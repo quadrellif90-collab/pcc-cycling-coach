@@ -1629,6 +1629,21 @@ window.addEventListener('unhandledrejection', function(e) {
   <!-- BETA Fase 7b: Nutrizione & Integrazione -->
   <div class="card" style="margin-top:12px;" id="nutrition-card">
     <h3 data-tip="Carboidrati periodizzati (GSSI SSE 231, 'fuel for the work required'): 7-12 g/kg nei giorni di carico, 3-5 a riposo; durante sforzo 30-90 g/h in glucosio-fruttosio 1:0.8. Supplement Gruppo A (Jeukendrup/UCI 2026, PMC12239112): caffeina, beta-alanina, nitrato, bicarbonato, creatina.">Nutrizione &amp; Integrazione</h3>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+      <label style="font-size:11px;color:var(--text2);">Obiettivo:</label>
+      <select id="nutri-goal" style="font-size:11px;padding:3px 6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;" onchange="loadNutrition()">
+        <option value="maintain">Mantenimento / forma</option>
+        <option value="cut">Dimagrimento</option>
+        <option value="gain">Aumento massa</option>
+      </select>
+      <label style="font-size:11px;color:var(--text2);">Carico oggi:</label>
+      <select id="nutri-load" style="font-size:11px;padding:3px 6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;" onchange="loadNutrition()">
+        <option value="0">Riposo/facile</option>
+        <option value="150">Moderato</option>
+        <option value="350">Alto</option>
+        <option value="600">Gara/carico max</option>
+      </select>
+    </div>
     <div id="nutrition-plan" style="font-size:12px;color:var(--text2);">Caricamento…</div>
   </div>
   <div class="card" style="margin-top:12px;" id="daily-adapt-card">
@@ -3026,6 +3041,15 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="form-row">
         <div class="form-group"><label>Peso (kg)</label><input type="number" id="set-weight" step="0.1"></div>
         <div class="form-group"><label>LBM (kg)</label><input type="number" id="set-lbm" step="0.1"></div>
+        <div class="form-group"><label>Età</label><input type="number" id="set-age"></div>
+        <div class="form-group"><label>Sesso</label>
+          <select id="set-sex"><option value="m">M</option><option value="f">F</option><option value="other">Altro</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Altezza (cm)</label><input type="number" id="set-height"></div>
+        <div class="form-group"><label>1RM Squat (kg)</label><input type="number" id="set-onerm" step="0.5">
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">Usato per calcolare i carichi di forza in palestra.</div></div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -7138,21 +7162,33 @@ async function loadTidHeatmap() {
   loadMyCalendar();
 }
 
-// BETA Fase 7b — Nutrizione & Integrazione (chiamato da loadDailyAdapt)
+// PPC — Nutrizione & Integrazione (piano completo individualizzato)
 async function loadNutrition() {
   const host = document.getElementById('nutrition-plan');
   if (!host) return;
   try {
-    const res = await fetch('/api/nutrition?day_type=high_intensity&bodyweight_kg=72&during_min=120');
+    const goal = ($('nutri-goal') && $('nutri-goal').value) || 'maintain';
+    const load = ($('nutri-load') && parseInt($('nutri-load').value)) || 0;
+    const res = await fetch(`/api/nutrition-full?goal_type=${encodeURIComponent(goal)}&planned_tss_today=${load}`);
     if (!res.ok) return;
-    const j = await res.json();
-    const p = j.plan || {};
-    const sup = (j.supplements || []).map(s =>
-      `<span style="display:inline-block;font-size:10px;padding:2px 6px;margin:2px;border-radius:8px;background:var(--surface2);color:var(--text2);">${esc(s.name)} <b style="color:var(--green);">${esc(s.evidence)}</b></span>`).join('');
-    host.innerHTML = `<div><b>${esc(p.label || '')}</b></div>
-      <div style="margin-top:3px;">Carb: <b style="color:var(--accent);">${esc(p.daily_g || '')}</b> (${esc(p.daily_g_per_kg || '')}) · durante: <b style="color:var(--accent);">${esc(p.during_g || 0)} g</b> (${esc(p.during_range_g_per_h || '')})</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px;">${esc(p.note || '')}</div>
-      <div style="margin-top:6px;">Supplement (Gruppo A):</div><div>${sup}</div>`;
+    const p = await res.json();
+    const m = p.macros || {};
+    const lc = p.load_compensation || {};
+    const sup = (p.supplements || []).map(s =>
+      `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);">
+        <span>${esc(s.name)} <b style="color:var(--green);">${esc(s.evidence)}</b></span>
+        <span style="color:var(--accent);font-weight:700;">${esc(s.dose || '')}</span></div>`).join('');
+    host.innerHTML = `
+      <div style="font-size:11px;color:var(--text2);">${esc(p.note_goal || '')}</div>
+      <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">
+        <span>🔥 <b>${p.target_kcal}</b> kcal</span>
+        <span>🥩 Proteine <b>${m.protein_g}</b> g (${m.protein_g_per_kg} g/kg)</span>
+        <span>🍞 Carb <b>${m.carb_g}</b> g (${m.carb_g_per_kg} g/kg)</span>
+        <span>🥑 Grassi <b>${m.fat_g}</b> g</span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px;">Compensazione carico (lavoro richiesto): oggi ${lc.planned_tss_today} TSS + ieri ${lc.prev_day_tss} → <b style="color:var(--accent);">${lc.carb_g_per_kg} g/kg carb</b> · ${esc(lc.basis || '')}</div>
+      <div style="font-size:11px;font-weight:600;margin-top:8px;">Supplementi (Gruppo A, dosi su ${p.bodyweight_kg} kg):</div>
+      <div style="margin-top:2px;">${sup || '<i>nessuno</i>'}</div>`;
   } catch (e) { /* non bloccare */ }
 }
 
@@ -7202,13 +7238,17 @@ async function loadStrength() {
   const mobEl = document.getElementById('mobility-routine');
   if (!sumEl || !weeksEl) return;
   try {
+    // PPC: legge 1RM dal profilo per mostrare i carichi in kg reali
+    let oneRm = 0;
+    try { const p = await (await fetch('/api/profile')).json(); oneRm = (p.profile && p.profile.one_rm_kg) || 0; } catch (_) {}
     const [sp, mp] = await Promise.all([
-      fetch(`/api/strength-plan?phase=${phase}&weeks=4`).then(r => r.ok ? r.json() : null),
+      fetch(`/api/strength-plan?phase=${phase}&weeks=4${oneRm ? '&one_rm_kg=' + oneRm : ''}`).then(r => r.ok ? r.json() : null),
       fetch('/api/mobility-plan?days=7').then(r => r.ok ? r.json() : null),
     ]);
     if (sp && sp.summary) {
       const s = sp.summary;
       sumEl.innerHTML = `<b>${esc(s.phase)}</b>: ${s.sessions_per_week}×/sett, ${s.sets}×${s.reps} al ${s.pct_1rm}% 1RM` +
+        (oneRm ? ` <b style="color:var(--accent);">(≈${Math.round(oneRm * s.pct_1rm / 100)} kg)</b>` : '') +
         (s.exercises.length ? ` — ${s.exercises.map(esc).join(', ')}` : '') +
         `<br><span style="font-size:10px;color:var(--text3);">${esc(s.source)}</span>`;
     }
@@ -7217,7 +7257,7 @@ async function loadStrength() {
         if (!wk.sessions.length) return `<div style="font-size:11px;color:var(--text3);">Sett. ${wk.week}: scarico / nessuna seduta</div>`;
         const rows = wk.sessions.map(s =>
           `<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid var(--border);">
-             <span>${esc(s.exercise)}</span><span style="color:var(--text3);">${s.sets}×${s.reps} @ ${s.pct_1rm}%</span>
+             <span>${esc(s.exercise)}</span><span style="color:var(--text3);">${s.sets}×${s.reps} @ ${s.pct_1rm}%${s.load_kg ? ` · <b style="color:var(--accent);">${s.load_kg} kg</b>` : ''}</span>
            </div>`).join('');
         return `<div style="background:var(--surface2);border-radius:6px;padding:6px 8px;"><div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px;">Settimana ${wk.week}</div>${rows}</div>`;
       }).join('');
@@ -15406,7 +15446,16 @@ async function loadSettings() {
   $('set-lthr').value = d.lthr;
   $('set-maxhr').value = d.max_hr;
   $('set-eftp').textContent = d.eftp ? d.eftp + 'W' : 'N/A';
-  $('set-wkg').textContent = d.w_per_kg + ' W/kg';
+  // PPC: campi estesi (età/sesso/altezza/1RM) da /api/profile
+  try {
+    const p = await (await fetch('/api/profile')).json();
+    const a = p.profile || {};
+    if (a.age != null) $('set-age').value = a.age;
+    if (a.sex) $('set-sex').value = a.sex;
+    if (a.height_cm != null) $('set-height').value = a.height_cm;
+    if (a.one_rm_kg != null) $('set-onerm').value = a.one_rm_kg;
+  } catch (_) {}
+
   // hr target_mode (IP_HR_ONLY): global flag drives detail rendering + chrome
   // suppression; the <select> is gated on an explicitly-set LTHR.
   window._targetMode = d.target_mode || 'power';
@@ -15900,7 +15949,15 @@ async function saveSettings() {
     lthr: parseInt($('set-lthr').value),
     max_hr: parseInt($('set-maxhr').value),
   };
-  // hr target_mode — server enforces the gate (explicit LTHR + max_hr > LTHR)
+  // PPC: campi estesi da inviare a /api/profile (età/sesso/altezza/1RM)
+  const ext = {
+    age: parseInt($('set-age').value),
+    sex: $('set-sex').value,
+    height_cm: parseFloat($('set-height').value),
+    one_rm_kg: parseFloat($('set-onerm').value),
+  };
+  for (const k in ext) { if (Number.isFinite(ext[k]) || (k === 'sex' && ext[k])) body[k] = ext[k]; }
+
   // and 400s with a readable message; surfaced via the alert below.
   const tmSel = $('set-target-mode');
   if (tmSel) body.target_mode = tmSel.value;
@@ -15939,6 +15996,21 @@ async function saveSettings() {
       }
       throw new Error(`${res.status}: ${msg}`);
     }
+    // PPC: invia i campi estesi (età/sesso/altezza/1RM) a /api/profile
+    // (con sync bidirezionale intervals.icu). Non bloccante sul successo settings.
+    try {
+      const profBody = {};
+      for (const k of ['age','sex','height_cm','one_rm_kg']) {
+        if (body[k] !== undefined && body[k] !== null && body[k] !== '') profBody[k] = body[k];
+      }
+      if (Object.keys(profBody).length) {
+        const pr = await fetch('/api/profile', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(profBody)});
+        if (pr.ok) {
+          const pj = await pr.json();
+          if (pj.icu_sync) console.log('[PPC] profilo:', pj.icu_sync);
+        }
+      }
+    } catch (_) {}
     // First switch INTO hr mode: one-time disclaimer (IP_HR_ONLY C11).
     // Per-profile key (red-team S3): a second athlete on the same machine
     // must see the disclaimer too, not inherit profile #1's dismissal.

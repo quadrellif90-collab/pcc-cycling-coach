@@ -3804,7 +3804,31 @@ def api_nutrition(day_type: str = Query("moderate"), bodyweight_kg: float = Quer
             "supplements": supplement_list()}
 
 
-@app.get("/api/race-fueling")
+@app.get("/api/nutrition-full")
+def api_nutrition_full(goal_type: str = Query("maintain"),
+                       planned_tss_today: float = Query(0.0),
+                       prev_day_tss: float = Query(0.0)):
+    """PPC — piano nutrizionale COMPLETO e individualizzato.
+
+    Legge peso/età/sesso/altezza dal profilo atleta (cadendo a default se
+    assenti) e calcola TDEE, obiettivo (cut/maintain/gain), macro e
+    supplementi in dosi ASSOLUTE (mg/kg × peso). Con compensazione sul carico
+    di oggi + ieri (GSSI SSE 231)."""
+    from nutrition import full_nutrition_plan, supplement_doses
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    a = pm._athlete or {}
+    bw = float(a.get("weight") or 72.0)
+    age = int(a.get("age") or 30)
+    sex = str(a.get("sex") or "m")
+    height = float(a.get("height_cm") or 178.0)
+    plan = full_nutrition_plan(goal_type, bw, height, age, sex,
+                               planned_tss_today=planned_tss_today,
+                               prev_day_tss=prev_day_tss)
+    plan["bodyweight_kg"] = bw
+    plan["supplements"] = supplement_doses(bw)
+    return plan
+
 def api_race_fueling(duration_h: float = Query(2.0), bodyweight_kg: float = Query(72.0)):
     """BETA Fase 7b — piano di gara carb + caffeina (Jeukendrup / UCI 2026)."""
     from nutrition import race_fueling
