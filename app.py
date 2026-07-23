@@ -3806,8 +3806,8 @@ def api_export_plan_html(athlete: str = Query("Atleta"), goal: str = Query(""),
     """BETA Fase 7c — compone il piano integrato (ciclismo+forza+mobilità+nutrizione)
     in un HTML autonomo stampabile → PDF dal browser. Usato da DIY e Coach."""
     from plan_export import build_plan_html
-    from strength_mobility import build_strength_plan, strength_summary
-    from nutrition import build_mobility_plan, compute_nutrition, supplement_list, race_fueling
+    from strength_mobility import build_strength_plan, strength_summary, build_mobility_plan
+    from nutrition import compute_nutrition, supplement_list, race_fueling
     try:
         sp = build_strength_plan(phase, 4)
         ss = strength_summary(phase)
