@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Domestique — Who's Riding?</title>
+<title>Domestique — Chi pedala?</title>
 <link rel="icon" type="image/png" href="/static/favicon.png?v=3">
 <style>
 :root {
@@ -124,27 +124,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sa
     <img src="/static/icon.png" alt="">
     <h1>Domestique</h1>
   </div>
-  <div class="subtitle" id="picker-subtitle">Who's riding today?</div>
+  <div class="subtitle" id="picker-subtitle">Chi pedala oggi?</div>
   <div class="grid" id="profile-grid"></div>
   <div class="remember" id="remember-row">
     <input type="checkbox" id="skip-picker">
-    <label for="skip-picker">Remember my choice</label>
+    <label for="skip-picker">Ricorda la mia scelta</label>
   </div>
 </div>
 
 <!-- Profile settings modal: name + color + red DELETE ACCOUNT -->
 <div class="pp-overlay" id="pp-settings-overlay">
   <div class="pp-modal">
-    <h2 id="pp-modal-title">Profile settings</h2>
+    <h2 id="pp-modal-title">Impostazioni profilo</h2>
     <div class="pp-sub" id="pp-modal-sub"></div>
 
     <div class="pp-row">
-      <label for="pp-name">Name</label>
+      <label for="pp-name">Nome</label>
       <input type="text" id="pp-name" maxlength="64" autocomplete="off">
     </div>
 
     <div class="pp-row">
-      <label>Profile color</label>
+      <label>Colore profilo</label>
       <div class="pp-colors" id="pp-colors">
         <!-- Swatches populated in JS; palette matches the dashboard theme -->
       </div>
@@ -153,27 +153,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sa
     <div class="pp-row">
       <label>Intervals.icu</label>
       <div class="hint">
-        Connect this profile to intervals.icu for wellness sync and activity upload.
-        Manage credentials from Settings inside the app after switching to this profile.
+        Collega questo profilo a intervals.icu per la sincronizzazione del benessere e il caricamento delle attività.
+        Gestisci le credenziali da Impostazioni nell'app dopo essere passato a questo profilo.
       </div>
     </div>
 
     <div class="pp-divider"></div>
 
     <div class="pp-danger-section">
-      <h3>Danger zone</h3>
+      <h3>Zona pericolosa</h3>
       <div class="warn">
-        Deleting this profile permanently removes its rides, plans, nutrition
-        products, intervals.icu credentials, and SQLite database. This cannot
-        be undone.
+        L'eliminazione di questo profilo rimuove definitivamente le sue uscite, i piani, i
+        prodotti nutrizionali, le credenziali intervals.icu e il database SQLite. L'operazione
+        non può essere annullata.
       </div>
-      <button type="button" class="btn-danger" id="pp-delete-btn">Delete account</button>
+      <button type="button" class="btn-danger" id="pp-delete-btn">Elimina account</button>
     </div>
 
     <div class="pp-btn-row">
-      <button type="button" class="btn-secondary" id="pp-cancel-btn">Cancel</button>
+      <button type="button" class="btn-secondary" id="pp-cancel-btn">Annulla</button>
       <div class="spacer"></div>
-      <button type="button" class="btn-primary" id="pp-save-btn">Save</button>
+      <button type="button" class="btn-primary" id="pp-save-btn">Salva</button>
     </div>
   </div>
 </div>
@@ -217,24 +217,24 @@ async function load() {
 
   // Empty state — "create your first profile" wizard hero
   if (profiles.length === 0) {
-    document.getElementById('picker-subtitle').textContent = 'No profiles yet';
+    document.getElementById('picker-subtitle').textContent = 'Ancora nessun profilo';
     document.getElementById('remember-row').style.display = 'none';
     grid.style.display = 'block';
     grid.innerHTML = `
       <div class="empty-hero">
         <div class="big-emoji">🚴</div>
-        <h2>Create your first profile</h2>
+        <h2>Crea il tuo primo profilo</h2>
         <p>
-          Every rider needs a profile — it holds your FTP, weight, training plans,
-          ride history, and intervals.icu connection. Takes about 30 seconds.
+          Ogni ciclista ha bisogno di un profilo — contiene il tuo FTP, il peso, i piani di
+          allenamento, lo storico delle uscite e la connessione a intervals.icu. Ci vogliono circa 30 secondi.
         </p>
-        <a href="/profile-setup" class="btn-start">Create account to start →</a>
+        <a href="/profile-setup" class="btn-start">Crea un account per iniziare →</a>
       </div>`;
     return;
   }
 
   // Reset to grid layout when profiles exist
-  document.getElementById('picker-subtitle').textContent = "Who's riding today?";
+  document.getElementById('picker-subtitle').textContent = "Chi pedala oggi?";
   document.getElementById('remember-row').style.display = 'flex';
   grid.style.display = 'grid';
 
@@ -271,7 +271,7 @@ async function load() {
     cogBtn.type = 'button';
     cogBtn.className = 'card-cog';
     cogBtn.innerHTML = '⚙';
-    cogBtn.title = `Settings for "${p.name}"`;
+    cogBtn.title = `Impostazioni per "${p.name}"`;
     cogBtn.onclick = (ev) => {
       ev.stopPropagation();
       openSettingsModal(p);
@@ -291,7 +291,7 @@ async function load() {
   addIcon.textContent = '+';
   const addName = document.createElement('div');
   addName.className = 'card-name';
-  addName.textContent = 'Add Profile';
+  addName.textContent = 'Aggiungi profilo';
   add.appendChild(addIcon);
   add.appendChild(addName);
   add.onclick = () => { window.location.href = '/profile-setup'; };
@@ -304,9 +304,9 @@ let _activeEditingProfile = null;
 
 function openSettingsModal(p) {
   _activeEditingProfile = p;
-  document.getElementById('pp-modal-title').textContent = 'Profile settings';
+  document.getElementById('pp-modal-title').textContent = 'Impostazioni profilo';
   document.getElementById('pp-modal-sub').textContent =
-    `Editing "${p.name}" — ${p.id}`;
+    `Modifica di "${p.name}" — ${p.id}`;
   document.getElementById('pp-name').value = p.name || '';
   // Render color swatches
   const colors = document.getElementById('pp-colors');
@@ -347,7 +347,7 @@ document.getElementById('pp-save-btn').onclick = async () => {
   const id = _activeEditingProfile.id;
   const name = document.getElementById('pp-name').value.trim();
   if (!name) {
-    alert('Name cannot be empty.');
+    alert('Il nome non può essere vuoto.');
     return;
   }
   const selectedSwatch = document.querySelector('.pp-color-swatch.selected');
@@ -359,13 +359,13 @@ document.getElementById('pp-save-btn').onclick = async () => {
       body: JSON.stringify({name, color}),
     });
     if (!res.ok) {
-      alert('Save failed: ' + res.status);
+      alert('Salvataggio non riuscito: ' + res.status);
       return;
     }
     closeSettingsModal();
     load();  // refresh the grid to show the new name/color
   } catch (e) {
-    alert('Save failed: ' + (e.message || e));
+    alert('Salvataggio non riuscito: ' + (e.message || e));
   }
 };
 
@@ -374,18 +374,18 @@ document.getElementById('pp-delete-btn').onclick = async () => {
   if (_deleting || !_activeEditingProfile) return;
   const p = _activeEditingProfile;
   const confirmMsg =
-    `Delete "${p.name}"?\n\n` +
-    `This permanently removes:\n` +
-    `• All rides and ride data\n` +
-    `• Training plans\n` +
-    `• Nutrition products\n` +
-    `• Intervals.icu credentials\n` +
-    `• SQLite database\n\n` +
-    `This cannot be undone.`;
+    `Eliminare "${p.name}"?\n\n` +
+    `Questa operazione rimuove definitivamente:\n` +
+    `• Tutte le uscite e i relativi dati\n` +
+    `• I piani di allenamento\n` +
+    `• I prodotti nutrizionali\n` +
+    `• Le credenziali Intervals.icu\n` +
+    `• Il database SQLite\n\n` +
+    `L'operazione non può essere annullata.`;
   if (!confirm(confirmMsg)) return;
   // Second confirm for safety
-  if (!confirm(`Are you absolutely sure? Type OK in the next prompt if so.`)) return;
-  const typed = prompt('Final confirmation — type "DELETE" (all caps) to proceed:');
+  if (!confirm(`Sei assolutamente sicuro? Premi OK nella richiesta successiva per confermare.`)) return;
+  const typed = prompt('Conferma finale — digita "DELETE" (tutto maiuscolo) per procedere:');
   if (typed !== 'DELETE') return;
 
   _deleting = true;
@@ -397,13 +397,13 @@ document.getElementById('pp-delete-btn').onclick = async () => {
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      alert(`Delete failed (${res.status}): ${body || 'unknown error'}`);
+      alert(`Eliminazione non riuscita (${res.status}): ${body || 'errore sconosciuto'}`);
       return;
     }
     closeSettingsModal();
     load();  // re-render; if this was the last profile, empty state appears
   } catch (e) {
-    alert('Delete failed: ' + (e.message || e));
+    alert('Eliminazione non riuscita: ' + (e.message || e));
   } finally {
     _deleting = false;
     document.getElementById('pp-delete-btn').disabled = false;

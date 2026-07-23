@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Domestique — New Profile</title>
+<title>Domestique — Nuovo profilo</title>
 <link rel="icon" type="image/png" href="/static/favicon.png?v=3">
 <style>
 :root {
@@ -67,7 +67,7 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,156,247
     <img src="/static/icon.png" alt="">
     <h1>Domestique</h1>
   </div>
-  <div class="subtitle">Set up a new rider profile in 3 steps.</div>
+  <div class="subtitle">Crea un nuovo profilo ciclista in 3 passaggi.</div>
 
   <div class="steps" id="step-dots">
     <div class="step-dot active"></div>
@@ -77,47 +77,47 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,156,247
 
   <!-- STEP 1: Name + Color -->
   <div class="step-panel active" id="step-1">
-    <h2>Name &amp; Color</h2>
+    <h2>Nome e colore</h2>
     <div class="form-row">
-      <label>Display Name</label>
-      <input type="text" id="profile-name" placeholder="e.g. Anna" autofocus autocomplete="off">
+      <label>Nome visualizzato</label>
+      <input type="text" id="profile-name" placeholder="es. Anna" autofocus autocomplete="off">
     </div>
     <div class="form-row">
-      <label>Profile Color</label>
+      <label>Colore profilo</label>
       <div class="color-grid" id="color-grid"></div>
     </div>
     <div class="status" id="step1-status"></div>
     <div class="actions">
-      <a href="/" class="skip-link">Cancel</a>
+      <a href="/" class="skip-link">Annulla</a>
       <!-- AC4b: purely local — the profile is created server-side only at the
            final "Create profile" step, so cancelling never leaves a phantom. -->
-      <button type="button" class="btn btn-primary" onclick="stepOneNext()" id="create-btn">Next</button>
+      <button type="button" class="btn btn-primary" onclick="stepOneNext()" id="create-btn">Avanti</button>
     </div>
   </div>
 
   <!-- STEP 2: Athlete Numbers (AC4b: collected locally — NOTHING is created
        server-side until Finish, so abandoning here leaves no phantom profile) -->
   <div class="step-panel" id="step-2">
-    <h2>Athlete Numbers</h2>
-    <p class="info">Set your current fitness values. You can update these anytime in Settings — fields you leave untouched simply aren't written.</p>
+    <h2>Dati dell'atleta</h2>
+    <p class="info">Imposta i tuoi valori di forma attuali. Puoi aggiornarli in qualsiasi momento in Impostazioni — i campi che lasci invariati semplicemente non vengono scritti.</p>
 
     <!-- AC5e (D9): target-mode question — hr requires the LTHR field filled. -->
     <div class="form-row">
-      <label>How do you train?</label>
+      <label>Come ti alleni?</label>
       <div style="display:flex;gap:8px;">
-        <button type="button" class="btn btn-secondary" id="tm-power" style="border-color:var(--accent);" onclick="setTargetMode('power', true)">Power meter</button>
-        <button type="button" class="btn btn-secondary" id="tm-hr" onclick="setTargetMode('hr', true)">Heart rate only</button>
+        <button type="button" class="btn btn-secondary" id="tm-power" style="border-color:var(--accent);" onclick="setTargetMode('power', true)">Misuratore di potenza</button>
+        <button type="button" class="btn btn-secondary" id="tm-hr" onclick="setTargetMode('hr', true)">Solo frequenza cardiaca</button>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Heart-rate mode prescribes workout targets from your LTHR — the LTHR field below is required.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">La modalità a frequenza cardiaca calcola i target degli allenamenti dal tuo LTHR — il campo LTHR qui sotto è obbligatorio.</div>
     </div>
 
     <div class="form-row-pair">
       <div class="form-row">
-        <label>FTP (watts)</label>
+        <label>FTP (watt)</label>
         <input type="number" id="ftp" value="200" min="50" max="600">
       </div>
       <div class="form-row">
-        <label>Weight (kg)</label>
+        <label>Peso (kg)</label>
         <input type="number" id="weight" value="70" min="30" max="200" step="0.1">
       </div>
     </div>
@@ -127,46 +127,46 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,156,247
         <input type="number" id="lthr" value="170" min="100" max="220">
       </div>
       <div class="form-row">
-        <label>Max HR (bpm)</label>
+        <label>FC max (bpm)</label>
         <input type="number" id="max-hr" value="190" min="140" max="220">
       </div>
     </div>
     <div class="form-row-pair">
       <div class="form-row">
         <label>
-          Age (years)
+          Età (anni)
           <input type="number" id="age" min="10" max="100" step="1" placeholder="35">
         </label>
       </div>
       <div class="form-row">
         <label>
-          Sex
+          Sesso
           <select id="sex" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface2);color:var(--text);outline:none;">
-            <option value="">Prefer not to say</option>
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-            <option value="O">Other</option>
+            <option value="">Preferisco non dirlo</option>
+            <option value="M">Uomo</option>
+            <option value="F">Donna</option>
+            <option value="O">Altro</option>
           </select>
         </label>
       </div>
     </div>
     <div class="form-row">
       <details>
-        <summary style="cursor:pointer;font-size:12px;color:var(--text2);">Advanced (optional)</summary>
+        <summary style="cursor:pointer;font-size:12px;color:var(--text2);">Avanzate (facoltative)</summary>
         <label style="margin-top:10px;">
-          Critical Power (W) — defaults to FTP × 1.03 if blank
+          Critical Power (W) — se vuoto, predefinito a FTP × 1.03
           <input type="number" id="cp" min="100" max="500" step="1" placeholder="auto">
         </label>
         <label style="margin-top:10px;">
-          W' — anaerobic capacity (J) — defaults to FTP × 80
+          W' — capacità anaerobica (J) — se vuoto, predefinito a FTP × 80
           <input type="number" id="wprime" min="5000" max="40000" step="100" placeholder="auto">
         </label>
       </details>
     </div>
     <div class="status" id="numbers-status"></div>
     <div class="actions">
-      <button type="button" class="btn btn-secondary" onclick="goStep(1)">Back</button>
-      <button type="button" class="btn btn-primary" onclick="doFinish()" id="save-athlete-btn">Create profile</button>
+      <button type="button" class="btn btn-secondary" onclick="goStep(1)">Indietro</button>
+      <button type="button" class="btn btn-primary" onclick="doFinish()" id="save-athlete-btn">Crea profilo</button>
     </div>
   </div>
 
@@ -174,24 +174,24 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,156,247
        so the OAuth state binds to the NEW profile (AC3a), and abandoning the
        earlier steps never leaves a phantom profile (AC4b). -->
   <div class="step-panel" id="step-3">
-    <h2>Connect Intervals.icu</h2>
+    <h2>Collega Intervals.icu</h2>
     <p class="info">
-      Profile created ✓ — optionally link an
+      Profilo creato ✓ — facoltativamente collega un account
       <a href="https://intervals.icu/" target="_blank" rel="noopener noreferrer" class="help-link">intervals.icu</a>
-      account to sync training data (CTL, ATL, TSB, HRV). You can also do this
-      later in <b>Settings</b>.
+      per sincronizzare i dati di allenamento (CTL, ATL, TSB, HRV). Puoi farlo anche
+      più tardi in <b>Impostazioni</b>.
     </p>
     <div class="info" style="background:rgba(59,130,246,0.08);border:1px solid #3b82f6;border-radius:8px;padding:10px 12px;margin:8px 0;">
-      Click <b>Sign in to intervals.icu</b> — it opens in your browser, you log in and approve
-      once, and we link <b>that account</b> to this profile.
+      Fai clic su <b>Accedi a intervals.icu</b> — si apre nel browser, accedi e autorizzi
+      una volta, e colleghiamo <b>quell'account</b> a questo profilo.
     </div>
     <!-- Link status: shows "✓ Linked as <name>" after a successful OAuth round-trip,
          or an error + retry. Populated by refreshLinkStatus() on return. -->
     <div id="link-status" style="font-size:13px;margin:8px 0;min-height:18px;"></div>
     <div class="status" id="step3-status"></div>
     <div class="actions">
-      <button type="button" class="btn btn-primary" id="connect-icu-btn" onclick="connectIcu()">Sign in to intervals.icu</button>
-      <a href="/" class="skip-link" id="step3-done">Go to dashboard →</a>
+      <button type="button" class="btn btn-primary" id="connect-icu-btn" onclick="connectIcu()">Accedi a intervals.icu</button>
+      <a href="/" class="skip-link" id="step3-done">Vai alla dashboard →</a>
     </div>
   </div>
 </div>
@@ -298,7 +298,7 @@ function showStatus(id, msg, ok) {
 
 function stepOneNext() {
   const name = document.getElementById('profile-name').value.trim();
-  if (!name) { showStatus('step1-status', 'Please enter a name.', false); return; }
+  if (!name) { showStatus('step1-status', 'Inserisci un nome.', false); return; }
   goStep(2);
 }
 
@@ -312,11 +312,11 @@ let _finishing = false;
 async function doFinish() {
   if (_finishing) return;
   const name = document.getElementById('profile-name').value.trim();
-  if (!name) { showStatus('step1-status', 'Please enter a name.', false); goStep(1); return; }
+  if (!name) { showStatus('step1-status', 'Inserisci un nome.', false); goStep(1); return; }
 
   // AC5e client gate: hr mode needs an LTHR the user actually filled in.
   if (_targetModeTouched && _targetMode === 'hr' && !_touched.has('lthr')) {
-    showStatus('numbers-status', 'Heart-rate mode needs your LTHR — fill in the LTHR field.', false);
+    showStatus('numbers-status', 'La modalità a frequenza cardiaca richiede il tuo LTHR — compila il campo LTHR.', false);
     return;
   }
 
@@ -333,7 +333,7 @@ async function doFinish() {
       });
       let data; try { data = await res.json(); } catch (e) { data = {}; }
       if (!res.ok || !data.id) {
-        showStatus('numbers-status', data.error || 'Failed to create profile.', false);
+        showStatus('numbers-status', data.error || 'Creazione del profilo non riuscita.', false);
         return;
       }
       createdId = data.id;
@@ -347,8 +347,8 @@ async function doFinish() {
     let swData; try { swData = await swRes.json(); } catch (e) { swData = {}; }
     if (!swRes.ok || swData.active !== createdId) {
       showStatus('numbers-status',
-        'Could not activate the new profile' +
-        (swData && swData.error ? ' — ' + swData.error : '') + '. Try again.', false);
+        'Impossibile attivare il nuovo profilo' +
+        (swData && swData.error ? ' — ' + swData.error : '') + '. Riprova.', false);
       return;
     }
     // 3. Save the touched fields through the wizard save path (server
@@ -385,7 +385,7 @@ async function doFinish() {
       // AC5d: show the server's validation detail, keep the wizard here so the
       // user can fix the value and retry (profile already exists + is active).
       showStatus('numbers-status',
-        (sData && (sData.detail || sData.error)) || ('Save failed: HTTP ' + sRes.status), false);
+        (sData && (sData.detail || sData.error)) || ('Salvataggio non riuscito: HTTP ' + sRes.status), false);
       return;
     }
     goStep(3);
@@ -416,17 +416,17 @@ async function refreshLinkStatus(icuParam) {
   const btn = document.getElementById('connect-icu-btn');
   if (!el) return;
   if (icuParam === 'error' || icuParam === 'unavailable') {
-    el.innerHTML = '<span style="color:var(--red);">Couldn’t link your account — please try again.</span>';
-    if (btn) btn.textContent = 'Retry — sign in to intervals.icu';
+    el.innerHTML = '<span style="color:var(--red);">Impossibile collegare il tuo account — riprova.</span>';
+    if (btn) btn.textContent = 'Riprova — accedi a intervals.icu';
     return;
   }
   try {
     const c = await (await fetch('/api/icu/connection')).json();
     if (c && c.method === 'oauth') {
-      const who = c.name || (c.athlete_id ? ('athlete ' + c.athlete_id) : 'your account');
-      el.innerHTML = '✓ Linked as <b>' + (who.replace(/</g, '&lt;')) + '</b>';
+      const who = c.name || (c.athlete_id ? ('atleta ' + c.athlete_id) : 'il tuo account');
+      el.innerHTML = '✓ Collegato come <b>' + (who.replace(/</g, '&lt;')) + '</b>';
       el.style.color = 'var(--green)';
-      if (btn) btn.textContent = 'Re-link a different account';
+      if (btn) btn.textContent = 'Collega un altro account';
     } else {
       el.textContent = '';
     }
