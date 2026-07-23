@@ -3852,11 +3852,20 @@ async function openCourseDetail(region, filename) {
         <div>Max grade: <b style="color:var(--text);">${Number(maxGrade).toFixed(1)}%</b></div>
       </div>
       <div id="course-elev-svg">${renderElevSvg(data.points || data.profile || [])}</div>
+      <div id="course-wprime" style="margin-top:12px;font-size:12px;color:var(--text2);">Calcolo fattibilità W′…</div>
       <div style="margin-top:14px;">
         <a href="/api/course/${encodeURIComponent(region)}/${encodeURIComponent(asciiFilename)}/download" class="btn btn-primary" download>Scarica CRS</a>
         <button onclick="closeModal()" class="btn" style="margin-left:8px;">Chiudi</button>
       </div>
     </div>`);
+    // BETA Fase 4.7 — fattibilità W′ su percorso (gran fondo)
+    const _url = `/api/routes/${encodeURIComponent(region)}/${encodeURIComponent(asciiFilename)}`;
+    fetch(`/api/route-wprime?url=${encodeURIComponent(_url)}`).then(r => r.ok ? r.json() : null).then(j => {
+      const el = document.getElementById('course-wprime');
+      if (!el || !j) { if (el) el.textContent = 'Fattibilità W′ non disponibile.'; return; }
+      const col = j.feasibility === 'ok' ? 'var(--green)' : j.feasibility === 'stretch' ? 'var(--yellow)' : 'var(--red)';
+      el.innerHTML = `<b style="color:${col};">Fattibilità W′: ${j.feasibility === 'ok' ? 'ok' : j.feasibility === 'stretch' ? 'ambizioso' : 'duro'}</b> — lavoro salite ${j.climb_work_kj} kJ / W′ ${j.wprime_kj} kJ (${j.wprime_used_pct}% del budget), massa ${j.mass_kg} kg`;
+    }).catch(() => {});
   } catch (e) {
     alert('Failed to load course: ' + e.message);
   }

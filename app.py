@@ -8015,6 +8015,61 @@ def api_profiles_bulk():
     return _load_route_index()
 
 
+@app.get("/api/route-wprime")
+def api_route_wprime(url: str = Query(...)):
+    """BETA Fase 4.7 — stima del consumo di W′ su percorso (gran fondo).
+
+    Calcola il lavoro meccanico sulle salite dal profilo elevazione
+    (lavoro = massa × g × Δe, J) e lo confronta con la W′ dell'atleta
+    (Skiba anaerobic work capacity). Indicatore di fattibilità per
+    percorsi lunghi con dislivello — non richiede ML, solo fisica base.
+    """
+    route_data = _load_route_detail(url)
+    if not route_data:
+        return JSONResponse({"error": "Route not scraped yet"}, 404)
+    profile = (route_data.get("profile") or
+               _route_profile_points(route_data.get("lat_lon_grade", [])) or
+               route_data.get("profile_points") or [])
+    if not profile:
+        return JSONResponse({"error": "No profile data"}, 404)
+
+    # massa ciclista (peso + bici ~8 kg); default 80 kg se sconosciuto
+    try:
+        weight = float(getattr(config, "WEIGHT_KG", None) or 0) or 72.0
+    except Exception:
+        weight = 72.0
+    mass = weight + 8.0
+    g = 9.81
+
+    climb_work_j = 0.0
+    for i in range(1, len(profile)):
+        de = (profile[i].get("e", 0) or 0) - (profile[i - 1].get("e", 0) or 0)
+        if de > 0:
+            climb_work_j += mass * g * de
+
+    # W' dell'atleta (già calcolata da ICU/fallback)
+    wprime_j = None
+    try:
+        from profile_manager import ProfileManager
+        ath = getattr(ProfileManager.get(), "_athlete", {}) or {}
+        wprime_j = ath.get("wprime_j") or getattr(config, "WPRIME_J", None)
+    except Exception:
+        wprime_j = None
+    if not wprime_j:
+        wprime_j = 20000.0  # fallback fisiologico medio
+
+    used_pct = round(climb_work_j / wprime_j * 100, 1)
+    feasibility = "ok" if used_pct <= 100 else ("stretch" if used_pct <= 200 else "hard")
+
+    return {
+        "climb_work_kj": round(climb_work_j / 1000.0, 1),
+        "wprime_kj": round(wprime_j / 1000.0, 1),
+        "wprime_used_pct": used_pct,
+        "feasibility": feasibility,
+        "mass_kg": round(mass, 1),
+    }
+
+
 @app.get("/api/route-profile")
 def api_route_profile(url: str = Query(...)):
     """Return full route detail (elevation profile + coordinates) from individual file."""
