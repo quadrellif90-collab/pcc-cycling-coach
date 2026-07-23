@@ -358,7 +358,7 @@ def run_with_tray():
             MenuItem("Quit", quit_app),
         )
 
-        icon = Icon("Domestique", img, "Domestique", menu)
+        icon = Icon("PPC", img, "PPC", menu)
         icon.run()
 
     except ImportError:
@@ -423,7 +423,7 @@ def _activate_existing_window() -> bool:
             subprocess.run(
                 ["osascript", "-e",
                  'tell application "System Events" to '
-                 'set frontmost of first process whose name is "Domestique" to true'],
+                 'set frontmost of first process whose name is "PPC" to true'],
                 capture_output=True, timeout=3,
             )
             return True
@@ -435,7 +435,7 @@ def _activate_existing_window() -> bool:
         try:
             import ctypes
             user32 = ctypes.windll.user32
-            hwnd = user32.FindWindowW(None, "Domestique")
+            hwnd = user32.FindWindowW(None, "PPC")
             if hwnd:
                 user32.ShowWindow(hwnd, 9)  # SW_RESTORE
                 user32.SetForegroundWindow(hwnd)
@@ -587,10 +587,10 @@ def _fallback_to_browser(reason: str) -> None:
             import ctypes
             ctypes.windll.user32.MessageBoxW(
                 0,
-                f"Domestique's built-in window could not start "
+                f"PPC's built-in window could not start "
                 f"({reason}).\n\nIt has opened in your default web browser "
                 f"at {URL} instead.",
-                "Domestique",
+                "PPC",
                 0x40,  # MB_ICONINFORMATION
             )
         except Exception:
@@ -609,16 +609,16 @@ def main():
     # Opening Chrome/Safari defeats the whole point of the pywebview app.
     if is_already_running():
         if _activate_existing_window():
-            print(f"Domestique already running — activated existing window.")
+            print(f"PPC already running — activated existing window.")
             return
         # Last resort: if we can't find the window (user killed the pywebview
         # process but something else is holding the port), open the browser so
         # the user can at least reach the UI.
-        print(f"Domestique already running → {URL}")
+        print(f"PPC already running → {URL}")
         webbrowser.open(URL)
         return
 
-    print(f"Starting Domestique on {URL}...")
+    print(f"Starting PPC on {URL}...")
 
     # Handle signals
     # CON5: ask uvicorn for a graceful shutdown (which drains in-flight
@@ -754,7 +754,7 @@ def main():
         # pywebview requires the main thread — skip pystray (tray not needed when
         # the app has its own window; closing the window exits the app).
         webview.create_window(
-            "Domestique", URL,
+            "PPC", URL,
             width=1400, height=900,
             min_size=(1000, 600),
             x=100, y=50,  # position near top-left, not bottom

@@ -702,6 +702,8 @@ class ProfileManager:
             "wprime_j":  (5000, 40000),  # W' in joules
             "pmax_w":    (300, 2500),    # Pmax in watts (v1.0.6 IMPL-3D-INGEST)
             "age":       (10, 100),      # years
+            "height_cm": (120, 220),     # cm
+            "one_rm_kg": (20, 400),      # kg (squat 1RM)
             # sex handled separately -- string not numeric
         }
         # Work on a copy so we don't corrupt the caller's dict on failure.

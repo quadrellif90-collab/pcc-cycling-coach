@@ -28,9 +28,34 @@ def test_full_nutrition_load_compensation():
                                planned_tss_today=400, prev_day_tss=300)
     low = full_nutrition_plan("maintain", 70, 175, 30, "m", 1.7,
                               planned_tss_today=30, prev_day_tss=0)
-    assert high["load_compensation"]["carb_g_per_kg"] >= 11.0
-    assert low["load_compensation"]["carb_g_per_kg"] <= 4.0
-    assert high["macros"]["carb_g"] > low["macros"]["carb_g"]
+    assert high["load_compensation"]["carb_g_per_kg_range"][1] >= 11.0
+    assert low["load_compensation"]["carb_g_per_kg_range"][1] <= 4.0
+    assert high["load_compensation"]["carb_g_range"][1] > low["load_compensation"]["carb_g_range"][1]
+
+
+def test_motori_nutrizione_coerenti():
+    """Contratto: full_nutrition_plan, day_macros e diet devono dare gli
+    STESSI macro totali (nessun numero divergente tra le card)."""
+    from nutrition import full_nutrition_plan, day_macros
+    from diet import build_daily_diet
+    for gt in ("cut", "maintain", "gain"):
+        plan = full_nutrition_plan(gt, 75, 180, 35, "m")
+        dm = day_macros("hard", gt, 75, 180, 35, "m")
+        assert dm["carb_g"] == plan["macros"]["carb_g"]
+        assert dm["protein_g"] == plan["macros"]["protein_g"]
+        assert dm["fat_g"] == plan["macros"]["fat_g"]
+        diet = build_daily_diet("hard", 75, gt, height_cm=180, age=35, sex="m",
+                                planned_tss_today=250, prev_day_tss=250)
+        ratio = diet.total_kcal / plan["target_kcal"]
+        assert 0.99 <= ratio <= 1.01, f"{gt}: pasti {diet.total_kcal} != target {plan['target_kcal']}"
+
+
+def test_deficit_coerente():
+    """cut < maintain < gain (il deficit deve essere reale, non surplus)."""
+    cut = full_nutrition_plan("cut", 75, 180, 35, "m")["target_kcal"]
+    maint = full_nutrition_plan("maintain", 75, 180, 35, "m")["target_kcal"]
+    gain = full_nutrition_plan("gain", 75, 180, 35, "m")["target_kcal"]
+    assert cut < maint < gain
 
 
 def test_compute_nutrition_weight():

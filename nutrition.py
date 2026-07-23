@@ -214,20 +214,26 @@ def full_nutrition_plan(goal_type: str = "maintain",
     carb_g_base = max(round(carb_kcal / 4), 0)
 
     # COMPENSAZIONE sul carico: mappa TSS -> g/kg carb (GSSI SSE 231)
+    # Questo è un RANGE CONSIGLIATO (min dai macro, max da carico) — NON
+    # sovrascrive il bilancio calorico dell'obiettivo (altrimenti il deficit
+    # verrebbe "mangiato" dai carboidrati e diventerebbe surplus).
     load = planned_tss_today + prev_day_tss * 0.5  # ieri pesa metà
     if load >= 350:
-        carb_g_per_kg = 11.0   # giorno di gara / carico alto
+        carb_g_per_kg_high = 11.0   # giorno di gara / carico alto
     elif load >= 200:
-        carb_g_per_kg = 8.0
+        carb_g_per_kg_high = 8.0
     elif load >= 80:
-        carb_g_per_kg = 6.0
+        carb_g_per_kg_high = 6.0
     else:
-        carb_g_per_kg = 4.0    # recupero / facile
-    carb_g_adjusted = round(carb_g_per_kg * bodyweight_kg)
-    # prendi il max tra base da kcal e da carico (fuel for the work required)
-    carb_g = max(carb_g_base, carb_g_adjusted)
+        carb_g_per_kg_high = 4.0    # recupero / facile
+    carb_g_adjusted = round(carb_g_per_kg_high * bodyweight_kg)
+    # Il carboidrato effettivo resta quello coerente col bilancio calorico;
+    # esponiamo il range [base, da-carico] come guida "fuel for the work required".
+    # base = carb minimo fisiologico (3 g/kg, GSSI SSE 231 recovery floor);
+    # da-carico = carb richiesto dal lavoro. Il range ha sempre min <= max.
+    carb_g_min = round(3.0 * bodyweight_kg)
+    carb_g = carb_g_base
     carb_kcal_adj = carb_g * 4
-    # ricalcola calorie totali coerenti coi carboidrati aggiustati
     total_kcal = protein_kcal + fat_kcal + carb_kcal_adj
 
     return {
@@ -238,18 +244,66 @@ def full_nutrition_plan(goal_type: str = "maintain",
         "macros": {
             "protein_g": protein_g, "protein_g_per_kg": protein_g_per_kg,
             "fat_g": fat_g,
-            "carb_g": carb_g, "carb_g_per_kg": round(carb_g_per_kg, 1),
+            "carb_g": carb_g, "carb_g_per_kg": round(carb_g / bodyweight_kg, 1),
             "carb_kcal": carb_kcal_adj,
         },
         "load_compensation": {
             "planned_tss_today": planned_tss_today,
             "prev_day_tss": prev_day_tss,
             "load_index": round(load),
-            "carb_g_per_kg": round(carb_g_per_kg, 1),
+            "carb_g_per_kg_range": [3.0, carb_g_per_kg_high],
+            "carb_g_range": [carb_g_min, carb_g_adjusted],
             "basis": "fuel for the work required (GSSI SSE 231 / Burke 2018)",
         },
         "sources": ["Mountjoy 2018 IOC", "Burke 2018 ISSN", "GSSI SSE 231",
                     "Jeukendrup/UCI 2026", "Morton 2018 protein", "Mifflin 1995"],
+    }
+
+
+def day_macros(day_type: str, goal_type: str = "maintain",
+               bodyweight_kg: float = 72.0, height_cm: float = 178.0,
+               age: int = 30, sex: str = "m", activity: float = 1.7,
+               planned_tss_today: float = 0.0, prev_day_tss: float = 0.0) -> dict:
+    """Macro giornalieri UNICI per tipo di giorno + obiettivo.
+
+    Fonete unica per la card 'Piano alimentare' (ex diet.py) e per la card
+    'Nutrizione completa': entrambe leggono qui, così i numeri non divergono.
+    I pasti sono la SCOMPOSIZIONE di questi macro (vedi diet.py), non un
+    calcolo parallelo.
+    """
+    plan = full_nutrition_plan(goal_type, bodyweight_kg, height_cm, age, sex,
+                               activity, planned_tss_today, prev_day_tss)
+    macros = plan["macros"]
+    # I macro totali del giorno SONO quelli del piano (bilancio coerente con
+    # obiettivo). Il tipo di giorno modula solo il RANGE di carb consigliato
+    # (fuel for the work required) esposto a parte, NON altera il bilancio.
+    carb_g = macros["carb_g"]
+    protein_g = macros["protein_g"]
+    fat_g = macros["fat_g"]
+    # range carb consigliato per il giorno (g/kg): base da bilancio → da carico
+    base_g_per_kg = round(carb_g / bodyweight_kg, 1)
+    load_g_per_kg = plan["load_compensation"]["carb_g_per_kg_range"][1]
+    if day_type in ("high_intensity", "race", "vo2max", "threshold", "sweetspot"):
+        day_carb_g_per_kg = load_g_per_kg
+    elif day_type in ("moderate", "tempo", "z2", "long_z2", "overunder"):
+        day_carb_g_per_kg = round((base_g_per_kg + load_g_per_kg) / 2, 1)
+    else:  # low_recovery, rest, recovery
+        day_carb_g_per_kg = base_g_per_kg
+    return {
+        "day_type": day_type,
+        "goal_type": goal_type,
+        "target_kcal": plan["target_kcal"],
+        "carb_g": carb_g,
+        "protein_g": protein_g,
+        "fat_g": fat_g,
+        "carb_kcal": carb_g * 4,
+        "protein_kcal": protein_g * 4,
+        "fat_kcal": fat_g * 9,
+        "carb_g_per_kg": base_g_per_kg,
+        "carb_g_per_kg_day": day_carb_g_per_kg,
+        "protein_g_per_kg": round(protein_g / bodyweight_kg, 2),
+        "load_compensation": plan["load_compensation"],
+        "sources": plan["sources"],
     }
 
 

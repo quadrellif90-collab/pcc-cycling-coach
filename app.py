@@ -3777,16 +3777,22 @@ def api_daily_adapt():
 
 
 @app.get("/api/strength-plan")
-def api_strength_plan(phase: str = Query("base"), weeks: int = Query(4)):
+def api_strength_plan(phase: str = Query("base"), weeks: int = Query(4),
+                      one_rm_kg: float = Query(0.0)):
     """BETA Fase 7a — piano di forza in palestra (Llanos-Lagos 2025).
 
     phase: base|build|peak|taper|race_week. Genera sedute heavy compound
     con set/rep/%1RM evidence-based, mantenute in-season.
+    one_rm_kg: 1RM Squat dell'atleta → carichi assoluti in kg (se 0, dal profilo).
     """
     from strength_mobility import build_strength_plan, strength_summary
-    return {"phase": phase, "weeks": weeks,
+    from profile_manager import ProfileManager
+    if not one_rm_kg:
+        a = (ProfileManager.get()._athlete or {})
+        one_rm_kg = float(a.get("one_rm_kg") or 0.0)
+    return {"phase": phase, "weeks": weeks, "one_rm_kg": one_rm_kg,
             "summary": strength_summary(phase),
-            "plan": build_strength_plan(phase, weeks)}
+            "plan": build_strength_plan(phase, weeks, one_rm_kg=one_rm_kg)}
 
 
 @app.get("/api/mobility-plan")
@@ -3817,8 +3823,8 @@ def api_inject_strength(request: Request):
     plan_dir = Path.home() / ".domestique" / "plans"
     if not (plan_dir / "current_plan.json").exists():
         # fallback: cerca nella profile dir
-        pm = ProfileManager.get()
-        plan_dir = Path.home() / ".domestique" / "profiles" / (pm._profile_id or "default") / "plans"
+            pm = ProfileManager.get()
+            plan_dir = Path.home() / ".domestique" / "profiles" / (pm._active_id or "default") / "plans"
     plan_path = plan_dir / "current_plan.json"
     if not plan_path.exists():
         raise HTTPException(404, "Nessun piano generato. Genera prima il piano.")
@@ -3854,26 +3860,42 @@ def api_inject_strength(request: Request):
             except Exception:
                 pass
 
-        # inietta forza nei primi N giorni disponibili
-        if i < len(strength_plan) and strength_plan[i].get("sessions"):
-            for j, sess in enumerate(strength_plan[i]["sessions"][:sessions_per_week]):
-                if j < len(all_dates):
-                    sessions.append({
-                        "day": all_dates[j],
-                        "session_type": "strength",
-                        "duration_min": 45,
-                        "tss_estimate": 30,
-                        "description": f"{sess['exercise']} {sess['sets']}×{sess['reps']} @ {sess['pct_1rm']}%" +
-                                       (f" ({sess['load_kg']} kg)" if sess.get("load_kg") else ""),
-                        "zwo_file": "",
-                        "zwo_name": "",
-                    })
-                    injected += 1
+        # Inietta forza COME SESSIONE SUPPLEMENTARE sul primo giorno
+        # disponibile della settimana (stesso `day` del ciclismo, tipo diverso)
+        # — così appare in calendario affianco all'allenamento, non serve un
+        # giorno vuoto. Un giorno può avere ciclismo + forza + mobilità.
+        training_days = [s["day"] for s in sessions if s.get("day")
+                         and s.get("session_type") != "rest"]
+        if i < len(strength_plan) and strength_plan[i].get("sessions") and training_days:
+            target_day = training_days[0]
+            for sess in strength_plan[i]["sessions"][:sessions_per_week]:
+                # evita duplicati: se quel giorno ha già una sessione strength identica
+                dup = any(s.get("session_type") == "strength"
+                          and s.get("day") == target_day
+                          and s.get("description", "").startswith(sess["exercise"])
+                          for s in sessions)
+                if dup:
+                    continue
+                sessions.append({
+                    "day": target_day,
+                    "session_type": "strength",
+                    "duration_min": 45,
+                    "tss_estimate": 30,
+                    "description": f"{sess['exercise']} {sess['sets']}×{sess['reps']} @ {sess['pct_1rm']}%" +
+                                   (f" ({sess['load_kg']} kg)" if sess.get("load_kg") else ""),
+                    "zwo_file": "",
+                    "zwo_name": "",
+                })
+                injected += 1
 
-        # inietta mobilità quotidiana (15 min, tutti i giorni)
-        for d_iso in all_dates[sessions_per_week:]:  # dopo le sedute forza
+        # inietta mobilità quotidiana (15 min) su OGNI giorno di allenamento
+        for td in training_days:
+            dup = any(s.get("session_type") == "mobility" and s.get("day") == td
+                      for s in sessions)
+            if dup:
+                continue
             sessions.append({
-                "day": d_iso,
+                "day": td,
                 "session_type": "mobility",
                 "duration_min": 15,
                 "tss_estimate": 5,
@@ -3912,7 +3934,7 @@ def api_nutrition_full(goal_type: str = Query("maintain"),
     from profile_manager import ProfileManager
     pm = ProfileManager.get()
     a = pm._athlete or {}
-    bw = float(a.get("weight") or 72.0)
+    bw = float(a.get("weight_kg") or 72.0)
     age = int(a.get("age") or 30)
     sex = str(a.get("sex") or "m")
     height = float(a.get("height_cm") or 178.0)
@@ -3920,6 +3942,7 @@ def api_nutrition_full(goal_type: str = Query("maintain"),
                                planned_tss_today=planned_tss_today,
                                prev_day_tss=prev_day_tss)
     plan["bodyweight_kg"] = bw
+    plan["profile_used"] = {"weight_kg": bw, "age": age, "sex": sex, "height_cm": height}
     plan["supplements"] = supplement_doses(bw)
     return plan
 
@@ -3941,8 +3964,12 @@ def api_diet(day_type: str = Query("moderate"),
     from profile_manager import ProfileManager
     pm = ProfileManager.get()
     a = pm._athlete or {}
-    bw = float(a.get("weight") or 72.0)
-    d = build_daily_diet(day_type, bw, goal_type, custom_calories=custom_calories)
+    bw = float(a.get("weight_kg") or 72.0)
+    age = int(a.get("age") or 30)
+    sex = str(a.get("sex") or "m")
+    height = float(a.get("height_cm") or 178.0)
+    d = build_daily_diet(day_type, bw, goal_type, custom_calories=custom_calories,
+                         height_cm=height, age=age, sex=sex)
     return {"day_type": day_type, "goal_type": goal_type,
             "bodyweight_kg": bw, "calorie_source": "nutrizionista" if custom_calories else "calcolato",
             "meals": [m.__dict__ for m in d.meals], "avoid": d.avoid,
@@ -3958,8 +3985,12 @@ def api_diet_weekly(goal_type: str = Query("maintain"),
     from profile_manager import ProfileManager
     pm = ProfileManager.get()
     a = pm._athlete or {}
-    bw = float(a.get("weight") or 72.0)
-    return build_weekly_diet(goal_type, bw, custom_calories=custom_calories)
+    bw = float(a.get("weight_kg") or 72.0)
+    age = int(a.get("age") or 30)
+    sex = str(a.get("sex") or "m")
+    height = float(a.get("height_cm") or 178.0)
+    return build_weekly_diet(goal_type, bw, custom_calories=custom_calories,
+                             height_cm=height, age=age, sex=sex)
 
 
 @app.get("/api/export-plan-html")
@@ -12804,6 +12835,9 @@ def api_profile_put(request: Request):
             updates[k] = v
     if "sex" in updates and str(updates["sex"]).lower() not in SETUP_ENUM["sex"]:
         raise HTTPException(400, "sex must be m/f/other")
+    # Mappa campi: l'endpoint usa 'weight', save_athlete si aspetta 'weight_kg'
+    if "weight" in updates:
+        updates["weight_kg"] = updates.pop("weight")
     if not updates:
         return {"ok": True, "profile": dict(pm._athlete or {})}
     try:

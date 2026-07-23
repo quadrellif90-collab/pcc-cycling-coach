@@ -1,13 +1,12 @@
 # Copyright 2024-2026 PPC — Programming Cycling Coach
 # Licensed under the Apache License, Version 2.0 (LICENSE / NOTICE).
-"""PPC — Piano alimentare settimanale personalizzato (creatore di diete).
+"""PPC — Piano alimentare settimanale (vista presentazionale di nutrition.py).
 
-Genera un piano pasti giornaliero/settimanale con:
-  - scelte specifiche di ALIMENTI (cosa mangiare / cosa evitare) per pasto,
-  - timing (carb davanti all'allenamento, proteine post-allenamento),
-  - periodizzazione per fase (cut / maintain / gain) e per tipo di giorno
-    (gara / carico / recupero),
-  - calorie override opzionale (se il nutrizionista fissa un target).
+QUESTO MODULO NON CALCOLA MACRO. Legge `day_macros()` da nutrition.py (l'unico
+motore: TDEE Mifflin + obiettivo + compensazione carico) e SCOMPONE quei macro
+nei pasti con timing/ alimenti evidence-based (Jeukendrup/UCI 2026, Burke 2018,
+Areta 2013, Phillips 2016). Così la card "Piano alimentare" e la card
+"Nutrizione completa" mostrano gli STESSI numeri.
 
 Fonti (2024-2026):
   - Jeukendrup & UCI Sports Nutrition Project 2026 (fuel timing, race fueling)
@@ -15,7 +14,6 @@ Fonti (2024-2026):
   - Morton 2018 (protein 1.6-2.2 g/kg)
   - Areta 2013 (protein timing: 20-25 g ogni 3h)
   - Phillips 2016 (leucine threshold per sintonizzazione proteica)
-  - Stote 2016 / Westerterp 2013 (meal frequency, satiety)
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -69,42 +67,36 @@ def _meal(name, foods, timing, carb, protein_g=0, fat=0, note=""):
 def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
                      goal_type: str = "maintain",
                      custom_calories: Optional[float] = None,
-                     training_time: str = "morning") -> DailyDiet:
+                     training_time: str = "morning",
+                     height_cm: float = 178.0, age: int = 30, sex: str = "m",
+                     activity: float = 1.7,
+                     planned_tss_today: float = 0.0, prev_day_tss: float = 0.0) -> DailyDiet:
     """Genera il piano pasti per UN giorno.
 
-    day_type: rest / easy / moderate / hard / race
-    custom_calories: se impostato (es. da nutrizionista), sovrascrive il target.
-    training_time: morning / afternoon / evening (per timing carb).
+    I macro TOTALI del giorno vengono da `day_macros()` (nutrition.py, motore
+    unico). Qui vengono solo SCOMPOSTI nei pasti con timing/ alimenti.
+    custom_calories: se impostato (es. da nutrizionista), sovrascrive il target
+    e ricalcola i macro mantenendo la ripartizione dell'obiettivo.
     """
-    # Calorie: override nutrizionista, altrimenti TDEE stimato
+    from nutrition import day_macros
+
+    dm = day_macros(day_type, goal_type, bodyweight_kg, height_cm, age, sex,
+                    activity, planned_tss_today, prev_day_tss)
+    target_kcal = dm["target_kcal"]
+    target_carb = dm["carb_g"]
+    target_prot = dm["protein_g"]
+    target_fat = dm["fat_g"]
+
+    # Se il nutrizionista fissa calorie, rispetta la ripartizione % dell'obiettivo
     if custom_calories is not None and custom_calories > 0:
+        tot = target_kcal if target_kcal > 0 else 1
+        p_carb = target_carb * 4 / tot
+        p_prot = target_prot * 4 / tot
+        p_fat = target_fat * 9 / tot
         target_kcal = float(custom_calories)
-        kcal_source = "impostato dal nutrizionista"
-    else:
-        # TDEE approssimativo (Mifflin-St Jeor medio × fattore)
-        target_kcal = 30 * bodyweight_kg * 1.7  # ~30 kcal/kg per atleta attivo
-        kcal_source = "calcolato (30 kcal/kg × fattore attività)"
-
-    # Macro ratio per obiettivo (Burke 2018 / ISSN)
-    if goal_type == "cut":
-        carb_r, prot_r, fat_r = 0.45, 0.30, 0.25
-    elif goal_type == "gain":
-        carb_r, prot_r, fat_r = 0.45, 0.25, 0.30
-    else:
-        carb_r, prot_r, fat_r = 0.50, 0.20, 0.30
-
-    # Adatta macro al tipo di giorno (fuel for the work required)
-    if day_type == "race":
-        carb_r = 0.65  # alta gara
-    elif day_type == "hard":
-        carb_r = 0.55
-    elif day_type == "rest":
-        carb_r = 0.40
-        fat_r = 0.35
-
-    target_carb = round(target_kcal * carb_r / 4)
-    target_prot = round(target_kcal * prot_r / 4)
-    target_fat = round(target_kcal * fat_r / 9)
+        target_carb = round(target_kcal * p_carb / 4)
+        target_prot = round(target_kcal * p_prot / 4)
+        target_fat = round(target_kcal * p_fat / 9)
 
     # ── Pasti (Areta 2013: proteine ogni 3h, 20-25g per pasto) ──────────────
     meals = []
@@ -159,7 +151,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
             note="Carb semplice + basso proteine: rapido, niente gonfiore.",
         ))
     # DURANTE allenamento (solo hard/race)
-    if day_type in ("hard", "race"):
+    if day_type in ("hard", "race", "high_intensity", "vo2max", "threshold"):
         meals.append(_meal(
             "Durante allenamento",
             ["bicchiere acqua", "carboidrati 60-90 g/h (glucosio-fruttosio)"],
@@ -197,17 +189,44 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
             carb=round(target_carb * 0.05),
             protein_g=round(target_prot * 0.10),
             fat=round(target_fat * 0.10),
-            note="Proteine lente per sinciliazione notturna.",
+            note="Proteine lente per sincetizzazione notturna.",
         ))
 
-    # Calcola totali e normalizza (i pasti possono non sommare esattamente)
+    # Calcola totali (somma pasti; può discostarsi di <2% per arrotondamenti)
+    tc = sum(m.carb_g for m in meals)
+    tp = sum(m.protein_g for m in meals)
+    tf = sum(m.fat_g for m in meals)
+    # NORMALIZZA al totale esatto di day_macros (motore unico) così i pasti
+    # sommano ESATTAMENTE al target — nessun numero divergente.
+    if tc > 0:
+        kc = target_carb / tc
+        for m in meals:
+            m.carb_g = round(m.carb_g * kc)
+    if tp > 0:
+        kp = target_prot / tp
+        for m in meals:
+            m.protein_g = round(m.protein_g * kp)
+    if tf > 0:
+        kf = target_fat / tf
+        for m in meals:
+            m.fat_g = round(m.fat_g * kf)
+    tc = sum(m.carb_g for m in meals)
+    tp = sum(m.protein_g for m in meals)
+    tf = sum(m.fat_g for m in meals)
+    # Compensa il residuo di arrotondamento sull'ultimo pasto (così la somma
+    # è ESATTAMENTE il target, nessun numero divergente).
+    if meals:
+        last = meals[-1]
+        last.carb_g += target_carb - tc
+        last.protein_g += target_prot - tp
+        last.fat_g += target_fat - tf
     tc = sum(m.carb_g for m in meals)
     tp = sum(m.protein_g for m in meals)
     tf = sum(m.fat_g for m in meals)
     total_kcal = round(tc * 4 + tp * 4 + tf * 9)
 
     avoid = AVOID.get(goal_type, AVOID["maintain"])
-    if day_type == "race":
+    if day_type in ("race", "high_intensity"):
         avoid += ["alcol 24h pre-gara", "cibi nuovi in gara"]
 
     return DailyDiet(
@@ -222,29 +241,36 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
 
 
 def build_weekly_diet(goal_type: str = "maintain", bodyweight_kg: float = 72.0,
-                      custom_calories: Optional[float] = None) -> dict:
-    """Piano alimentare SETTIMANALE (7 giorni) con variazione pasti."""
+                      custom_calories: Optional[float] = None,
+                      height_cm: float = 178.0, age: int = 30, sex: str = "m",
+                      activity: float = 1.7) -> dict:
+    """Piano alimentare SETTIMANALE (7 giorni) con variazione pasti.
+
+    I macro totali settimanali derivano da day_macros (motore unico); la
+    variazione giornaliera riflette il tipo di giorno (recupero vs carico),
+    coerente con 'fuel for the work required'.
+    """
+    from nutrition import day_macros
     day_map = {
         "Lunedì": "easy", "Martedì": "moderate", "Mercoledì": "hard",
         "Giovedì": "easy", "Venerdì": "moderate", "Sabato": "hard",
         "Domenica": "rest",
     }
-    # Se custom_calories, applica a tutti i giorni; altrimenti varia leggermente
     days = []
     for name, dt in day_map.items():
-        if custom_calories is not None:
-            cal = custom_calories
-        else:
-            # variazione: giorni di recupero meno calorici, gara più
-            mult = {"rest": 0.85, "easy": 0.90, "moderate": 1.0,
-                    "hard": 1.10, "race": 1.20}
-            cal = None  # lascia che build_daily_diet calcoli da 30 kcal/kg
-        d = build_daily_diet(dt, bodyweight_kg, goal_type, custom_calories=cal)
+        # variazione carico: easy/rest meno carb del giorno, hard di più
+        planned = 250 if dt == "hard" else (120 if dt == "moderate" else 40)
+        prev = 250 if dt in ("hard", "moderate") else 40
+        d = build_daily_diet(dt, bodyweight_kg, goal_type, custom_calories,
+                             height_cm=height_cm, age=age, sex=sex,
+                             activity=activity,
+                             planned_tss_today=planned, prev_day_tss=prev)
         days.append({"day": name, "day_type": dt, "diet": d})
     return {
         "goal_type": goal_type,
         "bodyweight_kg": bodyweight_kg,
-        "calorie_source": "impostato dal nutrizionista" if custom_calories else "calcolato (30 kcal/kg × fattore)",
+        "calorie_source": ("impostato dal nutrizionista" if custom_calories
+                           else "motore unico PPC (Mifflin + obiettivo + carico)"),
         "days": [{"day": d["day"], "day_type": d["day_type"],
                   "meals": [m.__dict__ for m in d["diet"].meals],
                   "avoid": d["diet"].avoid,
@@ -257,6 +283,7 @@ def build_weekly_diet(goal_type: str = "maintain", bodyweight_kg: float = 72.0,
 
 if __name__ == "__main__":
     import json
-    d = build_daily_diet("hard", 70, "maintain")
+    d = build_daily_diet("hard", 75, "cut", height_cm=180, age=35, sex="m")
     print(json.dumps({"meals": [m.__dict__ for m in d.meals],
-                      "avoid": d.avoid, "total_kcal": d.total_kcal}, indent=2, ensure_ascii=False))
+                      "avoid": d.avoid, "total_kcal": d.total_kcal},
+                     indent=2, ensure_ascii=False))
