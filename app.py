@@ -3726,6 +3726,17 @@ def api_tid_weekly(weeks: int = Query(8)):
     return {"weeks": out}
 
 
+@app.get("/api/plan-block-model")
+def api_plan_block_model(total_weeks: int = Query(None)):
+    """BETA Fase 4.5 — suggerisce il modello di distribuzione per blocco.
+
+    Basato sulla meta-analisi Sports Med 2024: POL > THR/pyramidal per VO2peak
+    solo <12 settimane; oltre, pyramidal è equivalente e più sostenibile.
+    """
+    from training_planner import recommend_block_model
+    return {"total_weeks": total_weeks, "recommended_model": recommend_block_model(total_weeks)}
+
+
 @app.get("/api/readiness")
 def api_readiness(subjective: float = Query(None)):
     training = cached("training", get_today_metrics)

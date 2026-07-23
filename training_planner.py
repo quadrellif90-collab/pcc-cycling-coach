@@ -1769,6 +1769,24 @@ def get_active_distribution() -> str:
     return _ACTIVE_DISTRIBUTION
 
 
+# BETA FASE 4.5 — blocco POL → THR/Pyramidal guidato da evidenza.
+# Meta-analisi Sports Med 2024 (Silva Oliveira et al., 17 studi, n=437):
+# POL supera THR/pyramidal per VO2peak SOLO in interventi <12 settimane e in
+# atleti highly-trained; oltre 12 settimane gli effetti su VO2peak/TT/TTE/VT2
+# sono equivalenti. Quindi un piano lungo (>12 sett.) dovrebbe usare POL nel
+# build e poi passare a pyramidal/threshold in mantenimento, non POL perpetuo.
+def recommend_block_model(total_weeks: int) -> str:
+    """Ritorna il modello di distribuzione consigliato per il blocco attuale.
+
+    - piani <= 12 settimane: 'polarized' (POL documentato superiore a breve termine)
+    - piani > 12 settimane: 'pyramidal' in mantenimento (equivalente a POL a
+      lungo termine per capacità aerobica, meno monotono, più sostenibile)
+    """
+    if total_weeks is None or total_weeks <= 12:
+        return "polarized"
+    return "pyramidal"
+
+
 def _active_budget_table() -> "dict[str, IntensityBudget]":
     if _ACTIVE_DISTRIBUTION == "custom" and _ACTIVE_CUSTOM_BUDGETS:
         return _ACTIVE_CUSTOM_BUDGETS
