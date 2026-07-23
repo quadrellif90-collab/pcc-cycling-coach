@@ -3826,6 +3826,88 @@ def api_export_plan_html(athlete: str = Query("Atleta"), goal: str = Query(""),
     return HTMLResponse(html)
 
 
+@app.get("/api/my-calendar")
+def api_my_calendar():
+    """BETA Fase 7e (DIY) — il mio calendario: aderenza personale pianificato
+    vs eseguito. Legge il piano di Domestique (tss_target) e le attività reali
+    del profilo self da intervals.icu (se le credenziali ci sono)."""
+    from my_progress import compute_my_adherence, fetch_actual_tss_by_week, load_plan_weeks
+    from profile_manager import ProfileManager
+    plan_weeks = load_plan_weeks()
+    if not plan_weeks:
+        return {"rows": [], "note": "Nessun piano generato ancora."}
+    # range date dal piano
+    starts = [w["start"] for w in plan_weeks if w.get("start")]
+    oldest = min(starts) if starts else _dt.date.today().isoformat()
+    newest = (_dt.date.fromisoformat(max(starts)) + _dt.timedelta(days=7)).isoformat() if starts else _dt.date.today().isoformat()
+    actual = {}
+    note = ""
+    try:
+        pm = ProfileManager.get()
+        key = getattr(pm, "icu_api_key", None) or getattr(pm, "_env", {}).get("ICU_API_KEY") if hasattr(pm, "icu_api_key") else None
+        aid = getattr(pm, "icu_athlete_id", None) if hasattr(pm, "icu_athlete_id") else None
+        # fallback su config
+        if not key:
+            try:
+                from config import ICU_API_KEY, ICU_ATHLETE_ID
+                key, aid = ICU_API_KEY, ICU_ATHLETE_ID
+            except Exception:
+                key, aid = None, None
+        if key and aid:
+            actual = fetch_actual_tss_by_week(key, aid, oldest, newest)
+        else:
+            note = "Credenziali intervals.icu non configurate: mostro solo il piano."
+    except Exception as e:
+        note = f"Lettura attività ICU non disponibile: {e}"
+    rows = compute_my_adherence(plan_weeks, actual)
+    return {"rows": rows, "note": note, "oldest": oldest, "newest": newest}
+
+
+@app.post("/api/my-push-plan")
+def api_my_push_plan():
+    """BETA Fase 7c/7e (DIY) — pusha il piano integrato sul proprio calendario
+    intervals.icu (self). Invia un EVENTO per ogni settimana del piano con
+    ciclismo + forza + mobilità + nutrizione (riuso plan_export)."""
+    from my_progress import load_plan_weeks
+    from profile_manager import ProfileManager
+    from plan_export import build_plan_html
+    import httpx
+    plan_weeks = load_plan_weeks()
+    if not plan_weeks:
+        return {"error": "Nessun piano da pushare", "pushed": 0, "errors": []}
+    pm = ProfileManager.get()
+    key = getattr(pm, "icu_api_key", None) if hasattr(pm, "icu_api_key") else None
+    aid = getattr(pm, "icu_athlete_id", None) if hasattr(pm, "icu_athlete_id") else None
+    if not key:
+        try:
+            from config import ICU_API_KEY, ICU_ATHLETE_ID
+            key, aid = ICU_API_KEY, ICU_ATHLETE_ID
+        except Exception:
+            key, aid = None, None
+    if not key or not aid:
+        return {"error": "Credenziali intervals.icu non configurate", "pushed": 0, "errors": []}
+    pushed = 0
+    errors = []
+    for wk in plan_weeks:
+        ev_date = wk.get("start")
+        if not ev_date:
+            continue
+        title = f"Sett. piano — {wk.get('phase','ciclismo')}"
+        desc = f"TSS target {round(wk.get('tss_target',0))} · piano Domestique (ciclismo+forza+mobilità+nutrizione)"
+        payload = {"date": ev_date, "title": title, "description": desc, "type": "workout"}
+        try:
+            r = httpx.post(
+                f"https://intervals.icu/api/v1/athlete/{aid}/events",
+                auth=("API_KEY", key), json=payload, timeout=15)
+            if r.status_code in (200, 201):
+                pushed += 1
+            else:
+                errors.append(f"{ev_date}: HTTP {r.status_code}")
+        except Exception as e:
+            errors.append(f"{ev_date}: {e}")
+    return {"pushed": pushed, "errors": errors, "athlete": aid}
+
+
 @app.get("/api/readiness")
 def api_readiness(subjective: float = Query(None)):
     training = cached("training", get_today_metrics)

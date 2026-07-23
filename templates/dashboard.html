@@ -1658,6 +1658,16 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="nutrition-plan" style="font-size:12px;color:var(--text2);">Caricamento…</div>
   </div>
 
+  <!-- BETA Fase 7e (DIY): Il mio calendario / aderenza personale -->
+  <div class="card" style="margin-top:12px;" id="my-cal-card">
+    <h3 data-tip="Il tuo calendario: per ogni settimana del piano mostra TSS pianificato vs eseguito (da intervals.icu) e l'aderenza %. 'Hai eseguito quanto richiesto' = barre verdi su blu.">Il mio calendario</h3>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadMyCalendar()">Aggiorna</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="myPushPlan()">⤴ Push piano su intervals.icu</button>
+    </div>
+    <div id="my-calendar" style="font-size:11px;color:var(--text2);">Genera un piano per vedere l'aderenza…</div>
+  </div>
+
   <div class="grid g3" style="margin-top:12px;">
     <div class="card">
       <h3>Sleep &amp; HRV</h3>
@@ -7131,6 +7141,7 @@ async function loadTidHeatmap() {
   } catch (e) { /* non bloccare il resto della UI */ }
   loadDailyAdapt();
   loadNutrition();
+  loadMyCalendar();
 }
 
 // BETA Fase 7b — Nutrizione & Integrazione (chiamato da loadDailyAdapt)
@@ -7149,6 +7160,44 @@ async function loadNutrition() {
       <div style="font-size:10px;color:var(--text3);margin-top:2px;">${esc(p.note || '')}</div>
       <div style="margin-top:6px;">Supplement (Gruppo A):</div><div>${sup}</div>`;
   } catch (e) { /* non bloccare */ }
+}
+
+// BETA Fase 7e (DIY) — Il mio calendario / aderenza + push piano
+async function loadMyCalendar() {
+  const host = document.getElementById('my-calendar');
+  if (!host) return;
+  try {
+    const j = await (await fetch('/api/my-calendar')).json();
+    const rows = j.rows || [];
+    if (!rows.length) { host.textContent = j.note || 'Genera un piano per vedere l’aderenza…'; return; }
+    const maxTss = Math.max(...rows.map(r => Math.max(r.planned_tss || 1, r.actual_tss || 1)));
+    const flagColor = {green:'#2d9d5f', amber:'#d99100', red:'#d9534f'};
+    const body = rows.map(r => {
+      const pW = Math.round(100 * (r.planned_tss || 0) / maxTss);
+      const aW = Math.round(100 * (r.actual_tss || 0) / maxTss);
+      return `<div style="margin:6px 0;">
+        <div style="font-weight:600;">${esc(r.week_label)} <span style="color:${flagColor[r.flag]||'var(--text2)'};">● ${r.flag}</span>
+          <span style="color:var(--text3);font-size:10px;"> · ${esc(r.phase)} · aderenza ${Math.round(r.tss_ratio*100)}%</span></div>
+        <div style="background:var(--surface2);border-radius:4px;height:10px;margin:2px 0;position:relative;">
+          <div style="background:#3b82f6;height:10px;border-radius:4px;width:${pW}%;opacity:.5;"></div>
+          <div style="background:#2d9d5f;height:10px;border-radius:4px;width:${aW}%;position:relative;top:-10px;"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text3);">Pianif ${Math.round(r.planned_tss)} TSS · Eseguito ${Math.round(r.actual_tss)} TSS (Δ${r.delta_tss>=0?'+':''}${r.delta_tss})</div>
+      </div>`;
+    }).join('');
+    host.innerHTML = `<div style="font-size:10px;color:var(--text3);margin-bottom:4px;">■ pianificato &nbsp; ■ eseguito</div>` + body + (j.note? `<div style="font-size:10px;color:var(--text3);margin-top:6px;">${esc(j.note)}</div>`:'');
+  } catch (e) { host.textContent = 'Calendario non disponibile'; }
+}
+async function myPushPlan() {
+  const host = document.getElementById('my-calendar');
+  if (!host) return;
+  host.textContent = 'Push in corso…';
+  try {
+    const res = await fetch('/api/my-push-plan', {method:'POST'});
+    const j = await res.json();
+    if (j.error) { host.textContent = 'Errore: ' + j.error; return; }
+    host.textContent = `Pushati ${j.pushed} eventi sul tuo calendario intervals.icu` + (j.errors&&j.errors.length? ` (errori: ${j.errors.join(', ')})`:'');
+  } catch (e) { host.textContent = 'Push fallito: ' + e.message; }
 }
 
 // BETA Fase 7a — Forza & Mobilità (chiamato dal bottone "Genera piano")
