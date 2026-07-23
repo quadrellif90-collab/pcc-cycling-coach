@@ -75,15 +75,21 @@ class StrengthSession:
     rest_s: int = 180
     note: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self, one_rm_kg: float = 0.0) -> dict:
         ex = STRENGTH_EXERCISES.get(self.exercise, {})
-        return {
+        d = {
             "phase": self.phase,
             "exercise": ex.get("name", self.exercise),
             "group": ex.get("group", ""),
             "sets": self.sets, "reps": self.reps, "pct_1rm": self.pct_1rm,
             "rest_s": self.rest_s, "note": ex.get("note", "") or self.note,
         }
+        # Carico assoluto calcolato sull'1RM dell'atleta (kg), se noto.
+        if one_rm_kg and one_rm_kg > 0:
+            load = round(one_rm_kg * self.pct_1rm / 100.0, 1)
+            d["load_kg"] = load
+            d["one_rm_kg"] = one_rm_kg
+        return d
 
 
 @dataclass
@@ -103,10 +109,13 @@ class MobilitySession:
         }
 
 
-def build_strength_plan(phase: str = "base", weeks: int = 4) -> list[dict]:
+def build_strength_plan(phase: str = "base", weeks: int = 4,
+                        one_rm_kg: float = 0.0) -> list[dict]:
     """Genera il piano di forza per N settimane in una fase.
 
-    Ritorna lista di dict (una per settimana) con le sedute della settimana.
+    one_rm_kg: 1RM dell'atleta (Squat) per calcolare i carichi assoluti in kg
+    (Llanos-Lagos 2025 usa %1RM; il kg reale serve all'atleta in palestra).
+    Se 0, ritorna solo %1RM.
     """
     proto = STRENGTH_PROTOCOLS.get(phase, STRENGTH_PROTOCOLS["base"])
     out = []
@@ -121,7 +130,7 @@ def build_strength_plan(phase: str = "base", weeks: int = 4) -> list[dict]:
             sessions.append(StrengthSession(
                 phase=phase, exercise=ex, sets=proto["sets"],
                 reps=proto["reps"], pct_1rm=int(pct),
-            ).to_dict())
+            ).to_dict(one_rm_kg=one_rm_kg))
         out.append({"week": w + 1, "sessions": sessions,
                     "sessions_per_week": proto["sessions_per_week"]})
     return out

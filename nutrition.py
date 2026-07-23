@@ -112,6 +112,147 @@ def supplement_list() -> list[dict]:
     return [{"key": k, **v} for k, v in SUPPLEMENTS.items()]
 
 
+def supplement_doses(bodyweight_kg: float) -> list[dict]:
+    """DOSI ASSOLUTE (mg/g) calcolate sul peso dell'atleta.
+
+    Ogni supplemento ha un range per-kg (es. caffeina 3-6 mg/kg); qui si
+    moltiplica per il peso reale e si ritorna il range assoluto, così l'atleta
+    vede '270-540 mg' invece di solo '3-6 mg/kg'. Fonti: PMC12239112 (review
+    Gruppo A), Jeukendrup/UCI 2026.
+    """
+    out = []
+    for k, v in SUPPLEMENTS.items():
+        proto = v.get("protocol", "")
+        mg_per_kg = None
+        g_per_kg = None
+        # estrae il range mg/kg o g/kg dal protocollo testuale
+        import re
+        m = re.search(r"(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*mg/kg", proto)
+        if m:
+            mg_per_kg = (float(m.group(1)), float(m.group(2)))
+        g = re.search(r"(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*g/kg", proto)
+        if g:
+            g_per_kg = (float(g.group(1)), float(g.group(2)))
+        entry = {"key": k, "name": v["name"], "evidence": v["evidence"]}
+        if mg_per_kg:
+            lo = round(mg_per_kg[0] * bodyweight_kg)
+            hi = round(mg_per_kg[1] * bodyweight_kg)
+            entry["dose"] = f"{lo}-{hi} mg"
+            entry["dose_mg_range"] = [lo, hi]
+        elif g_per_kg:
+            lo = round(g_per_kg[0] * bodyweight_kg, 1)
+            hi = round(g_per_kg[1] * bodyweight_kg, 1)
+            entry["dose"] = f"{lo}-{hi} g"
+            entry["dose_g_range"] = [lo, hi]
+        else:
+            entry["dose"] = proto  # protocollo non per-kg (es. 4-6 g/giorno cronico)
+        entry["protocol"] = proto
+        entry["use"] = v.get("use", "")
+        entry["caution"] = v.get("caution", "")
+        out.append(entry)
+    return out
+
+
+def _mifflin_tdee(weight_kg: float, height_cm: float, age: int, sex: str,
+                 activity: float = 1.5) -> float:
+    """TDEE via Mifflin-St Jeor (1995) × fattore attività.
+
+    activity: 1.2 sedentario … 1.9 molto attivo. Per ciclisti in preparazione
+    usare 1.6-1.9. Fonte: Mifflin & St Jeor 1995 (più accurato di Harris-Benedict).
+    """
+    s = 5 if sex.lower().startswith("m") else -161
+    bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + s
+    return bmr * activity
+
+
+def full_nutrition_plan(goal_type: str = "maintain",
+                        bodyweight_kg: float = 72.0, height_cm: float = 178.0,
+                        age: int = 30, sex: str = "m",
+                        activity: float = 1.7,
+                        planned_tss_today: float = 0.0,
+                        prev_day_tss: float = 0.0) -> dict:
+    """Piano nutrizionale COMPLETO e individualizzato.
+
+    Calcola: TDEE, obiettivo (deficit/mantenimento/surplus), macro su base
+    scientifica, e COMPENSAZIONE sul carico di oggi + del giorno prima
+    ("fuel for the work required", GSSI SSE 231 / Burke 2018).
+
+    Obiettivi:
+      - 'cut'     dimagrimento: deficit 300-500 kcal (Mountjoy 2018 IOC; Burke 2018
+                  raccomanda NON <30 kcal/kg per evitare perdita di FTP/massa).
+      - 'maintain' mantenimento / forma: TDEE + carb matching al carico.
+      - 'gain'    aumento massa-lean / ipertrofia: surplus +300-500 kcal.
+
+    Compensazione: se il TSS di oggi o di ieri è alto, i carboidrati salgono
+    verso 8-12 g/kg (lavoro richiesto); se basso, scendono a 3-5 g/kg.
+    """
+    tdee = _mifflin_tdee(bodyweight_kg, height_cm, age, sex, activity)
+    # bilancio calorico per obiettivo
+    if goal_type == "cut":
+        target_kcal = tdee - 400  # deficit moderato (Mountjoy 2018: 300-500)
+        note_goal = ("Deficit ~400 kcal: dimagrimento preservando FTP/massa "
+                     "(IOC 2018: non scendere <30 kcal/kg).")
+    elif goal_type == "gain":
+        target_kcal = tdee + 400  # surplus ipertrofia
+        note_goal = "Surplus ~400 kcal: supporto ipertrofia/potenza (Burd 2009)."
+    else:
+        target_kcal = tdee
+        note_goal = "Mantenimento / forma: TDEE coperto, carb matching al carico."
+    target_kcal = round(target_kcal)
+
+    # Proteine: 1.6-1.8 g/kg (Morton 2018 meta; Phillips 2016) — 1.8 se cut/gain
+    protein_g_per_kg = 1.8 if goal_type in ("cut", "gain") else 1.6
+    protein_g = round(protein_g_per_kg * bodyweight_kg)
+    protein_kcal = protein_g * 4
+
+    # Grassi: 25-30% delle kcal (ISSNA 2018)
+    fat_kcal = target_kcal * 0.27
+    fat_g = round(fat_kcal / 9)
+
+    # Carboidrati = resto delle kcal (soggetti a compensazione carico)
+    carb_kcal = target_kcal - protein_kcal - fat_kcal
+    carb_g_base = max(round(carb_kcal / 4), 0)
+
+    # COMPENSAZIONE sul carico: mappa TSS -> g/kg carb (GSSI SSE 231)
+    load = planned_tss_today + prev_day_tss * 0.5  # ieri pesa metà
+    if load >= 350:
+        carb_g_per_kg = 11.0   # giorno di gara / carico alto
+    elif load >= 200:
+        carb_g_per_kg = 8.0
+    elif load >= 80:
+        carb_g_per_kg = 6.0
+    else:
+        carb_g_per_kg = 4.0    # recupero / facile
+    carb_g_adjusted = round(carb_g_per_kg * bodyweight_kg)
+    # prendi il max tra base da kcal e da carico (fuel for the work required)
+    carb_g = max(carb_g_base, carb_g_adjusted)
+    carb_kcal_adj = carb_g * 4
+    # ricalcola calorie totali coerenti coi carboidrati aggiustati
+    total_kcal = protein_kcal + fat_kcal + carb_kcal_adj
+
+    return {
+        "goal_type": goal_type,
+        "note_goal": note_goal,
+        "tdee_kcal": round(tdee),
+        "target_kcal": round(total_kcal),
+        "macros": {
+            "protein_g": protein_g, "protein_g_per_kg": protein_g_per_kg,
+            "fat_g": fat_g,
+            "carb_g": carb_g, "carb_g_per_kg": round(carb_g_per_kg, 1),
+            "carb_kcal": carb_kcal_adj,
+        },
+        "load_compensation": {
+            "planned_tss_today": planned_tss_today,
+            "prev_day_tss": prev_day_tss,
+            "load_index": round(load),
+            "carb_g_per_kg": round(carb_g_per_kg, 1),
+            "basis": "fuel for the work required (GSSI SSE 231 / Burke 2018)",
+        },
+        "sources": ["Mountjoy 2018 IOC", "Burke 2018 ISSN", "GSSI SSE 231",
+                    "Jeukendrup/UCI 2026", "Morton 2018 protein", "Mifflin 1995"],
+    }
+
+
 def race_fueling(duration_h: float, bodyweight_kg: float = 72.0) -> dict:
     """Piano di gara: carb durante (g/h) + caffeina pre, basati su Jeukendrup 2026.
 

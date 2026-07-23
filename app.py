@@ -907,8 +907,14 @@ SETUP_LIMITS: dict[str, list[float]] = {
     "max_hr": [140, 220],
     "hours_per_week": [1, 40],
     "age": [10, 100],
+    "height_cm": [120, 220],
+    "one_rm_kg": [20, 400],
     "cp": [100, 500],
     "wprime_j": [5000, 40000],
+}
+# Campi testuali / enum non numerici
+SETUP_ENUM = {
+    "sex": ("m", "f", "other"),
 }
 
 
@@ -1273,10 +1279,10 @@ def setup_save(body: dict):
         # fields present in the payload are validated/written (AC5e: wizards
         # omit untouched fields; omission is the no-write mechanism).
         profile = {}
-        for key in ("weight", "ftp", "lthr", "max_hr"):
+        for key in ("weight", "ftp", "lthr", "max_hr", "age", "height_cm", "one_rm_kg"):
             if key in body:
                 profile[key] = body[key]
-        for key in ("weight", "ftp", "lthr", "max_hr"):
+        for key in ("weight", "ftp", "lthr", "max_hr", "age", "height_cm", "one_rm_kg"):
             if key in profile:
                 lo, hi = SETUP_LIMITS[key]
                 try:
@@ -1286,6 +1292,11 @@ def setup_save(body: dict):
                 if not (lo <= v <= hi):
                     raise HTTPException(400, f"{key}={v} out of range [{lo},{hi}]")
                 profile[key] = v
+        # Campi enum (sex)
+        if "sex" in body:
+            if str(body["sex"]).lower() not in SETUP_ENUM["sex"]:
+                raise HTTPException(400, "sex must be m/f/other")
+            profile["sex"] = str(body["sex"]).lower()
         if body.get("weight"):
             profile["lbm"] = round(float(body["weight"]) * 0.80, 1)
 
@@ -12570,6 +12581,81 @@ def api_event_projection():
         _log.debug(f"projection weekly_history skipped: {_e}")
         projection["weekly_history"] = []
     return projection
+
+
+@app.get("/api/profile")
+def api_profile_get():
+    """Scheda Profilo Atleta — legge i dati dell'atleta attivo (peso, età,
+    sesso, altezza, FTP, 1RM, HRmax). Usato dalla UI 'Profilo' aggiornabile."""
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    a = dict(pm._athlete or {})
+    for k in ("weight", "ftp", "lthr", "max_hr", "age", "height_cm",
+              "one_rm_kg", "sex"):
+        a.setdefault(k, None)
+    return {"profile": a, "icu_connected": bool(pm.icu_api_key)}
+
+
+@app.post("/api/profile")
+def api_profile_put(request: Request):
+    """Aggiorna il profilo atleta e (se connesso a ICU) sincronizza i campi
+    corrispondenti su intervals.icu (invio/ricezione bidirezionale)."""
+    from profile_manager import ProfileManager
+    import httpx
+    body = {}
+    try:
+        body = json.loads(request.body().read().decode("utf-8") or "{}")
+    except Exception:
+        body = {}
+    pm = ProfileManager.get()
+    allowed = ("weight", "ftp", "lthr", "max_hr", "age", "height_cm",
+               "one_rm_kg", "sex")
+    updates = {k: body[k] for k in allowed if k in body}
+    for k in ("weight", "ftp", "lthr", "max_hr", "age", "height_cm", "one_rm_kg"):
+        if k in updates:
+            lo, hi = SETUP_LIMITS.get(k, [0, 1e9])
+            try:
+                v = float(updates[k])
+            except (TypeError, ValueError):
+                raise HTTPException(400, f"invalid {k}")
+            if not (lo <= v <= hi):
+                raise HTTPException(400, f"{k}={v} out of range [{lo},{hi}]")
+            updates[k] = v
+    if "sex" in updates and str(updates["sex"]).lower() not in SETUP_ENUM["sex"]:
+        raise HTTPException(400, "sex must be m/f/other")
+    if not updates:
+        return {"ok": True, "profile": dict(pm._athlete or {})}
+    try:
+        pm.save_athlete(updates)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    icu_msg = None
+    if pm.icu_api_key:
+        try:
+            api_key = pm.icu_api_key
+            aid = pm.icu_athlete_id or "0"
+            hdr = {"Authorization": f"Bearer {api_key}"}
+            cur = httpx.get(f"https://intervals.icu/api/v1/athlete/{aid}",
+                            headers=hdr, timeout=15)
+            icu_data = cur.json() if cur.status_code == 200 else {}
+            send = {}
+            if "weight" in updates:
+                send["BodyWeightKg"] = updates["weight"]
+            if "ftp" in updates:
+                send["FTP"] = updates["ftp"]
+            if "max_hr" in updates:
+                send["MaxHeartRate"] = updates["max_hr"]
+            if send:
+                httpx.put(f"https://intervals.icu/api/v1/athlete/{aid}",
+                          headers=hdr, json=send, timeout=15)
+            if icu_data.get("BodyWeightKg") and not pm._athlete.get("weight"):
+                pm.save_athlete({"weight": float(icu_data["BodyWeightKg"])})
+            icu_msg = "sincronizzato con intervals.icu"
+        except Exception as e:
+            icu_msg = f"salvato localmente; sync ICU non riuscita: {type(e).__name__}"
+    clear_cache()
+    return {"ok": True, "profile": dict(pm._athlete or {}),
+            "icu_sync": icu_msg}
 
 
 @app.post("/api/plan/generate")
