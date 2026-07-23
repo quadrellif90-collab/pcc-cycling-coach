@@ -3694,6 +3694,38 @@ def _local_sleep_metrics(days: int = 14) -> dict:
     return compute_sleep_metrics_from_wellness(list(reversed(records)))
 
 
+@app.get("/api/tid-weekly")
+def api_tid_weekly(weeks: int = Query(8)):
+    """BETA — intensity-distribution (TID) heatmap data.
+
+    Returns the actual polarized split (Z1+Z2 / Z3 / Z4+) for each of the
+    last `weeks` rolling 7-day windows, so the dashboard can draw a weekly
+    POL heatmap. Uses the existing _polarized_actual_from_rides() over
+    fetch_activities() — no new data source, pure presentation of what the
+    planner already computes per-ride.
+    """
+    from datetime import timedelta
+    try:
+        rides = fetch_activities(days=weeks * 7 + 7)
+    except Exception:
+        rides = []
+    out = []
+    today = date.today()
+    for w in range(weeks - 1, -1, -1):
+        win_end = today - timedelta(weeks=w)
+        pol = _polarized_actual_from_rides(rides, win_end, last_n_days=7)
+        z1z2 = pol.get("z1z2_pct") or pol.get("z1_z2_pct") or 0
+        z3 = pol.get("z3_pct") or 0
+        z4 = pol.get("z4plus_pct") or pol.get("z4_pct") or 0
+        out.append({
+            "week_start": (win_end - timedelta(days=win_end.weekday())).isoformat(),
+            "z1z2_pct": round(z1z2, 1),
+            "z3_pct": round(z3, 1),
+            "z4plus_pct": round(z4, 1),
+        })
+    return {"weeks": out}
+
+
 @app.get("/api/readiness")
 def api_readiness(subjective: float = Query(None)):
     training = cached("training", get_today_metrics)

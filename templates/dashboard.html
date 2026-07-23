@@ -1619,6 +1619,13 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
   </div>
 
+  <!-- BETA: heatmap TID settimanale (POL 80/20) -->
+  <div class="card" style="margin-top:12px;" id="tid-heatmap-card">
+    <h3 data-tip="Distribuzione intensità settimanale (TID). Ogni riga = una settimana di allenamento: verde = facile (Z1-Z2, ~80%), giallo = soglia moderata (Z3, da evitare), rosso = duro (Z4+). Obiettivo polarizzato 80/0/20 (Stöggl & Sperlich 2014).">Distribuzione intensità settimanale</h3>
+    <div id="tid-heatmap" style="display:flex;flex-direction:column;gap:4px;"></div>
+    <div style="font-size:10px;color:var(--text3);margin-top:6px;">Verde = facile (Z1-Z2) · Giallo = Z3 (soglia) · Rosso = duro (Z4+)</div>
+  </div>
+
   <div class="grid g3" style="margin-top:12px;">
     <div class="card">
       <h3>Sleep &amp; HRV</h3>
@@ -2362,8 +2369,8 @@ window.addEventListener('unhandledrejection', function(e) {
       </div>
       <div id="ps-kpi-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
-        <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Distribuzione intensità</h4><canvas id="ps-chart-intensity" height="160"></canvas><div style="font-size:10px;color:var(--text3);margin-top:4px;">Stöggl & Sperlich 2014 — POL 80/0/20 target</div></div>
-        <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Indice di polarizzazione</h4><canvas id="ps-chart-pol" height="160"></canvas><div style="font-size:10px;color:var(--text3);margin-top:4px;">Treff et al. 2019 — PI > 2.0 polarized</div></div>
+        <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;" data-tip="Distribuzione intensità (TID). Modello polarizzato 80/0/20: ~80% facile (Z1-Z2), 0% soglia moderata (Z3, 'trappola moderata'), ~20% duro (Z4-Z5). Stöggl & Sperlich 2014 (PMID 24550842); Seiler 2006.">Distribuzione intensità</h4><canvas id="ps-chart-intensity" height="160"></canvas><div style="font-size:10px;color:var(--text3);margin-top:4px;">Stöggl & Sperlich 2014 — POL 80/0/20 target</div></div>
+        <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;" data-tip="Indice di polarizzazione (Treff PI) = log10((Z1+Z2)/Z3 × Z5+/Z3). PI > 2.0 classifica come polarizzato. Treff et al. 2019 (Front Physiol).">Indice di polarizzazione</h4><canvas id="ps-chart-pol" height="160"></canvas><div style="font-size:10px;color:var(--text3);margin-top:4px;">Treff et al. 2019 — PI > 2.0 polarized</div></div>
         <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Adesione per fase</h4><canvas id="ps-chart-compliance" height="160"></canvas></div>
         <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Mean-max curve · start vs end (4w)</h4><canvas id="ps-chart-meanmax" height="160"></canvas></div>
         <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Hooper composite trend</h4><canvas id="ps-chart-hooper" height="160"></canvas><div style="font-size:10px;color:var(--text3);margin-top:4px;">Hooper & Mackinnon 1995</div></div>
@@ -6830,6 +6837,10 @@ async function loadHome() {
       // the "Readiness today" composite card; the gauge keeps 0-100.
       const gaugeScore = (d.score_0_100 != null) ? d.score_0_100 : r.score;
       $('gauge').innerHTML = gaugeArc(gaugeScore);
+      // BETA: semaforo readiness — bordo colore in base allo score (0-100)
+      const _gc = gaugeScore >= 70 ? '#22c55e' : gaugeScore >= 45 ? '#eab308' : '#ef4444';
+      $('gauge').style.border = '3px solid ' + _gc;
+      $('gauge').style.borderRadius = '50%';
       $('gauge-status').textContent = r.status || '';
 
       // v2.2.5 issue #3 R2 — this card is now the analytic (gauge + factor
@@ -6846,17 +6857,18 @@ async function loadHome() {
 
       // Training metrics — now with color coding
       const metrics = [
-        {v:t.ctl,l:'CTL',t:'ctl',k:null},
-        {v:t.atl,l:'ATL',t:'atl',k:null},
-        {v:t.tsb,l:'TSB',t:'tsb',k:'tsb'},
-        {v:t.acwr,l:'ACWR',t:'acwr',k:'acwr'},
-        {v:t.ramp_rate,l:'Ramp',t:'ramp',k:'ramp_rate'},
-        {v:t.monotony,l:'Monotony',t:'monotony',k:'monotony'}
+        {v:t.ctl,l:'CTL',t:'ctl',k:null,tip:'CTL (Chronic Training Load) — carico cumulato ~42 giorni. Friel / TrainingPeaks Performance Manager.'},
+        {v:t.atl,l:'ATL',t:'atl',k:null,tip:'ATL (Acute Training Load) — carico acuto ~7 giorni. Friel / TrainingPeaks.'},
+        {v:t.tsb,l:'TSB',t:'tsb',k:'tsb',tip:'TSB (Training Stress Balance) = CTL−ATL. Forma/affaticamento. Banister 1975 (IMP). Valori molto negativi = affaticamento.'},
+        {v:t.acwr,l:'ACWR',t:'acwr',k:'acwr',tip:'ACWR (Acute:Chronic Workload Ratio). Rischio infortuni se >1.5. Gabbett 2016.'},
+        {v:t.ramp_rate,l:'Ramp',t:'ramp',k:'ramp_rate',tip:'Ramp rate — velocità di crescita CTL/settimana. >8 sett/sett rischioso. Friel CTL-ramp.'},
+        {v:t.monotony,l:'Monotony',t:'monotony',k:'monotony',tip:'Monotony / strain (Foster 1998, PMID 9662690): varietà settimanale; monotonia >2.0 o strain >2500 = rischio sovrattenamento.'}
       ];
       $('training-metrics').innerHTML = metrics.map(m => {
         const col = m.k ? metricColor(m.k, m.v) : '';
-        return `<div class="metric" data-tip="${m.t}"><div class="mv ${col}">${m.v??'—'}</div><div class="ml">${m.l}</div></div>`;
+        return `<div class="metric" data-tip="${m.tip}"><div class="mv ${col}">${m.v??'—'}</div><div class="ml">${m.l}</div></div>`;
       }).join('');
+      loadTidHeatmap();
 
       // Header stats
       $('header-stats').innerHTML = [
@@ -7047,6 +7059,37 @@ async function loadHome() {
 // severity-driven state word + colour, and the WHY (source + reason) so a
 // Hooper override reads as an explanation ("78/100, but you logged high
 // soreness → rest"), not a contradiction. The single action is gated on
+// BETA — heatmap TID settimanale (POL 80/20). Legge /api/tid-weekly e disegna
+// una riga per settimana: barre verdi (Z1-Z2), gialle (Z3), rosse (Z4+).
+async function loadTidHeatmap() {
+  const host = document.getElementById('tid-heatmap');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/tid-weekly?weeks=8');
+    if (!res.ok) return;
+    const j = await res.json();
+    const weeks = (j.weeks || []).slice().reverse();  // oldest -> newest
+    if (!weeks.length) {
+      host.innerHTML = '<div style="font-size:12px;color:var(--text3);">Nessun dato di allenamento ancora importato.</div>';
+      return;
+    }
+    host.innerHTML = weeks.map(w => {
+      const z1 = w.z1z2_pct || 0, z3 = w.z3_pct || 0, z4 = w.z4plus_pct || 0;
+      const tot = (z1 + z3 + z4) || 1;
+      const p1 = (z1 / tot * 100), p3 = (z3 / tot * 100), p4 = (z4 / tot * 100);
+      return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;">
+        <div style="width:64px;color:var(--text3);white-space:nowrap;">${w.week_start.slice(5)}</div>
+        <div style="flex:1;height:16px;border-radius:4px;overflow:hidden;display:flex;background:var(--border);">
+          <div style="width:${p1}%;background:#22c55e;" title="Z1-Z2 ${z1}%"></div>
+          <div style="width:${p3}%;background:#eab308;" title="Z3 ${z3}%"></div>
+          <div style="width:${p4}%;background:#ef4444;" title="Z4+ ${z4}%"></div>
+        </div>
+        <div style="width:42px;text-align:right;color:var(--text3);">${Math.round(z4)}%</div>
+      </div>`;
+    }).join('');
+  } catch (e) { /* non bloccare il resto della UI */ }
+}
+
 // severity; button ids are preserved so applyReadinessTierDown /
 // applyWeekAutoAdjust stay untouched. Kept the function name so all existing
 // callers (loadHome, HRV upload, post-auto-adjust) keep working.
