@@ -3785,6 +3785,21 @@ def api_mobility_plan(days: int = Query(7)):
     return {"days": days, "routine": build_mobility_plan(days)}
 
 
+@app.get("/api/nutrition")
+def api_nutrition(day_type: str = Query("moderate"), bodyweight_kg: float = Query(72.0), during_min: int = Query(0)):
+    """BETA Fase 7b — carboidrati periodizzati (GSSI SSE 231, "fuel for work")."""
+    from nutrition import compute_nutrition, supplement_list
+    return {"day_type": day_type, "plan": compute_nutrition(day_type, bodyweight_kg, during_min),
+            "supplements": supplement_list()}
+
+
+@app.get("/api/race-fueling")
+def api_race_fueling(duration_h: float = Query(2.0), bodyweight_kg: float = Query(72.0)):
+    """BETA Fase 7b — piano di gara carb + caffeina (Jeukendrup / UCI 2026)."""
+    from nutrition import race_fueling
+    return race_fueling(duration_h, bodyweight_kg)
+
+
 @app.get("/api/readiness")
 def api_readiness(subjective: float = Query(None)):
     training = cached("training", get_today_metrics)
