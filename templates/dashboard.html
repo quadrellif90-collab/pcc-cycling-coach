@@ -1632,6 +1632,21 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="daily-adapt" style="font-size:12px;color:var(--text2);">Calcolo…</div>
   </div>
 
+  <!-- BETA Fase 7a: Forza & Mobilità -->
+  <div class="card" style="margin-top:12px;" id="strength-card">
+    <h3 data-tip="Forza in palestra (Llanos-Lagos 2025, meta-analisi 17 studi/262 ciclisti: la forza pesante migliora efficienza di pedalata + TT). Mobilità quotidiana 15 min (Warneke 2025) riduce infortuni.">Forza &amp; Mobilità</h3>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <select id="strength-phase" style="font-size:11px;padding:3px 6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;">
+        <option value="base">Base</option><option value="build">Build</option>
+        <option value="peak">Peak</option><option value="taper">Taper</option>
+      </select>
+      <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadStrength()">Genera piano</button>
+    </div>
+    <div id="strength-summary" style="font-size:12px;color:var(--text2);margin-bottom:8px;"></div>
+    <div id="strength-weeks" style="display:flex;flex-direction:column;gap:6px;"></div>
+    <div id="mobility-routine" style="font-size:11px;color:var(--text3);margin-top:8px;"></div>
+  </div>
+
   <div class="grid g3" style="margin-top:12px;">
     <div class="card">
       <h3>Sleep &amp; HRV</h3>
@@ -7106,7 +7121,40 @@ async function loadTidHeatmap() {
   loadDailyAdapt();
 }
 
-// BETA Fase 5 — adattamento giornaliero da HRV/sonno/DFA/TSB.
+// BETA Fase 7a — Forza & Mobilità (chiamato dal bottone "Genera piano")
+async function loadStrength() {
+  const phase = (document.getElementById('strength-phase') || {}).value || 'base';
+  const sumEl = document.getElementById('strength-summary');
+  const weeksEl = document.getElementById('strength-weeks');
+  const mobEl = document.getElementById('mobility-routine');
+  if (!sumEl || !weeksEl) return;
+  try {
+    const [sp, mp] = await Promise.all([
+      fetch(`/api/strength-plan?phase=${phase}&weeks=4`).then(r => r.ok ? r.json() : null),
+      fetch('/api/mobility-plan?days=7').then(r => r.ok ? r.json() : null),
+    ]);
+    if (sp && sp.summary) {
+      const s = sp.summary;
+      sumEl.innerHTML = `<b>${esc(s.phase)}</b>: ${s.sessions_per_week}×/sett, ${s.sets}×${s.reps} al ${s.pct_1rm}% 1RM` +
+        (s.exercises.length ? ` — ${s.exercises.map(esc).join(', ')}` : '') +
+        `<br><span style="font-size:10px;color:var(--text3);">${esc(s.source)}</span>`;
+    }
+    if (sp && sp.plan) {
+      weeksEl.innerHTML = sp.plan.map(wk => {
+        if (!wk.sessions.length) return `<div style="font-size:11px;color:var(--text3);">Sett. ${wk.week}: scarico / nessuna seduta</div>`;
+        const rows = wk.sessions.map(s =>
+          `<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid var(--border);">
+             <span>${esc(s.exercise)}</span><span style="color:var(--text3);">${s.sets}×${s.reps} @ ${s.pct_1rm}%</span>
+           </div>`).join('');
+        return `<div style="background:var(--surface2);border-radius:6px;padding:6px 8px;"><div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px;">Settimana ${wk.week}</div>${rows}</div>`;
+      }).join('');
+    }
+    if (mp && mp.routine) {
+      const names = mp.routine[0].sequence.map(x => x.exercise).join(' · ');
+      mobEl.innerHTML = `Mobilità quotidiana (${mp.routine[0].minutes} min): ${esc(names)} <span style="color:var(--text3);">(Warneke 2025)</span>`;
+    }
+  } catch (e) { /* non bloccare */ }
+}
 async function loadDailyAdapt() {
   const host = document.getElementById('daily-adapt');
   if (!host) return;

@@ -3765,6 +3765,26 @@ def api_daily_adapt():
     }
 
 
+@app.get("/api/strength-plan")
+def api_strength_plan(phase: str = Query("base"), weeks: int = Query(4)):
+    """BETA Fase 7a — piano di forza in palestra (Llanos-Lagos 2025).
+
+    phase: base|build|peak|taper|race_week. Genera sedute heavy compound
+    con set/rep/%1RM evidence-based, mantenute in-season.
+    """
+    from strength_mobility import build_strength_plan, strength_summary
+    return {"phase": phase, "weeks": weeks,
+            "summary": strength_summary(phase),
+            "plan": build_strength_plan(phase, weeks)}
+
+
+@app.get("/api/mobility-plan")
+def api_mobility_plan(days: int = Query(7)):
+    """BETA Fase 7a — routine mobilità quotidiana (Warneke 2025, 15 min)."""
+    from strength_mobility import build_mobility_plan
+    return {"days": days, "routine": build_mobility_plan(days)}
+
+
 @app.get("/api/readiness")
 def api_readiness(subjective: float = Query(None)):
     training = cached("training", get_today_metrics)
