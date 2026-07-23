@@ -3800,6 +3800,32 @@ def api_race_fueling(duration_h: float = Query(2.0), bodyweight_kg: float = Quer
     return race_fueling(duration_h, bodyweight_kg)
 
 
+@app.get("/api/export-plan-html")
+def api_export_plan_html(athlete: str = Query("Atleta"), goal: str = Query(""),
+                         phase: str = Query("base")):
+    """BETA Fase 7c — compone il piano integrato (ciclismo+forza+mobilità+nutrizione)
+    in un HTML autonomo stampabile → PDF dal browser. Usato da DIY e Coach."""
+    from plan_export import build_plan_html
+    from strength_mobility import build_strength_plan, strength_summary
+    from nutrition import build_mobility_plan, compute_nutrition, supplement_list, race_fueling
+    try:
+        sp = build_strength_plan(phase, 4)
+        ss = strength_summary(phase)
+        mp = build_mobility_plan(7)
+        nut = compute_nutrition("high_intensity", 72, 120)
+        sup = supplement_list()
+        rf = race_fueling(3.0, 72)
+    except Exception as e:
+        sp, ss, mp, nut, sup, rf = [], {}, [], {}, [], {}
+    html = build_plan_html(
+        athlete_name=athlete, goal_name=goal,
+        strength_plan=sp, strength_summary=ss, mobility_plan=mp,
+        nutrition_day=nut, supplements=sup, race_fueling=rf,
+    )
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(html)
+
+
 @app.get("/api/readiness")
 def api_readiness(subjective: float = Query(None)):
     training = cached("training", get_today_metrics)
