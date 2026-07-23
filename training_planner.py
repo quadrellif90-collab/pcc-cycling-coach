@@ -692,6 +692,66 @@ def _hooper_index_today() -> int:
     return int(sleep_q) + int(fatigue) + int(stress) + int(soreness)
 
 
+# BETA FASE 5 — motore adattivo giornaliero.
+# Basato su HRV-guided training (Front Sports Act Living 2025: HRV migliora il
+# fitness negli amatoriali; Casanova-Lizón 2025) + Hooper composite (Hooper &
+# Mackinnon 1995) + DFA α1 (Rogers 2021). Combina i segnali del giorno in un
+# fattore di aggiustamento del carico (0.80–1.10) e una raccomandazione.
+def daily_recalculate_adjustment(hrv_ms=None, dfa_alpha1=None, hooper=None,
+                                  sleep_score=None, tsb=None) -> dict:
+    """Calcola l'aggiustamento di carico giornaliero da HRV/sonno/DFA.
+
+    Segnali (tutti opzionali — degradazione graziosa se mancano):
+      - hrv_ms: rMSSD mattutino (ms). Basso vs baseline → affaticamento ANS.
+      - dfa_alpha1: DFA α1 della scorsa attività. <0.75 = sopra LT1 (duro).
+      - hooper: composite sonno+fatica+stress+indolenzimento (4-28).
+      - sleep_score: Garmin-style 0-100. <60 scarso.
+      - tsb: Training Stress Balance (forma). Molto negativo = affaticamento.
+    Ritorna {factor, recommendation, signals[]}.
+    """
+    factor = 1.0
+    signals = []
+
+    if hrv_ms is not None:
+        # rMSSD: <20 ms forte calo ANS; >40 ottimo. Scala lineare molle.
+        if hrv_ms < 20:
+            factor -= 0.15; signals.append("HRV molto bassa")
+        elif hrv_ms < 30:
+            factor -= 0.07; signals.append("HRV bassa")
+        elif hrv_ms >= 45:
+            factor += 0.05; signals.append("HRV buona")
+
+    if dfa_alpha1 is not None:
+        # DFA α1 < 0.75 = sopra LT1 (lavoro duro cumulato); 0.75-1.0 transizione.
+        if dfa_alpha1 < 0.60:
+            factor -= 0.08; signals.append("DFA α1 molto basso (fatica autonomica)")
+        elif dfa_alpha1 < 0.75:
+            factor -= 0.04; signals.append("DFA α1 sotto LT1")
+
+    if hooper is not None and hooper >= 18:
+        factor -= 0.07; signals.append(f"Hooper alto ({hooper})")
+
+    if sleep_score is not None and sleep_score < 60:
+        factor -= 0.05; signals.append(f"Sonno scarso ({sleep_score})")
+
+    if tsb is not None and tsb <= -25:
+        factor -= 0.05; signals.append(f"TSB molto negativo ({tsb})")
+    elif tsb is not None and tsb >= 15:
+        factor += 0.03; signals.append("TSB positivo (forma)")
+
+    factor = max(0.80, min(1.10, round(factor, 2)))
+
+    if factor <= 0.90:
+        rec = "Riduci il carico di oggi (Z2 / recupero) — segnali di fatica"
+    elif factor >= 1.05:
+        rec = "Carico pieno ammesso — buona prontezza autonomica"
+    else:
+        rec = "Allenati come pianificato — prontezza nella norma"
+
+    return {"factor": factor, "recommendation": rec, "signals": signals}
+
+
+
 def _last_48h_z5plus_min(rides: list[dict]) -> float:
     """G2 input — rolling 48h sum of minutes in Z5/Z6/Z7 across all sports.
     Hulin 2014 — >=25min/48h forces today -> Z2 (cycling INCLUDED in v4.6.6).

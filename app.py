@@ -3737,6 +3737,34 @@ def api_plan_block_model(total_weeks: int = Query(None)):
     return {"total_weeks": total_weeks, "recommended_model": recommend_block_model(total_weeks)}
 
 
+@app.get("/api/daily-adapt")
+def api_daily_adapt():
+    """BETA Fase 5 — ricalibrazione giornaliera da HRV/sonno/DFA/TSB.
+
+    Legge i segnali del giorno e ritorna il fattore di aggiustamento del
+    carico + raccomandazione, basato su HRV-guided training (Casanova-Lizón
+    2025) + Hooper (1995) + DFA α1 (Rogers 2021).
+    """
+    from training_planner import daily_recalculate_adjustment, _hooper_index_today
+    from training import get_today_metrics
+    try:
+        m = get_today_metrics()
+    except Exception:
+        m = {}
+    hrv = (m.get("hrv") or {}).get("rmssd_ms") if isinstance(m.get("hrv"), dict) else None
+    dfa = (m.get("dfa") or {}).get("alpha1_last") if isinstance(m.get("dfa"), dict) else None
+    sleep = (m.get("sleep") or {}).get("score") if isinstance(m.get("sleep"), dict) else None
+    tsb = m.get("tsb")
+    hooper = _hooper_index_today()
+    return {
+        "hrv_ms": hrv, "dfa_alpha1": dfa, "sleep_score": sleep,
+        "tsb": tsb, "hooper": hooper,
+        "adjustment": daily_recalculate_adjustment(
+            hrv_ms=hrv, dfa_alpha1=dfa, hooper=hooper,
+            sleep_score=sleep, tsb=tsb),
+    }
+
+
 @app.get("/api/readiness")
 def api_readiness(subjective: float = Query(None)):
     training = cached("training", get_today_metrics)

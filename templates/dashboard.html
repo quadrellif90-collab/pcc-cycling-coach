@@ -1626,6 +1626,12 @@ window.addEventListener('unhandledrejection', function(e) {
     <div style="font-size:10px;color:var(--text3);margin-top:6px;">Verde = facile (Z1-Z2) · Giallo = Z3 (soglia) · Rosso = duro (Z4+)</div>
   </div>
 
+  <!-- BETA Fase 5: adattamento giornaliero da HRV/sonno/DFA -->
+  <div class="card" style="margin-top:12px;" id="daily-adapt-card">
+    <h3 data-tip="Adattamento giornaliero (BETA): combina HRV (rMSSD), DFA α1, sonno e TSB del giorno in un fattore di carico 0.80–1.10. HRV-guided training (Casanova-Lizón 2025), Hooper 1995, DFA α1 (Rogers 2021).">Adattamento giornaliero</h3>
+    <div id="daily-adapt" style="font-size:12px;color:var(--text2);">Calcolo…</div>
+  </div>
+
   <div class="grid g3" style="margin-top:12px;">
     <div class="card">
       <h3>Sleep &amp; HRV</h3>
@@ -7097,9 +7103,28 @@ async function loadTidHeatmap() {
       </div>`;
     }).join('');
   } catch (e) { /* non bloccare il resto della UI */ }
+  loadDailyAdapt();
 }
 
-// severity; button ids are preserved so applyReadinessTierDown /
+// BETA Fase 5 — adattamento giornaliero da HRV/sonno/DFA/TSB.
+async function loadDailyAdapt() {
+  const host = document.getElementById('daily-adapt');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/daily-adapt');
+    if (!res.ok) return;
+    const j = await res.json();
+    const a = j.adjustment || {};
+    const f = a.factor != null ? a.factor : 1.0;
+    const col = f <= 0.90 ? 'var(--red)' : f >= 1.05 ? 'var(--green)' : 'var(--text2)';
+    const sig = (a.signals || []).length ? ' (' + a.signals.join(', ') + ')' : '';
+    host.innerHTML = `<div style="display:flex;align-items:baseline;gap:10px;">
+        <span style="font-size:20px;font-weight:800;color:${col};">×${f}</span>
+        <span>${esc(a.recommendation || '')}${sig ? '<span style="color:var(--text3);"> — ' + esc(sig) + '</span>' : ''}</span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;">HRV ${j.hrv_ms != null ? j.hrv_ms + ' ms' : '—'} · DFA α1 ${j.dfa_alpha1 != null ? j.dfa_alpha1 : '—'} · Sonno ${j.sleep_score != null ? j.sleep_score : '—'} · TSB ${j.tsb != null ? j.tsb : '—'} · Hooper ${j.hooper != null ? j.hooper : '—'}</div>`;
+  } catch (e) { /* non bloccare il resto */ }
+}
 // applyWeekAutoAdjust stay untouched. Kept the function name so all existing
 // callers (loadHome, HRV upload, post-auto-adjust) keep working.
 async function loadReadinessComposite() {
