@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Domestique — Setup</title>
+<title>Domestique — Configurazione</title>
 <link rel="icon" type="image/png" href="/static/favicon.png?v=3">
 <style>
 :root {
@@ -83,7 +83,7 @@ input.invalid { border-color: var(--red); }
 <body>
 <div class="wizard">
   <h1><img src="/static/icon.png" alt="" style="height:32px;vertical-align:middle;margin-right:8px;border-radius:8px;">Domestique</h1>
-  <div class="subtitle">Let's get you set up in 4 quick steps.</div>
+  <div class="subtitle">Configuriamo tutto in 4 rapidi passaggi.</div>
 
   <div class="steps" id="step-dots">
     <div class="step-dot active"></div>
@@ -94,32 +94,32 @@ input.invalid { border-color: var(--red); }
 
   <!-- STEP 1: Connect your data (Intervals.icu + Garmin) -->
   <div class="step-panel active" id="step-1">
-    <h2>Connect your data</h2>
+    <h2>Collega i tuoi dati</h2>
     <p class="info">
-      Domestique reads your training data (fitness, fatigue, form, HRV, activities)
-      from <b>Intervals.icu</b> — a free training-analysis service. You connect by
-      <b>signing in on intervals.icu</b> in your browser — no API keys to copy.
+      Domestique legge i tuoi dati di allenamento (forma, fatica, condizione, HRV, attività)
+      da <b>Intervals.icu</b> — un servizio gratuito di analisi dell'allenamento. Ti colleghi
+      <b>accedendo a intervals.icu</b> nel tuo browser — nessuna chiave API da copiare.
     </p>
 
-    <h3 class="sub">1 · Intervals.icu account</h3>
+    <h3 class="sub">1 · Account Intervals.icu</h3>
     <div class="callout">
       <div style="font-size:13px;color:var(--text2);line-height:1.6;">
-        <b>No account yet?</b> It's free — create one at
+        <b>Non hai ancora un account?</b> È gratuito — creane uno su
         <a href="https://intervals.icu/" target="_blank" rel="noopener noreferrer" class="help-link">intervals.icu</a>.
-        You can sign in with your <b>Garmin</b> or <b>Strava</b> account (one click, no new password).
+        Puoi accedere con il tuo account <b>Garmin</b> o <b>Strava</b> (un clic, nessuna nuova password).
       </div>
     </div>
 
-    <h3 class="sub">2 · Connect — one click, no keys</h3>
+    <h3 class="sub">2 · Collega — un clic, nessuna chiave</h3>
     <div class="callout" style="background:rgba(59,130,246,0.08);border:1px solid #3b82f6;">
       <div style="font-size:13px;line-height:1.6;">
-        ✨ <b>Sign in to intervals.icu</b> — it opens in your browser, you log in and approve
-        once, and we link <b>that account</b> here (no API keys to copy). Optional now; you can
-        also connect later in <b>Settings</b>. Until then, fitness (CTL/ATL/TSB) is computed from
-        any FIT files you import.
+        ✨ <b>Accedi a intervals.icu</b> — si apre nel browser, accedi e autorizzi
+        una volta, e colleghiamo <b>quell'account</b> qui (nessuna chiave API da copiare). Ora è
+        facoltativo; puoi collegarlo anche più tardi in <b>Impostazioni</b>. Fino ad allora, la forma
+        (CTL/ATL/TSB) viene calcolata dai file FIT che importi.
       </div>
       <div id="setup-link-status" style="font-size:13px;margin-top:8px;min-height:18px;"></div>
-      <button type="button" class="btn" id="setup-connect-btn" style="margin-top:8px;" onclick="connectIcu()">Sign in to intervals.icu</button>
+      <button type="button" class="btn" id="setup-connect-btn" style="margin-top:8px;" onclick="connectIcu()">Accedi a intervals.icu</button>
     </div>
     <!-- Manual API-key entry removed (OAuth is the only setup path); the legacy
          hidden stubs went with the api-key JS (AC5a). -->
@@ -128,108 +128,108 @@ input.invalid { border-color: var(--red); }
     <div id="garmin-block" style="display:none;">
       <h3 class="sub">3 · Garmin Connect → Intervals.icu</h3>
       <p class="info" style="margin-bottom:10px;">
-        So new rides appear in your plan automatically, let Intervals.icu pull them
-        from <b>Garmin Connect</b> (one-time):
+        Affinché le nuove uscite compaiano automaticamente nel tuo piano, consenti a Intervals.icu di importarle
+        da <b>Garmin Connect</b> (una tantum):
       </p>
       <div class="callout">
         <ol>
-          <li>Open <a href="https://intervals.icu/settings" target="_blank" rel="noopener noreferrer" class="help-link">intervals.icu/settings</a> → <b>Connections</b></li>
-          <li>Click <b>Garmin Connect</b> → authorise (one-click OAuth)</li>
+          <li>Apri <a href="https://intervals.icu/settings" target="_blank" rel="noopener noreferrer" class="help-link">intervals.icu/settings</a> → <b>Connections</b></li>
+          <li>Fai clic su <b>Garmin Connect</b> → autorizza (OAuth con un clic)</li>
         </ol>
         <div style="font-size:11px;color:var(--text3);margin-top:6px;">
-          New rides can take a few minutes to appear, and the connection is region-specific —
-          if it fails, retry from a desktop browser.
+          Le nuove uscite possono richiedere qualche minuto per comparire, e la connessione dipende dalla regione —
+          se non funziona, riprova da un browser desktop.
         </div>
       </div>
-      <button type="button" class="btn btn-secondary" onclick="checkGarminSync()" id="garmin-check-btn">Check sync</button>
+      <button type="button" class="btn btn-secondary" onclick="checkGarminSync()" id="garmin-check-btn">Verifica sincronizzazione</button>
       <div class="status" id="garmin-status"></div>
     </div>
 
     <div class="actions">
-      <button type="button" class="btn btn-primary" onclick="nextStep(2)" id="step1-next">Continue</button>
+      <button type="button" class="btn btn-primary" onclick="nextStep(2)" id="step1-next">Continua</button>
     </div>
   </div>
 
   <!-- STEP 2: Athlete Profile -->
   <div class="step-panel" id="step-2">
-    <h2>Your Profile</h2>
-    <p class="info">These values power your training zones. If you connected Intervals.icu, auto-fill pulls them from your data.</p>
+    <h2>Il tuo profilo</h2>
+    <p class="info">Questi valori alimentano le tue zone di allenamento. Se hai collegato Intervals.icu, il riempimento automatico li recupera dai tuoi dati.</p>
 
     <!-- AC5a: OAuth-era auto-fill (the per-field API-key toggles are gone).
          Shown only when an intervals.icu connection exists. -->
     <div id="autofill-row" style="display:none;margin-bottom:16px;">
-      <button type="button" class="btn btn-secondary" id="autofill-btn" onclick="autofillFromIcu()">Auto-fill from your data</button>
+      <button type="button" class="btn btn-secondary" id="autofill-btn" onclick="autofillFromIcu()">Riempi automaticamente dai tuoi dati</button>
       <div id="autofill-status" style="font-size:12px;color:var(--text2);margin-top:6px;"></div>
     </div>
 
     <!-- AC5e (D9): target-mode question — hr requires the LTHR field filled. -->
     <div class="form-row">
-      <label>How do you train?</label>
+      <label>Come ti alleni?</label>
       <div style="display:flex;gap:8px;">
-        <button type="button" class="btn btn-secondary toggle-btn active" id="tm-power" onclick="setTargetMode('power', true)" style="font-size:12px;padding:5px 12px;">Power meter</button>
-        <button type="button" class="btn btn-secondary toggle-btn" id="tm-hr" onclick="setTargetMode('hr', true)" style="font-size:12px;padding:5px 12px;">Heart rate only</button>
+        <button type="button" class="btn btn-secondary toggle-btn active" id="tm-power" onclick="setTargetMode('power', true)" style="font-size:12px;padding:5px 12px;">Misuratore di potenza</button>
+        <button type="button" class="btn btn-secondary toggle-btn" id="tm-hr" onclick="setTargetMode('hr', true)" style="font-size:12px;padding:5px 12px;">Solo frequenza cardiaca</button>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="tm-hint">Heart-rate mode prescribes workout targets from your LTHR — the LTHR field below is required.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="tm-hint">La modalità a frequenza cardiaca calcola i target degli allenamenti dal tuo LTHR — il campo LTHR qui sotto è obbligatorio.</div>
     </div>
 
     <div class="form-row">
-      <label>Weight (kg)<span class="icu-tag" id="icu-tag-s-weight">from intervals.icu</span></label>
+      <label>Peso (kg)<span class="icu-tag" id="icu-tag-s-weight">da intervals.icu</span></label>
       <input type="number" id="s-weight" value="72" min="30" max="200" step="0.1">
       <div class="field-err" id="err-s-weight"></div>
-      <div style="font-size:11px;color:var(--text3);margin-top:3px;">Used for W/kg and climb power estimates</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px;">Usato per i W/kg e le stime di potenza in salita</div>
     </div>
 
     <div class="form-row">
-      <label>FTP — Functional Threshold Power (watts)<span class="icu-tag" id="icu-tag-s-ftp">from intervals.icu</span>
-        <span style="font-weight:400;color:var(--text3);"> — the max power you can sustain for ~1 hour</span></label>
+      <label>FTP — Functional Threshold Power (watt)<span class="icu-tag" id="icu-tag-s-ftp">da intervals.icu</span>
+        <span style="font-weight:400;color:var(--text3);"> — la potenza massima che puoi sostenere per ~1 ora</span></label>
       <input type="number" id="s-ftp" value="250" min="50" max="600" step="1">
       <div class="field-err" id="err-s-ftp"></div>
     </div>
 
     <div class="form-row">
-      <label>LTHR — Lactate Threshold Heart Rate (bpm)<span class="icu-tag" id="icu-tag-s-lthr">from intervals.icu</span>
-        <span style="font-weight:400;color:var(--text3);"> — HR at the point where lactate accumulates rapidly (~FTP effort)</span></label>
+      <label>LTHR — Frequenza cardiaca alla soglia del lattato (bpm)<span class="icu-tag" id="icu-tag-s-lthr">da intervals.icu</span>
+        <span style="font-weight:400;color:var(--text3);"> — la FC nel punto in cui il lattato si accumula rapidamente (~sforzo all'FTP)</span></label>
       <input type="number" id="s-lthr" value="175" min="100" max="220" step="1">
       <div class="field-err" id="err-s-lthr"></div>
-      <div style="font-size:11px;color:var(--text3);margin-top:3px;">Tip: your average HR during a 30min all-out effort is a good estimate</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px;">Suggerimento: la tua FC media durante uno sforzo massimale di 30 min è una buona stima</div>
     </div>
 
     <div class="form-row">
-      <label>Max Heart Rate (bpm)<span class="icu-tag" id="icu-tag-s-maxhr">from intervals.icu</span>
-        <span style="font-weight:400;color:var(--text3);"> — the highest HR you've ever recorded during a max effort</span></label>
+      <label>Frequenza cardiaca massima (bpm)<span class="icu-tag" id="icu-tag-s-maxhr">da intervals.icu</span>
+        <span style="font-weight:400;color:var(--text3);"> — la FC più alta che hai mai registrato durante uno sforzo massimale</span></label>
       <input type="number" id="s-maxhr" value="196" min="140" max="220" step="1">
       <div class="field-err" id="err-s-maxhr"></div>
-      <div style="font-size:11px;color:var(--text3);margin-top:3px;">Formula estimates (220-age) are unreliable. Use your actual recorded max if known.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px;">Le stime da formula (220-età) sono inaffidabili. Usa il tuo massimo effettivamente registrato, se lo conosci.</div>
     </div>
 
     <div class="form-row">
       <label>
-        Age (years) <span class="skip-link">(optional)</span>
+        Età (anni) <span class="skip-link">(facoltativo)</span>
         <input type="number" id="s-age" min="10" max="100" step="1" placeholder="35">
         <div class="field-err" id="err-s-age"></div>
       </label>
     </div>
     <div class="form-row">
       <label>
-        Sex <span class="skip-link">(optional)</span>
+        Sesso <span class="skip-link">(facoltativo)</span>
         <select id="s-sex">
-          <option value="">Prefer not to say</option>
-          <option value="M">Male</option>
-          <option value="F">Female</option>
-          <option value="O">Other</option>
+          <option value="">Preferisco non dirlo</option>
+          <option value="M">Uomo</option>
+          <option value="F">Donna</option>
+          <option value="O">Altro</option>
         </select>
       </label>
     </div>
     <div class="form-row">
       <details>
-        <summary>Advanced (optional)</summary>
+        <summary>Avanzate (facoltative)</summary>
         <label>
-          Critical Power (W) — defaults to FTP × 1.03 if blank
+          Critical Power (W) — se vuoto, predefinito a FTP × 1.03
           <input type="number" id="s-cp" min="100" max="500" step="1" placeholder="auto">
           <div class="field-err" id="err-s-cp"></div>
         </label>
         <label>
-          W' — anaerobic capacity (J) — defaults to FTP × 80
+          W' — capacità anaerobica (J) — se vuoto, predefinito a FTP × 80
           <input type="number" id="s-wprime" min="5000" max="40000" step="100" placeholder="auto">
           <div class="field-err" id="err-s-wprime"></div>
         </label>
@@ -237,86 +237,86 @@ input.invalid { border-color: var(--red); }
     </div>
 
     <div class="actions">
-      <button type="button" class="btn btn-secondary" onclick="nextStep(1)">Back</button>
-      <button type="button" class="btn btn-primary" onclick="nextStep(3)" id="step2-next">Next</button>
+      <button type="button" class="btn btn-secondary" onclick="nextStep(1)">Indietro</button>
+      <button type="button" class="btn btn-primary" onclick="nextStep(3)" id="step2-next">Avanti</button>
     </div>
   </div>
 
   <!-- STEP 3: Paths -->
   <div class="step-panel" id="step-3">
-    <h2>Workout &amp; Route Folders</h2>
+    <h2>Cartelle workout e percorsi</h2>
     <p class="info">
-      Domestique comes with a full <b>workout library built in</b>, so you can
-      leave both folders as they are. If you already keep your own workout
-      files or routes on this computer, point Domestique at those folders
-      instead — click <b>Browse</b> to pick one. You can change this anytime
-      in <b>Settings</b>.
+      Domestique include un'intera <b>libreria di workout integrata</b>, quindi puoi
+      lasciare entrambe le cartelle così come sono. Se tieni già i tuoi file di workout
+      o i percorsi su questo computer, indirizza Domestique a quelle cartelle
+      — fai clic su <b>Sfoglia</b> per selezionarne una. Puoi modificarle in qualsiasi momento
+      in <b>Impostazioni</b>.
     </p>
     <div class="form-row">
-      <label>Workouts folder <span class="skip-link">(optional)</span></label>
+      <label>Cartella workout <span class="skip-link">(facoltativo)</span></label>
       <div style="display:flex;gap:8px;">
         <input type="text" id="s-workout-dir" placeholder="~/Documents/Workouts" style="flex:1;">
-        <button type="button" class="btn btn-secondary" onclick="pickFolder(this, 's-workout-dir')" style="padding:8px 12px;white-space:nowrap;" title="Browse">&#128193; Browse</button>
+        <button type="button" class="btn btn-secondary" onclick="pickFolder(this, 's-workout-dir')" style="padding:8px 12px;white-space:nowrap;" title="Sfoglia">&#128193; Sfoglia</button>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Structured workout files in .zwo format — e.g. exported from TrainerRoad or Zwift</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">File di workout strutturati in formato .zwo — ad es. esportati da TrainerRoad o Zwift</div>
     </div>
     <div class="form-row">
-      <label>Routes folder <span class="skip-link">(optional)</span></label>
+      <label>Cartella percorsi <span class="skip-link">(facoltativo)</span></label>
       <div style="display:flex;gap:8px;">
         <input type="text" id="s-gpx-dir" placeholder="~/Documents/GPX/cyclinglocations" style="flex:1;">
-        <button type="button" class="btn btn-secondary" onclick="pickFolder(this, 's-gpx-dir')" style="padding:8px 12px;white-space:nowrap;">&#128193; Browse</button>
+        <button type="button" class="btn btn-secondary" onclick="pickFolder(this, 's-gpx-dir')" style="padding:8px 12px;white-space:nowrap;">&#128193; Sfoglia</button>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Ride routes in .gpx format, used to suggest outdoor courses — skip it if you don't ride with routes</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Percorsi in formato .gpx, usati per suggerire uscite all'aperto — salta se non usi i percorsi</div>
     </div>
     <p class="info" style="margin-top:20px;margin-bottom:0;">
-      <b>Almost done.</b> One more step — your weekly hours and training days.
-      When you finish, Domestique opens your dashboard, pulls in your recent
-      training from intervals.icu (if you connected it), and you can generate
-      your first training plan with one click.
+      <b>Quasi fatto.</b> Ancora un passaggio — le tue ore settimanali e i giorni di allenamento.
+      Al termine, Domestique apre la tua dashboard, importa i tuoi allenamenti recenti
+      da intervals.icu (se lo hai collegato) e puoi generare il tuo primo piano
+      di allenamento con un clic.
     </p>
     <div class="actions">
-      <button type="button" class="btn btn-secondary" onclick="nextStep(2)">Back</button>
-      <button type="button" class="btn btn-primary" onclick="nextStep(4)">Next</button>
+      <button type="button" class="btn btn-secondary" onclick="nextStep(2)">Indietro</button>
+      <button type="button" class="btn btn-primary" onclick="nextStep(4)">Avanti</button>
     </div>
   </div>
 
   <!-- STEP 4: Training Preferences + Done -->
   <div class="step-panel" id="step-4">
-    <h2>Training Preferences</h2>
+    <h2>Preferenze di allenamento</h2>
     <div class="form-row">
-      <label>Hours per week</label>
+      <label>Ore alla settimana</label>
       <input type="number" id="s-hours" value="8" min="1" max="40" step="0.5">
       <div class="field-err" id="err-s-hours"></div>
     </div>
     <div class="form-row">
-      <label>Training days (click to toggle)</label>
+      <label>Giorni di allenamento (clic per attivare)</label>
       <div class="day-grid" id="day-grid">
-        <!-- AC6b: Mon starts unselected — it is the default REST day below,
-             and a day can't be both a training day and a rest day. -->
-        <div class="day-btn" data-day="0">Mon</div>
-        <div class="day-btn selected" data-day="1">Tue</div>
-        <div class="day-btn selected" data-day="2">Wed</div>
-        <div class="day-btn selected" data-day="3">Thu</div>
-        <div class="day-btn selected" data-day="4">Fri</div>
-        <div class="day-btn selected" data-day="5">Sat</div>
-        <div class="day-btn selected" data-day="6">Sun</div>
+        <!-- AC6b: Lun parte deselezionato — è il giorno di riposo predefinito
+             qui sotto, e un giorno non può essere sia di allenamento che di riposo. -->
+        <div class="day-btn" data-day="0">Lun</div>
+        <div class="day-btn selected" data-day="1">Mar</div>
+        <div class="day-btn selected" data-day="2">Mer</div>
+        <div class="day-btn selected" data-day="3">Gio</div>
+        <div class="day-btn selected" data-day="4">Ven</div>
+        <div class="day-btn selected" data-day="5">Sab</div>
+        <div class="day-btn selected" data-day="6">Dom</div>
       </div>
     </div>
     <div class="form-row">
-      <label>Rest days (click to mark)</label>
+      <label>Giorni di riposo (clic per contrassegnare)</label>
       <div class="day-grid" id="rest-grid">
-        <div class="day-btn rest" data-day="0">Mon</div>
-        <div class="day-btn" data-day="1">Tue</div>
-        <div class="day-btn" data-day="2">Wed</div>
-        <div class="day-btn" data-day="3">Thu</div>
-        <div class="day-btn" data-day="4">Fri</div>
-        <div class="day-btn" data-day="5">Sat</div>
-        <div class="day-btn" data-day="6">Sun</div>
+        <div class="day-btn rest" data-day="0">Lun</div>
+        <div class="day-btn" data-day="1">Mar</div>
+        <div class="day-btn" data-day="2">Mer</div>
+        <div class="day-btn" data-day="3">Gio</div>
+        <div class="day-btn" data-day="4">Ven</div>
+        <div class="day-btn" data-day="5">Sab</div>
+        <div class="day-btn" data-day="6">Dom</div>
       </div>
     </div>
     <div class="actions">
-      <button type="button" class="btn btn-secondary" onclick="nextStep(3)">Back</button>
-      <button type="button" class="btn btn-success" onclick="saveAll()" id="save-btn">Complete Setup</button>
+      <button type="button" class="btn btn-secondary" onclick="nextStep(3)">Indietro</button>
+      <button type="button" class="btn btn-success" onclick="saveAll()" id="save-btn">Completa configurazione</button>
     </div>
     <div class="status" id="save-status"></div>
   </div>
@@ -324,7 +324,7 @@ input.invalid { border-color: var(--red); }
 
 <script>
 let currentStep = 1;
-const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAYS = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
 const TOTAL_STEPS = 4;
 
 function nextStep(n) {
@@ -410,21 +410,21 @@ const VALIDATED_FIELDS = ['s-weight', 's-ftp', 's-lthr', 's-maxhr',
 function fieldError(id) {
   const el = document.getElementById(id);
   if (!el) return '';
-  if (el.validity && el.validity.badInput) return 'Enter a number';
+  if (el.validity && el.validity.badInput) return 'Inserisci un numero';
   const raw = el.value.trim();
   if (raw === '') return '';
   const v = parseFloat(raw);
-  if (isNaN(v)) return 'Enter a number';
+  if (isNaN(v)) return 'Inserisci un numero';
   const lo = parseFloat(el.min), hi = parseFloat(el.max);
   if ((!isNaN(lo) && v < lo) || (!isNaN(hi) && v > hi))
-    return 'Must be between ' + lo + ' and ' + hi;
+    return 'Deve essere compreso tra ' + lo + ' e ' + hi;
   if (id === 's-lthr' || id === 's-maxhr') {
     const l = parseFloat(document.getElementById('s-lthr').value);
     const m = parseFloat(document.getElementById('s-maxhr').value);
     if (!isNaN(l) && !isNaN(m) && l >= m)
       return (id === 's-lthr')
-        ? 'LTHR (' + l + ') must be below max HR (' + m + ')'
-        : 'Max HR (' + m + ') must be above LTHR (' + l + ')';
+        ? 'LTHR (' + l + ') deve essere sotto la FC max (' + m + ')'
+        : 'FC max (' + m + ') deve essere sopra la LTHR (' + l + ')';
   }
   return '';
 }
@@ -483,7 +483,7 @@ document.querySelectorAll('#rest-grid .day-btn').forEach(btn => {
 async function autofillFromIcu() {
   const st = document.getElementById('autofill-status');
   const btn = document.getElementById('autofill-btn');
-  st.textContent = 'Fetching from intervals.icu…';
+  st.textContent = 'Recupero da intervals.icu…';
   if (btn) btn.disabled = true;
   try {
     const a = await (await fetch('/api/icu/athlete-numbers')).json();
@@ -498,12 +498,12 @@ async function autofillFromIcu() {
       }
     }
     st.textContent = got.length
-      ? 'Filled from intervals.icu: ' + got.join(', ') + ' — edit anything that looks off.'
-      : 'Nothing to fill yet — your first sync runs after setup.';
+      ? 'Compilato da intervals.icu: ' + got.join(', ') + ' — correggi ciò che non torna.'
+      : 'Ancora nulla da compilare — la prima sincronizzazione parte dopo la configurazione.';
     refreshValidation();  // programmatic fill fires no input events
     persistState();
   } catch (e) {
-    st.textContent = 'Auto-fill failed — enter your numbers manually.';
+    st.textContent = 'Riempimento automatico non riuscito — inserisci i dati manualmente.';
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -515,7 +515,7 @@ async function autofillFromIcu() {
 async function checkGarminSync() {
   const st = document.getElementById('garmin-status');
   const btn = document.getElementById('garmin-check-btn');
-  st.className = 'status info'; st.textContent = 'Checking Intervals.icu for recent activities...';
+  st.className = 'status info'; st.textContent = 'Verifica di Intervals.icu per attività recenti...';
   btn.disabled = true;
   try {
     const res = await fetch('/api/setup/check-activities', {
@@ -524,19 +524,19 @@ async function checkGarminSync() {
     });
     const d = await res.json().catch(() => null);
     if (!d || !d.ok) {
-      st.className = 'status err'; st.textContent = (d && d.error) || 'Check failed.';
+      st.className = 'status err'; st.textContent = (d && d.error) || 'Verifica non riuscita.';
       return;
     }
     if (d.count > 0) {
       st.className = 'status ok';
-      st.textContent = '✓ ' + d.count + ' recent activit' + (d.count === 1 ? 'y' : 'ies')
-        + ' on Intervals.icu'
+      st.textContent = '✓ ' + d.count + ' attività recente' + (d.count === 1 ? '' : 's')
+        + ' su Intervals.icu'
         + (d.garmin_count ? ' (' + d.garmin_count + ' from Garmin)' : '')
         + (d.latest_date ? ' · latest ' + d.latest_date : '') + '.';
     } else {
       st.className = 'status info';
-      st.textContent = 'No activities in the last 6 weeks yet. Enable Garmin Connect above and ride — '
-        + 'new rides can take a few minutes to sync.';
+      st.textContent = 'Ancora nessuna attività nelle ultime 6 settimane. Abilita Garmin Connect qui sopra e vai in bici — '
+        + 'le nuove uscite possono richiedere qualche minuto per sincronizzarsi.';
     }
   } catch(e) {
     st.className = 'status err'; st.textContent = 'Check failed: ' + e.message;
@@ -558,7 +558,7 @@ async function saveAll() {
   // AC5e client gate: hr mode needs a filled-in LTHR (typed or auto-filled).
   if (_targetModeTouched && _targetMode === 'hr' && !_touched.has('s-lthr')) {
     st.className = 'status err';
-    st.textContent = 'Heart-rate mode needs your LTHR — fill in the LTHR field on the Profile step.';
+    st.textContent = 'La modalità a frequenza cardiaca richiede la LTHR — compila il campo LTHR nel passaggio Profilo.';
     nextStep(2);
     return;
   }
@@ -566,7 +566,7 @@ async function saveAll() {
   // hard stop in case saveAll is reached another way.
   if (!refreshValidation()) return;
   _saving = true;
-  btn.disabled = true; btn.textContent = 'Saving...';
+  btn.disabled = true; btn.textContent = 'Salvataggio...';
 
   const payload = {};
   const numFields = { 's-weight': 'weight', 's-ftp': 'ftp', 's-lthr': 'lthr', 's-maxhr': 'max_hr' };
@@ -621,17 +621,17 @@ async function saveAll() {
       // be below max HR (170)"), not a bare status code.
       st.className = 'status err';
       st.textContent = (data && (data.detail || data.error))
-        || ('Save failed: HTTP ' + res.status + ' ' + (res.statusText || ''));
+        || ('Salvataggio non riuscito: HTTP ' + res.status + ' ' + (res.statusText || ''));
       return;
     }
     if (data && data.ok) {
       st.className = 'status ok';
-      st.textContent = 'Setup complete! Redirecting to dashboard...';
+      st.textContent = 'Configurazione completata! Reindirizzamento alla dashboard...';
       try { localStorage.removeItem(SETUP_LS_KEY); } catch(e) {}
       setTimeout(() => window.location.href = '/', 1500);
     } else {
       st.className = 'status err';
-      st.textContent = (data && (data.error || data.detail)) || 'Save failed.';
+      st.textContent = (data && (data.error || data.detail)) || 'Salvataggio non riuscito.';
     }
   } catch(e) {
     st.className = 'status err'; st.textContent = 'Error: ' + e.message;
@@ -656,7 +656,7 @@ async function pickFolder(btn, inputId) {
       persistState();
     }
   } catch(e) {}
-  btn.innerHTML = '&#128193; Browse';
+  btn.innerHTML = '&#128193; Sfoglia';
 }
 
 // ── v1.8.25 wizard-state persistence (NON-SECRET fields only) ─────────────────
@@ -727,19 +727,19 @@ async function refreshLinkStatus(icuParam, reason) {
   if (icuParam === 'error' || icuParam === 'unavailable') {
     // AC3d: no_athlete_id is a hard, actionable error — say what happened.
     const msg = (reason === 'no_athlete_id')
-      ? "intervals.icu didn't return an athlete id for that account. Nothing was linked — try again."
-      : 'Couldn’t link your account — please try again.';
+      ? "intervals.icu non ha restituito un athlete id per quell'account. Nessun collegamento effettuato — riprova."
+      : 'Impossibile collegare il tuo account — riprova.';
     el.innerHTML = '<span style="color:var(--red);">' + msg + '</span>';
-    if (btn) btn.textContent = 'Retry — sign in to intervals.icu';
+    if (btn) btn.textContent = 'Riprova — accedi a intervals.icu';
     return;
   }
   try {
     const c = await (await fetch('/api/icu/connection')).json();
     if (c && c.method === 'oauth') {
-      const who = c.name || (c.athlete_id ? ('athlete ' + c.athlete_id) : 'your account');
-      el.innerHTML = '✓ Linked as <b>' + who.replace(/</g, '&lt;') + '</b>';
+      const who = c.name || (c.athlete_id ? ('atleta ' + c.athlete_id) : 'il tuo account');
+      el.innerHTML = '✓ Collegato come <b>' + who.replace(/</g, '&lt;') + '</b>';
       el.style.color = 'var(--green)';
-      if (btn) btn.textContent = 'Re-link a different account';
+      if (btn) btn.textContent = 'Collega un altro account';
     }
     // AC5a: connection-gated affordances — the step-2 auto-fill and the
     // Garmin sub-step only make sense with a live connection.
