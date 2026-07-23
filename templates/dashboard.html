@@ -8178,16 +8178,16 @@ async function applyFtpSuggestion(ftp, method, source, opts) {
       if (status) { status.textContent = 'Error: ' + d.error; status.style.color = '#ef4444'; }
       return;
     }
-    if (status) { status.textContent = 'FTP updated to ' + d.ftp + ' W'; status.style.color = '#22c55e'; }
+    if (status) { status.textContent = 'FTP aggiornato a ' + d.ftp + ' W'; status.style.color = '#22c55e'; }
     const btn = document.getElementById('ftp-update-btn');
     if (btn) btn.disabled = true;
-    try { showToast('FTP updated to ' + d.ftp + ' W (source: ' + sourceTag + ')', 4000); } catch(_) {}
+    try { showToast('FTP aggiornato a ' + d.ftp + ' W (fonte: ' + sourceTag + ')', 4000); } catch(_) {}
     // Refresh settings-dependent surfaces
     if (typeof loadSettings === 'function') { try { loadSettings(); } catch(_) {} }
     if (opts.closeModal) { try { closeModal(); } catch(_) {} }
   } catch (e) {
     if (status) { status.textContent = 'Error: ' + e.message; status.style.color = '#ef4444'; }
-    try { showToast('FTP update failed: server update needed', 4000); } catch(_) {}
+    try { showToast('Aggiornamento FTP non riuscito: aggiornamento server richiesto', 4000); } catch(_) {}
   }
 }
 async function keepCurrentFtp(method, ftp, source, opts) {
@@ -8199,10 +8199,10 @@ async function keepCurrentFtp(method, ftp, source, opts) {
       body: JSON.stringify({ftp: ftp, method: method, source: source || '', applied: false})
     });
   } catch (e) {
-    try { showToast('Could not log keep-current: server update needed', 4000); } catch(_) {}
+    try { showToast('Impossibile registrare keep-current: aggiornamento server richiesto', 4000); } catch(_) {}
   }
   const status = document.getElementById('ftp-banner-status') || document.getElementById('ftp-modal-status');
-  if (status) { status.textContent = 'Kept current FTP. Test logged to history.'; status.style.color = 'var(--text2)'; }
+  if (status) { status.textContent = 'FTP attuale mantenuto. Test registrato nello storico.'; status.style.color = 'var(--text2)'; }
   if (opts.closeModal) { try { closeModal(); } catch(_) {} }
 }
 async function customFtp(suggested, method, source, opts) {
@@ -9272,7 +9272,7 @@ async function loadWorkouts() {
     renderLibrary(_libraryWorkouts);
   } catch(e) {
     if (gen !== _libLoadGen) return;   // stale failure — newer request owns the DOM
-    console.error('loadWorkouts failed:', e); $('wk-body').innerHTML = '<tr><td colspan="6" style="color:var(--red);padding:20px;">Failed to load workouts. Check server connection.</td></tr>';
+    console.error('loadWorkouts failed:', e); $('wk-body').innerHTML = '<tr><td colspan="6" style="color:var(--red);padding:20px;">Caricamento workout non riuscito. Controlla la connessione al server.</td></tr>';
   }
 }
 
@@ -9865,7 +9865,7 @@ async function loadCourses() {
       regions.map(r => `<div class="tab" onclick="filterCourses('${escJs(r)}',this)">${esc(r)}</div>`).join('');
     _courseRegionFilter = '';
     renderCourses(sortRoutes(getFilteredCourses(), $('course-sort').value));
-  } catch(e) { console.error('loadCourses failed:', e); $('course-list').innerHTML = '<div style="color:var(--red);padding:20px;">Failed to load courses. Check server connection.</div>'; }
+  } catch(e) { console.error('loadCourses failed:', e); $('course-list').innerHTML = '<div style="color:var(--red);padding:20px;">Caricamento percorsi non riuscito. Controlla la connessione al server.</div>'; }
 }
 
 async function filterCourses(region, el) {
@@ -14734,7 +14734,7 @@ async function loadPlan() {
   } catch(e) {
     console.error('loadPlan failed:', e);
     try { window._diagFrontendError('E_FRONTEND_LOADPLAN', {msg: String(e && e.message || e)}); } catch(_) {}
-    $('plan-content').innerHTML = '<div style="color:var(--red);padding:20px;">Failed to load plan. Check server connection.</div>';
+    $('plan-content').innerHTML = '<div style="color:var(--red);padding:20px;">Caricamento piano non riuscito. Controlla la connessione al server.</div>';
     return;
   }
   if (d.plan_json) {
@@ -18242,8 +18242,8 @@ async function openDayWorkout(sessionIdx) {
   html += (_hrLead ? (_fitBtn + _zwoBtn) : (_zwoBtn + _fitBtn)) + _calBtn;
   html += '</div>';
   html += _hrLead
-    ? '<div style="font-size:10px;color:var(--text3);margin-top:8px;">Heart-rate mode: the <b>FIT</b> carries your bpm ranges (and RPE cues for short/hard efforts) — load it on a Garmin / Wahoo / Hammerhead. ZWO is greyed out because the format is power-only and cannot encode heart rate. Ride it, then Import FIT to analyze.</div>'
-    : '<div style="font-size:10px;color:var(--text3);margin-top:8px;">Same workout, two formats — pick whichever your tool reads. <b>ZWO</b> is the structured-workout file for indoor trainer apps (MyWhoosh / Zwift / Tacx / Golden Cheetah); it drives ERG with smooth power ramps. <b>FIT</b> is the structured-workout file for bike computers and workout platforms (TrainingPeaks, Vekta, and head units). Many devices read either (a Hammerhead takes both). Ride it, then Import FIT to analyze.</div>';
+    ? '<div style="font-size:10px;color:var(--text3);margin-top:8px;">Modalità a frequenza cardiaca: il <b>FIT</b> contiene i tuoi range bpm (e i suggerimenti RPE per sforzi brevi/intensi) — caricalo su Garmin / Wahoo / Hammerhead. ZWO è disattivato perché il formato è solo potenza e non può codificare la frequenza cardiaca. Fallo, poi importa il FIT per analizzarlo.</div>'
+    : '<div style="font-size:10px;color:var(--text3);margin-top:8px;">Stesso workout, due formati — scegli quello che il tuo strumento legge. <b>ZWO</b> è il file di workout strutturato per app da indoor trainer (MyWhoosh / Zwift / Tacx / Golden Cheetah); guida l\'ERG con rampe di potenza fluide. <b>FIT</b> è il file di workout strutturato per computer da bordo e piattaforme (TrainingPeaks, Vekta e head unit). Molti dispositivi leggono entrambi (un Hammerhead legge tutti e due). Fallo, poi importa il FIT per analizzarlo.</div>';
 
   // 3.4.1 M3: adjusted-lead — the stored original becomes the labeled
   // secondary block, and the rematch/swap/dismiss row (which operates on the
@@ -18560,12 +18560,12 @@ async function _rematchAccept(day) {
       }),
     });
     if (!res.ok) {
-      if (resultEl) resultEl.innerHTML = '<div style="font-size:11px;color:var(--red);padding:6px 0;">Accept failed: server returned ' + res.status + '</div>';
+      if (resultEl) resultEl.innerHTML = '<div style="font-size:11px;color:var(--red);padding:6px 0;">Accettazione non riuscita: il server ha risposto ' + res.status + '</div>';
       return;
     }
     data = await res.json();
   } catch (e) {
-    if (resultEl) resultEl.innerHTML = '<div style="font-size:11px;color:var(--red);padding:6px 0;">Accept failed: ' + esc(e.message || e) + '</div>';
+    if (resultEl) resultEl.innerHTML = '<div style="font-size:11px;color:var(--red);padding:6px 0;">Accettazione non riuscita: ' + esc(e.message || e) + '</div>';
     return;
   }
   const n = (data && typeof data.sessions_modified === 'number') ? data.sessions_modified : 0;
@@ -19437,7 +19437,7 @@ async function loadUpdateCheck(force) {
       // Always append "View on GitHub →" footer link inside the panel.
       const footer = '<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);">' +
         '<a href="' + safeRelease + '" target="_blank" rel="noopener noreferrer" ' +
-        'style="color:#3b82f6;text-decoration:none;font-size:12px;">View on GitHub &rarr;</a>' +
+        'style="color:#3b82f6;text-decoration:none;font-size:12px;">Vedi su GitHub &rarr;</a>' +
         '</div>';
       detailsBlock =
         '<details style="margin-top:8px;">' +
