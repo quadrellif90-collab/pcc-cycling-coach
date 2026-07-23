@@ -1492,7 +1492,7 @@ window.addEventListener('unhandledrejection', function(e) {
 </div>
 
 <div class="tabs" id="tabs">
-  <div class="tab active" data-tab="home">Home</div>
+  <div class="tab active" data-tab="home">Inizio</div>
   <div class="tab" data-tab="picker">Workout Shuffle</div>
   <div class="tab" data-tab="library">Libreria workout</div>
   <div class="tab" data-tab="courses">Percorsi e salite</div>
@@ -2408,7 +2408,7 @@ window.addEventListener('unhandledrejection', function(e) {
     return `<span style="color:${col}">${sign}${Math.round(delta)}${unit||''}${pct}</span>`;
   }
   function _psRender(d){
-    document.getElementById('ps-window').textContent = `${d.start_date || '—'}  →  ${d.end_date || '—'}  ·  ${d.weeks || 0} weeks`;
+    document.getElementById('ps-window').textContent = `${d.start_date || '—'}  →  ${d.end_date || '—'}  ·  ${d.weeks || 0} settimane`;
     const kpi = document.getElementById('ps-kpi-row');
     if (kpi) {
       const tiles = [
@@ -2428,8 +2428,8 @@ window.addEventListener('unhandledrejection', function(e) {
     const mNode = document.getElementById('ps-monotony');
     if (mNode) {
       const m = d.monotony_max, s = d.strain_max;
-      if (m == null) { mNode.textContent = 'Monotony / strain (Foster 1998): no data'; }
-      else { const ok = m < 2.0; const color = ok ? 'var(--green)' : 'var(--red)'; mNode.innerHTML = `<strong>Monotony / strain (Foster 1998):</strong> max monotony <span style="color:${color}">${m.toFixed(2)}</span> ${ok ? '(target <2.0 ✓)' : '(>2.0 — illness/overtraining flag)'} · max strain ${s != null ? Math.round(s) : '—'}`; }
+      if (m == null) { mNode.textContent = 'Monotony / strain (Foster 1998): nessun dato'; }
+      else { const ok = m < 2.0; const color = ok ? 'var(--green)' : 'var(--red)'; mNode.innerHTML = `<strong>Monotony / strain (Foster 1998):</strong> monotonia max <span style="color:${color}">${m.toFixed(2)}</span> ${ok ? '(target <2.0 ✓)' : '(>2.0 — flag malattia/sovrattenamento)'} · strain max ${s != null ? Math.round(s) : '—'}`; }
     }
     const cNode = document.getElementById('ps-citations');
     if (cNode) cNode.textContent = (d.citations || []).join(' · ');
@@ -4138,7 +4138,7 @@ async function openWorkoutDetail(category, filename, meta, view) {
     const vq = view ? `?view=${encodeURIComponent(view)}` : '';
     const res = await fetch(`/api/workout/${encodeURIComponent(category)}/${encodeURIComponent(filename)}${vq}`);
     const d = await res.json();
-    if (d.error) { $('modal-content').innerHTML = `<p style="color:var(--red)">Error: ${esc(d.error)}</p>`; return; }
+    if (d.error) { $('modal-content').innerHTML = `<p style="color:var(--red)">Errore: ${esc(d.error)}</p>`; return; }
     window._wkDetailMeta = meta; // for the toggle re-render
 
     // hr target_mode (IP_HR_ONLY): server attaches target_mode + per-segment
@@ -5591,7 +5591,7 @@ function renderPowerCurve() {
     const wp = data.wprime_j != null ? (Number(data.wprime_j)/1000).toFixed(1) + ' kJ' : '—';
     const pmax = data.pmax_w != null ? Number(data.pmax_w).toFixed(0) + ' W' : '—';
     const winLbl = (_powerCurveWindow === 'all') ? 'all-time' : (_powerCurveWindow + ' d');
-    meta.textContent = `Window: ${winLbl} · ${n} rides · weight ${wkg} kg · CP ${cp} · W' ${wp} · Pmax ${pmax}`;
+    meta.textContent = `Finestra: ${winLbl} · ${n} uscite · peso ${wkg} kg · CP ${cp} · W' ${wp} · Pmax ${pmax}`;
   }
 }
 // Top-of-page first-sync strip: spinner + "Syncing activities XXX of YYY (NN%)".
@@ -5716,12 +5716,12 @@ async function maybeKickBackfill(data) {
         bar.style.width = pct + '%';
         const finished = sj.status === 'complete' || sj.state === 'done' || sj.state === 'error';
         if (finished || pct >= 100) {
-          msg.textContent = `Synced ${done} of ${total} activities · done.`;
+          msg.textContent = `Sincronizzate ${done} di ${total} attività · fatto.`;
           _setSyncTopbar(done, total, true);
           setTimeout(() => { toast.style.display = 'none'; loadPowerCurve(true); }, 2000);
           return;
         }
-        msg.textContent = `Syncing activities — ${done} of ${total}…`;
+        msg.textContent = `Sincronizzazione attività — ${done} di ${total}…`;
         _setSyncTopbar(done, total, false);
       } catch (_) {}
       setTimeout(poll, 5000);
@@ -5974,7 +5974,7 @@ function renderFatigueResistance(d) {
   }
   const score = (d.robustness_score != null) ? Number(d.robustness_score).toFixed(1) : '—';
   const n = Number(d.n_long_rides || 0);
-  if (headline) headline.textContent = `Robustness ${score}% @ > ${_fatigueResistanceThreshold} kJ`;
+  if (headline) headline.textContent = `Robustezza ${score}% @ > ${_fatigueResistanceThreshold} kJ`;
   let tableRows = '';
   (d.by_duration || []).forEach(row => {
     const dur = Number(row.duration_s || 0);
