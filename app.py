@@ -3796,7 +3796,101 @@ def api_mobility_plan(days: int = Query(7)):
     return {"days": days, "routine": build_mobility_plan(days)}
 
 
-@app.get("/api/nutrition")
+@app.post("/api/plan/inject-strength")
+def api_inject_strength(request: Request):
+    """PPC — Inietta sessioni forza + mobilità nel piano settimanale.
+
+    Legge current_plan.json, aggiunge sedute strength (2×/sett base, 1× peak)
+    e mobility (quotidiana 15min) nei giorni non-rest. Salva il piano modificato.
+    """
+    from profile_manager import ProfileManager
+    import json as _json
+    body = {}
+    try:
+        body = _json.loads(request.body().read().decode("utf-8") or "{}")
+    except Exception:
+        body = {}
+    phase = body.get("phase", "base")
+    one_rm = float(body.get("one_rm_kg", 0))
+
+    # leggi piano salvato
+    plan_dir = Path.home() / ".domestique" / "plans"
+    if not (plan_dir / "current_plan.json").exists():
+        # fallback: cerca nella profile dir
+        pm = ProfileManager.get()
+        plan_dir = Path.home() / ".domestique" / "profiles" / (pm._profile_id or "default") / "plans"
+    plan_path = plan_dir / "current_plan.json"
+    if not plan_path.exists():
+        raise HTTPException(404, "Nessun piano generato. Genera prima il piano.")
+    plan = _json.loads(plan_path.read_text(encoding="utf-8"))
+
+    from strength_mobility import build_strength_plan, STRENGTH_PROTOCOLS, MOBILITY_ROUTINE
+    proto = STRENGTH_PROTOCOLS.get(phase, STRENGTH_PROTOCOLS["base"])
+    sessions_per_week = proto["sessions_per_week"]
+    strength_plan = build_strength_plan(phase, len(plan.get("weeks", [])), one_rm_kg=one_rm)
+
+    injected = 0
+    for i, week in enumerate(plan.get("weeks", [])):
+        sessions = week.get("sessions", [])
+        # giorni già occupati
+        occupied_days = set()
+        for s in sessions:
+            if s.get("day"):
+                occupied_days.add(s["day"])
+
+        # giorni disponibili (non rest)
+        rest_days = plan.get("goal", {}).get("rest_days", [0])
+        all_dates = []
+        if week.get("start") and week.get("end"):
+            from datetime import datetime, timedelta
+            try:
+                d_start = datetime.fromisoformat(week["start"]).date()
+                d_end = datetime.fromisoformat(week["end"]).date()
+                d = d_start
+                while d <= d_end:
+                    if d.isoformat() not in occupied_days and d.weekday() not in rest_days:
+                        all_dates.append(d.isoformat())
+                    d += timedelta(days=1)
+            except Exception:
+                pass
+
+        # inietta forza nei primi N giorni disponibili
+        if i < len(strength_plan) and strength_plan[i].get("sessions"):
+            for j, sess in enumerate(strength_plan[i]["sessions"][:sessions_per_week]):
+                if j < len(all_dates):
+                    sessions.append({
+                        "day": all_dates[j],
+                        "session_type": "strength",
+                        "duration_min": 45,
+                        "tss_estimate": 30,
+                        "description": f"{sess['exercise']} {sess['sets']}×{sess['reps']} @ {sess['pct_1rm']}%" +
+                                       (f" ({sess['load_kg']} kg)" if sess.get("load_kg") else ""),
+                        "zwo_file": "",
+                        "zwo_name": "",
+                    })
+                    injected += 1
+
+        # inietta mobilità quotidiana (15 min, tutti i giorni)
+        for d_iso in all_dates[sessions_per_week:]:  # dopo le sedute forza
+            sessions.append({
+                "day": d_iso,
+                "session_type": "mobility",
+                "duration_min": 15,
+                "tss_estimate": 5,
+                "description": "Mobilità quotidiana 15 min (Warneke 2025)",
+                "zwo_file": "",
+                "zwo_name": "",
+            })
+            injected += 1
+
+        week["sessions"] = sessions
+
+    plan_path.write_text(_json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
+    return {"ok": True, "injected": injected, "phase": phase,
+            "weeks": len(plan.get("weeks", []))}
+
+
+
 def api_nutrition(day_type: str = Query("moderate"), bodyweight_kg: float = Query(72.0), during_min: int = Query(0)):
     """BETA Fase 7b — carboidrati periodizzati (GSSI SSE 231, "fuel for work")."""
     from nutrition import compute_nutrition, supplement_list

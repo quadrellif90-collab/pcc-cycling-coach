@@ -1660,6 +1660,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <option value="peak">Peak</option><option value="taper">Taper</option>
       </select>
       <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadStrength()">Genera piano</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="injectStrength()" title="Inserisce sedute forza+mobilità nel tuo piano settimanale">⚡ Inietta nel piano</button>
       <a class="btn" style="font-size:11px;padding:3px 10px;" href="/api/export-plan-html?athlete=Atleta&phase=base" target="_blank" rel="noopener">⤓ Esporta piano (PDF/HTML)</a>
     </div>
     <div id="strength-summary" style="font-size:12px;color:var(--text2);margin-bottom:8px;"></div>
@@ -7240,6 +7241,27 @@ async function loadDiet() {
     }
     host.innerHTML = html;
   } catch (e) { host.textContent = 'Piano alimentare non disponibile'; }
+}
+
+// PPC — Inietta forza + mobilità nel piano settimanale
+async function injectStrength() {
+  const phase = ($('strength-phase') || {}).value || 'base';
+  let oneRm = 0;
+  try { const p = await (await fetch('/api/profile')).json(); oneRm = (p.profile && p.profile.one_rm_kg) || 0; } catch (_) {}
+  const sumEl = $('strength-summary');
+  if (sumEl) sumEl.textContent = 'Iniezione in corso…';
+  try {
+    const res = await fetch('/api/plan/inject-strength', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({phase, one_rm_kg: oneRm})
+    });
+    const j = await res.json();
+    if (j.ok) {
+      if (sumEl) sumEl.innerHTML = `<span style="color:var(--green);">✅ ${j.injected} sedute iniettate nel piano (${j.weeks} settimane, fase ${j.phase})</span>`;
+    } else {
+      if (sumEl) sumEl.innerHTML = `<span style="color:var(--red);">Errore: ${j.detail || 'sconosciuto'}</span>`;
+    }
+  } catch (e) { if (sumEl) sumEl.innerHTML = `<span style="color:var(--red);">Errore: ${e.message}</span>`; }
 }
 
 async function loadMyCalendar() {
