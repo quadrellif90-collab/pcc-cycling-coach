@@ -1,12 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec for Domestique.
+PyInstaller spec for PPC — Programming Cycling Coach.
 
 Build:
   macOS:   pyinstaller domestique.spec
   Windows: pyinstaller domestique.spec
 
-Output: dist/Domestique.app (macOS) or dist/Domestique/Domestique.exe (Windows)
+Output: dist/PPC.app (macOS) or dist/PPC/PPC.exe (Windows)
+
+NOTE: the on-disk data directory stays ~/.domestique/ so existing user data
+and intervals.icu connections survive upgrades without migration.
 """
 
 import sys
@@ -14,7 +17,7 @@ import os
 from pathlib import Path
 
 block_cipher = None
-app_name = "Domestique"
+app_name = "PPC"
 
 # Single source of truth for the bundle version — read the repo's VERSION
 # file at build time. `SPEC` is the absolute path to this spec file that

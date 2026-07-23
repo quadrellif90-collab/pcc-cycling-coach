@@ -1,3 +1,5 @@
+# Copyright 2024-2026 PPC — Programming Cycling Coach
+# Licensed under the Apache License, Version 2.0 (LICENSE / NOTICE).
 """BETA Fase 7c — Compositore piano integrato + export HTML/PDF.
 
 Raccoglie da un unico piano: ciclismo (training_planner / goal), Forza (7a),
@@ -122,7 +124,7 @@ def build_plan_html(athlete_name: str = "Atleta", goal_name: str = "",
   {race_block}
   {sup_block or ""}
 
-  <div class="footer">Generato da Domestique BETA · Fonti: Llanos-Lagos 2025, Warneke 2025,
+  <div class="footer">Generato da PPC — Programming Cycling Coach · Fonti: Llanos-Lagos 2025, Warneke 2025,
   GSSI SSE 231, Jeukendrup/UCI Sports Nutrition Project 2026, PMC12239112.</div>
 </body></html>"""
     return html

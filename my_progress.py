@@ -1,3 +1,5 @@
+# Copyright 2024-2026 PPC — Programming Cycling Coach
+# Licensed under the Apache License, Version 2.0 (LICENSE / NOTICE).
 """BETA Fase 7e (verticale DIY) — Il mio calendario / aderenza personale.
 
 Lettura ATTIVITÀ REALI del proprio profilo intervals.icu (self) e confronto

@@ -1,3 +1,5 @@
+# Copyright 2024-2026 PPC — Programming Cycling Coach
+# Licensed under the Apache License, Version 2.0 (LICENSE / NOTICE).
 """BETA Fase 7b — Nutrizione + Integrazione per ciclisti.
 
 Fonti scientifiche (2024-2026):

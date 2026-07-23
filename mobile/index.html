@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PPC Mobile — Programming Cycling Coach</title>
+<style>
+  :root { --bg:#0f1115; --surface:#1a1d23; --accent:#2d7d46; --text:#e8e8e8; --text2:#9aa0a6; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); padding:16px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--text2); font-size:12px; margin-bottom:16px; }
+  .card { background:var(--surface); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .big { font-size:32px; font-weight:700; }
+  .lbl { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
+  button { width:100%; padding:12px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-size:15px; font-weight:600; }
+  .row { display:flex; gap:10px; }
+  .row .card { flex:1; }
+  #status { font-size:12px; color:var(--text2); margin-top:8px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th,td { text-align:left; padding:4px 6px; border-bottom:1px solid #2a2d33; }
+</style>
+</head>
+<body>
+  <h1>PPC Mobile</h1>
+  <div class="sub">Programming Cycling Coach — vista da intervals.icu</div>
+
+  <div class="card" id="loginCard">
+    <p style="font-size:13px;">Connetti il tuo account intervals.icu per vedere CTL / TSB / calendario direttamente qui, senza installare nulla.</p>
+    <button onclick="connectICU()">Collega intervals.icu</button>
+    <div id="status"></div>
+  </div>
+
+  <div id="dash" style="display:none;">
+    <div class="row">
+      <div class="card"><div class="lbl">CTL</div><div class="big" id="ctl">–</div></div>
+      <div class="card"><div class="lbl">TSB</div><div class="big" id="tsb">–</div></div>
+      <div class="card"><div class="lbl">ATL</div><div class="big" id="atl">–</div></div>
+    </div>
+    <div class="card">
+      <div class="lbl">Calendario (ultime 14 attività)</div>
+      <table id="acts"><thead><tr><th>Data</th><th>Tipo</th><th>TSS</th></tr></thead><tbody></tbody></table>
+    </div>
+    <button onclick="logoutICU()" style="background:#444;">Disconnetti</button>
+  </div>
+
+<script>
+// CONFIGURA QUI: il tuo Client ID intervals.icu ( OAuth app su intervals.icu/settings/api )
+const ICU_CLIENT_ID = "YOUR_ICU_CLIENT_ID";
+const REDIRECT = location.origin + location.pathname;
+const ICU_AUTH = "https://intervals.icu/oauth/authorize";
+const ICU_API  = "https://intervals.icu/api/v1";
+
+function connectICU(){
+  const u = `${ICU_AUTH}?response_type=token&client_id=${encodeURIComponent(ICU_CLIENT_ID)}&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=activity:read,wellness:read`;
+  location.href = u;
+}
+
+function logoutICU(){
+  localStorage.removeItem("icu_token");
+  location.reload();
+}
+
+// Cattura il token dall'URL dopo il redirect OAuth (implicit flow)
+(function(){
+  const h = location.hash;
+  if(h.includes("access_token")){
+    const tok = new URLSearchParams(h.slice(1)).get("access_token");
+    if(tok){ localStorage.setItem("icu_token", tok); location.hash=""; }
+  }
+  const tok = localStorage.getItem("icu_token");
+  if(tok){ document.getElementById("loginCard").style.display="none"; document.getElementById("dash").style.display="block"; loadICU(tok); }
+})();
+
+async function loadICU(token){
+  const st = document.getElementById("status");
+  try {
+    // atleta corrente (self)
+    const ath = await fetch(`${ICU_API}/athlete/0`, { headers:{ Authorization:"Bearer "+token } }).then(r=>r.json());
+    const id = ath.id;
+    const wl = await fetch(`${ICU_API}/athlete/${id}/wellness?oldest=90d`, { headers:{ Authorization:"Bearer "+token } }).then(r=>r.json());
+    const last = wl[wl.length-1] || {};
+    document.getElementById("ctl").textContent = Math.round(last.ctl ?? 0);
+    document.getElementById("tsb").textContent = Math.round(last.tsb ?? 0);
+    document.getElementById("atl").textContent = Math.round(last.atl ?? 0);
+    const acts = await fetch(`${ICU_API}/athlete/${id}/activities?oldest=14d`, { headers:{ Authorization:"Bearer "+token } }).then(r=>r.json());
+    const tb = document.querySelector("#acts tbody");
+    tb.innerHTML = (acts||[]).slice(0,14).map(a=>`<tr><td>${a.startDateLocal?.slice(0,10)}</td><td>${a.type||""}</td><td>${Math.round(a.trainingStressScore||0)}</td></tr>`).join("");
+  } catch(e){ st.textContent = "Errore: "+e.message; }
+}
+</script>
+</body>
+</html>

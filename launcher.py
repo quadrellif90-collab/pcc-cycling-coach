@@ -147,7 +147,7 @@ def _ensure_port_free_or_die() -> None:
     except OSError as e:
         msg = (
             f"FATAL: cannot bind 127.0.0.1:{PORT} ({e}). "
-            f"Domestique requires port {PORT} for single-instance detection. "
+            f"PPC requires port {PORT} for single-instance detection. "
             f"Stop the conflicting process and try again."
         )
         print(f"\n{msg}\n")
@@ -364,7 +364,7 @@ def run_with_tray():
     except ImportError:
         # pystray not installed — block until Ctrl+C
         print("(pystray not installed — running without system tray)")
-        print(f"Domestique → {URL}")
+        print(f"PPC → {URL}")
         print("Press Ctrl+C to quit.")
         try:
             _shutdown_event.wait()
