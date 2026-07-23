@@ -1666,7 +1666,7 @@ def api_profiles():
         }
     except Exception as e:
         log.exception(f"api_profiles failed: {e}")
-        return JSONResponse({"error": "Failed to list profiles"}, 500)
+        return JSONResponse({"error": "Impossibile elencare i profili"}, 500)
 
 
 @app.post("/api/profiles/create")
@@ -8458,7 +8458,7 @@ def api_logs(lines: int = Query(100)):
         }
     except Exception as e:
         log.exception(f"Failed to read log file at {log_path}: {e}")
-        return JSONResponse({"error": "Failed to read log file", "path": str(log_path)}, 500)
+        return JSONResponse({"error": "Lettura del file di log non riuscita", "path": str(log_path)}, 500)
 
 
 @app.get("/api/version")
