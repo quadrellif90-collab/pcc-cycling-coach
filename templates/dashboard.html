@@ -7155,12 +7155,22 @@ async function loadReadinessComposite() {
         <div id="apply-week-tier-down-status" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>`;
     }
 
+    // BETA Fase 4.6 — raccomandazione di zona esplicita dal readiness (DFA/HRV).
+    // Traduce lo score 0-100 in una prescrizione di intensità leggibile.
+    let zoneRec = '';
+    if (s100 != null) {
+      if (s100 >= 70)      zoneRec = 'Z4+ ammesso (lavoro duro) · poli bene oggi';
+      else if (s100 >= 45) zoneRec = 'Z2-Z3 (moderato) · evita sforzi al limite';
+      else                  zoneRec = 'Z1-Z2 (facile) · recupero attivo';
+    }
+
     host.innerHTML = `
       <div style="display:flex;gap:16px;align-items:center;">
         ${circle}
         <div style="flex:1;min-width:0;">
           <div style="font-size:15px;font-weight:700;color:${st.color};">${esc(st.word)}${srcPill}</div>
           ${why ? `<div style="font-size:12px;color:var(--text2);margin-top:3px;">${esc(why)}</div>` : ''}
+          ${zoneRec ? `<div style="font-size:11px;color:var(--accent);margin-top:4px;">Oggi: ${esc(zoneRec)}</div>` : ''}
         </div>
       </div>
       ${actionHtml}`;
