@@ -2425,9 +2425,13 @@ def generate_phases(goal: Goal, current_ctl: float,
     if recent_weekly_tss and recent_weekly_tss > 0:
         gabbett_safe = recent_weekly_tss * ACWR_CEILING
         peak_weekly_tss = min(peak_weekly_tss, gabbett_safe)
-    else:
-        max_tss_from_hours = goal.hours_per_week * 65
-        peak_weekly_tss = min(peak_weekly_tss, max_tss_from_hours)
+    # Tetto SEMPRE vincolato dalle ore a disposizione (hours_per_week × 65 TSS/h).
+    # Prima era solo nel ramo 'else' (nessun recent_weekly_tss), quindi con
+    # storico ride presente il TSS ignorava le ore a disposizione (bug #2:
+    # 4h e 12h/settimana davano lo stesso carico). Ora il tempo reale conta
+    # sempre.
+    max_tss_from_hours = goal.hours_per_week * 65
+    peak_weekly_tss = min(peak_weekly_tss, max_tss_from_hours)
 
     # ── Allocate phases backwards from target date ────────────────────────
 

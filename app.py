@@ -3835,6 +3835,39 @@ def api_race_fueling(duration_h: float = Query(2.0), bodyweight_kg: float = Quer
     return race_fueling(duration_h, bodyweight_kg)
 
 
+@app.get("/api/diet")
+def api_diet(day_type: str = Query("moderate"),
+             goal_type: str = Query("maintain"),
+             custom_calories: float = Query(None)):
+    """PPC — piano pasti giornaliero personalizzato (creatore di diete).
+
+    Restituisce pasti specifici, timing, cosa mangiare/cosa evitare.
+    custom_calories: se >0, override del nutrizionista (altrimenti calcolato)."""
+    from diet import build_daily_diet
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    a = pm._athlete or {}
+    bw = float(a.get("weight") or 72.0)
+    d = build_daily_diet(day_type, bw, goal_type, custom_calories=custom_calories)
+    return {"day_type": day_type, "goal_type": goal_type,
+            "bodyweight_kg": bw, "calorie_source": "nutrizionista" if custom_calories else "calcolato",
+            "meals": [m.__dict__ for m in d.meals], "avoid": d.avoid,
+            "total_kcal": d.total_kcal, "total_carb": d.total_carb,
+            "total_protein": d.total_protein, "total_fat": d.total_fat}
+
+
+@app.get("/api/diet-weekly")
+def api_diet_weekly(goal_type: str = Query("maintain"),
+                    custom_calories: float = Query(None)):
+    """PPC — piano alimentare SETTIMANALE (7 giorni) con variazione pasti."""
+    from diet import build_weekly_diet
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    a = pm._athlete or {}
+    bw = float(a.get("weight") or 72.0)
+    return build_weekly_diet(goal_type, bw, custom_calories=custom_calories)
+
+
 @app.get("/api/export-plan-html")
 def api_export_plan_html(athlete: str = Query("Atleta"), goal: str = Query(""),
                          phase: str = Query("base")):
