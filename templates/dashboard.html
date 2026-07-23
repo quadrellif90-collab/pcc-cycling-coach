@@ -23,7 +23,12 @@
   --bg: #f1f5f9; --surface: #ffffff; --surface2: #f8fafc; --border: #e2e8f0;
   --card: #ffffff;  /* opaque — see dark-theme note */
   --text: #1e293b; --text2: #475569; --text3: #64748b;
-  --accent: #2563eb; --accent2: #4f46e5;
+}
+[data-theme="green"] {
+  --bg: #0a1a0a; --surface: #0f2a0f; --surface2: #143014; --border: #1e4d1e;
+  --accent: #22c55e; --green: #22c55e; --card: #0f2a0f;
+  --text: #d1fae5; --text2: #86efac; --text3: #4ade80;
+}
   --green: #16a34a; --yellow: #ca8a04; --orange: #ea580c; --red: #dc2626; --purple: #9333ea;
   --z1: #94a3b8; --z2: #3b82f6; --z3: #16a34a; --z4: #ca8a04; --z5: #ea580c; --z6: #dc2626; --z7: #475569;
 }
@@ -1427,6 +1432,13 @@ window.addEventListener('unhandledrejection', function(e) {
     <div>
       <h1><img src="/static/icon.png" alt="" style="height:28px;vertical-align:middle;margin-right:6px;border-radius:6px;">PPC<span id="app-version" style="font-size:10px;font-weight:400;color:var(--text3);vertical-align:middle;margin-left:7px;"></span></h1>
       <div style="font-size:12px;color:var(--text2)" id="date-header"></div>
+      <div style="position:absolute;right:16px;top:12px;">
+        <select id="theme-select" style="font-size:10px;padding:2px 4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="applyTheme(this.value)">
+          <option value="dark">🌙 Dark</option>
+          <option value="light">☀️ Light</option>
+          <option value="green">🚴 Green</option>
+        </select>
+      </div>
     </div>
     <!-- Header sync chip — spinner + "Updating activities" next to the logo while
          a sync/backfill runs. Driven by _setSyncTopbar (same source as the full
@@ -1621,7 +1633,7 @@ window.addEventListener('unhandledrejection', function(e) {
 
   <!-- BETA: heatmap TID settimanale (POL 80/20) -->
   <div class="card" style="margin-top:12px;" id="tid-heatmap-card">
-    <h3 data-tip="Distribuzione intensità settimanale (TID). Ogni riga = una settimana di allenamento: verde = facile (Z1-Z2, ~80%), giallo = soglia moderata (Z3, da evitare), rosso = duro (Z4+). Obiettivo polarizzato 80/0/20 (Stöggl & Sperlich 2014).">Distribuzione intensità settimanale</h3>
+    <h3 data-tip="Distribuzione intensità settimanale (TID). Ogni riga = una settimana di allenamento: verde = facile (Z1-Z2, ~80%), giallo = soglia moderata (Z3, da evitare), rosso = duro (Z4+). Obiettivo polarizzato 80/0/20 (Stöggl & Sperlich 2014).">Distribuzione intensità settimanale <button class="btn btn-sm" style="font-size:10px;padding:2px 6px;" onclick="loadTidHeatmap()">Aggiorna</button></h3>
     <div id="tid-heatmap" style="display:flex;flex-direction:column;gap:4px;"></div>
     <div style="font-size:10px;color:var(--text3);margin-top:6px;">Verde = facile (Z1-Z2) · Giallo = Z3 (soglia) · Rosso = duro (Z4+)</div>
   </div>
@@ -3528,6 +3540,16 @@ async function switchProfileFromBadge(id) {
   }
 }
 document.addEventListener('click', () => { const dd=$('profile-dropdown'); if(dd) dd.classList.remove('open'); });
+
+// PPC — Theme switcher
+function applyTheme(name) {
+  document.documentElement.setAttribute('data-theme', name === 'dark' ? '' : name);
+  if (name === 'dark') document.documentElement.removeAttribute('data-theme');
+  localStorage.setItem('ppc-theme', name);
+  const sel = $('theme-select'); if (sel) sel.value = name;
+}
+// Ripristina tema salvato all'avvio
+(function() { const t = localStorage.getItem('ppc-theme'); if (t && t !== 'dark') { document.documentElement.setAttribute('data-theme', t); } })();
 loadProfileBadge();
 // Pre-load FTP for workout library mini SVGs (don't wait for Settings tab).
 // _targetMode too — red-team F6: it was only set on the Settings tab, so every
@@ -7350,11 +7372,16 @@ async function loadDailyAdapt() {
     const f = a.factor != null ? a.factor : 1.0;
     const col = f <= 0.90 ? 'var(--red)' : f >= 1.05 ? 'var(--green)' : 'var(--text2)';
     const sig = (a.signals || []).length ? ' (' + a.signals.join(', ') + ')' : '';
+    // Mostra cosa cambia: se applichi il fattore al TSS di oggi
+    const tip = f < 0.95 ? 'Riduci intensità / volume oggi' :
+                f > 1.05 ? 'Hai margine per spingere oggi' :
+                'Stato stabile — prosegui con il piano';
     host.innerHTML = `<div style="display:flex;align-items:baseline;gap:10px;">
         <span style="font-size:20px;font-weight:800;color:${col};">×${f}</span>
-        <span>${esc(a.recommendation || '')}${sig ? '<span style="color:var(--text3);"> — ' + esc(sig) + '</span>' : ''}</span>
+        <span>${esc(a.recommendation || tip)}${sig ? '<span style="color:var(--text3);"> — ' + esc(sig) + '</span>' : ''}</span>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px;">HRV ${j.hrv_ms != null ? j.hrv_ms + ' ms' : '—'} · DFA α1 ${j.dfa_alpha1 != null ? j.dfa_alpha1 : '—'} · Sonno ${j.sleep_score != null ? j.sleep_score : '—'} · TSB ${j.tsb != null ? j.tsb : '—'} · Hooper ${j.hooper != null ? j.hooper : '—'}</div>`;
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;">HRV ${j.hrv_ms != null ? j.hrv_ms + ' ms' : '—'} · DFA α1 ${j.dfa_alpha1 != null ? j.dfa_alpha1 : '—'} · Sonno ${j.sleep_score != null ? j.sleep_score : '—'} · TSB ${j.tsb != null ? j.tsb : '—'} · Hooper ${j.hooper != null ? j.hooper : '—'}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">💡 ${esc(tip)}</div>`;
   } catch (e) { /* non bloccare il resto */ }
 }
 // applyWeekAutoAdjust stay untouched. Kept the function name so all existing
