@@ -6514,6 +6514,36 @@ def api_workouts(
     return JSONResponse(result, headers=headers)
 
 
+@app.post("/api/workouts/import")
+def api_workout_import(request: Request):
+    """PPC — importa un file ZWO personalizzato nella libreria locale.
+
+    Accetta: { filename: str, content: str (XML ZWO) }
+    Salva nella cartella workouts/ e lo rende disponibile nella libreria.
+    """
+    import re as _re
+    body = {}
+    try:
+        body = json.loads(request.body().read().decode("utf-8") or "{}")
+    except Exception:
+        body = {}
+    filename = body.get("filename", "").strip()
+    content = body.get("content", "")
+    if not filename or not content:
+        raise HTTPException(400, "filename e content sono obbligatori")
+    if not filename.endswith(".zwo"):
+        filename += ".zwo"
+    # sanitizza filename
+    filename = _re.sub(r'[^a-zA-Z0-9_\-.]', '_', filename)
+    workouts_dir = Path("workouts")
+    workouts_dir.mkdir(exist_ok=True)
+    target = workouts_dir / filename
+    if target.exists():
+        raise HTTPException(409, f"{filename} esiste già")
+    target.write_text(content, encoding="utf-8")
+    return {"ok": True, "filename": filename, "size": len(content)}
+
+
 @app.get("/api/workout/download/{filename}")
 def download_workout_by_id(filename: str, cap: int = Query(0)):
     """Serve a ZWO workout file as a download attachment.
