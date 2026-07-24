@@ -258,18 +258,21 @@ def parse_bia_pdf(pdf_bytes: bytes) -> dict:
 
 
 # ── Mappatura BIA -> Intervals.icu /wellness ───────────────────────────────
-# Campi che ICU accetta in POST /athlete/{id}/wellness/{date}
+# Campi verificati accettati da ICU per questo atleta (PUT /wellness-bulk):
+#   weight, bodyFat (%)
+# Campi RIFIUTATI da ICU (422): pctBodyFat, muscleMass, hydration, bmi,
+#   boneMass, protein, visceralFat, metabolicAge
+# Li escludiamo per non far fallire l'intera push.
 ICU_WELLNESS_FIELDS = [
-    "weight", "bodyFat", "pctBodyFat", "hydration", "boneMass",
-    "muscleMass", "pctMuscle", "protein", "bmi", "visceralFat",
-    "metabolicAge",
+    "weight", "bodyFat",
 ]
 
 
 def to_icu_wellness(r: BIAReading, date: str) -> dict:
     """Costruisce il payload ICU /wellness per una misurazione BIA.
 
-    Restituisce {"date":..., "payload": {...}} con solo i campi disponibili.
+    Restituisce {"date":..., "payload": {...}} con solo i campi disponibili
+    e ACCETTATI da Intervals.icu (weight, bodyFat).
     """
     d = r.to_dict()
     payload = {}
@@ -277,22 +280,5 @@ def to_icu_wellness(r: BIAReading, date: str) -> dict:
         payload["weight"] = round(r.weight_kg, 1)
     if r.fat_mass_pct is not None:
         payload["bodyFat"] = round(r.fat_mass_pct, 1)
-        payload["pctBodyFat"] = round(r.fat_mass_pct, 1)
-    if r.hydration_pct is not None:
-        payload["hydration"] = round(r.hydration_pct, 1)
-    if r.bone_kg is not None:
-        payload["boneMass"] = round(r.bone_kg, 1)
-    # muscleMass: ICU lo intende come massa muscolare; usiamo SMM se presente
-    mm = r.smm_kg if r.smm_kg is not None else r.muscle_mass_kg
-    if mm is not None:
-        payload["muscleMass"] = round(mm, 1)
-    if r.protein_kg is not None:
-        payload["protein"] = round(r.protein_kg, 1)
-    if r.bmi is not None:
-        payload["bmi"] = round(r.bmi, 1)
-    if r.visceral_fat is not None:
-        payload["visceralFat"] = round(r.visceral_fat, 1)
-    if r.metabolic_age is not None:
-        payload["metabolicAge"] = round(r.metabolic_age, 1)
     use_date = date or r.date or ""
     return {"date": use_date, "payload": payload}
