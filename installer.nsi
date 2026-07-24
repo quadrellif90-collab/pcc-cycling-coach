@@ -14,14 +14,18 @@
 !define INSTDIR "$PROGRAMFILES64\PPC"
 
 Name "${APPNAMEFULL}"
-; OutFile assoluto per evitare ambiguità di cwd su CI (GitHub Actions).
-; Define OUTDIR passato dal CI; default alla cartella corrente se compilato a mano.
+; OutputDir/OutputBaseFilename (sintassi nativa Inno Setup) invece di OutFile
+; assoluto, per evitare "Access is denied" quando iscc gira su CI con cwd
+; non scrivibile. OUTDIR passato dal CI (/DOUTDIR=...); default "." se a mano.
 !ifndef OUTDIR
   !define OUTDIR "."
 !endif
-OutFile "${OUTDIR}\PPC-Setup-${VERSION}.exe"
+OutputDir "${OUTDIR}"
+OutputBaseFilename "PPC-Setup-${VERSION}"
 InstallDir "${INSTDIR}"
-RequestExecutionLevel admin
+; RequestExecutionLevel admin: l'installer chiede i privilegi all'utente a
+; runtime (UAC). NON serve a compile-time e su CI può dare "Access denied".
+RequestExecutionLevel highest
 
 ; I dati utente vivono fuori da INSTDIR -> non li includiamo e non li cancelliamo.
 InstallDirRegKey HKLM "Software\PPC" "InstallDir"
