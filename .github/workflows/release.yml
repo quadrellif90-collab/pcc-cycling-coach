@@ -358,7 +358,7 @@ jobs:
           }
 
       - name: Build Windows installer (Inno Setup)
-        uses: Minionguyjpro/Inno-Setup-Action@v1
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
         with:
           file: installer.nsi
           extra_args: "/DVERSION=${{ needs.read-version.outputs.version }} /DOUTDIR=${{ github.workspace }}"
