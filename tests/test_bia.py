@@ -57,10 +57,14 @@ def test_icu_payload_mapping():
     r["date"] = "2026-06-15"
     icu = to_icu_wellness(BIAReading(**r), "2026-06-15")
     p = icu["payload"]
+    # Intervals.icu /wellness-bulk accepts ONLY weight + bodyFat for this
+    # athlete: pctBodyFat, muscleMass, hydration, bmi -> 422 Unprocessable.
+    # Verified end-to-end with real PUT (200 OK). See bia_parser.to_icu_wellness.
     assert p["weight"] == 71.4
-    assert p["hydration"] == 73.1
-    assert p["muscleMass"] == 32.2
-    assert p["bmi"] == 25.3
+    assert p["bodyFat"] == 20.4
+    assert "hydration" not in p
+    assert "muscleMass" not in p
+    assert "bmi" not in p
     assert icu["date"] == "2026-06-15"
 
 
