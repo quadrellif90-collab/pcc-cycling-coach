@@ -3361,9 +3361,9 @@ window.addEventListener('unhandledrejection', function(e) {
         <div id="icu-cal-sync-hint" style="font-size:11px;color:var(--text3);margin-top:4px;">
           Mirrors your next 14 days of planned workouts to your intervals.icu
           calendar after every plan change (Garmin &amp; MyWhoosh pull workouts
-          from there). Turning this off removes the workouts Domestique pushed;
+          from there). Turning this off removes the workouts PPC pushed;
           anything else on your calendar is never touched — workouts you added
-          yourself stay put (even on the same day). Sync from one Domestique
+          yourself stay put (even on the same day). Sync from one PPC
           install per athlete.
         </div>
       </div>
@@ -16045,7 +16045,7 @@ async function copyLogs() {
   try {
     const d = await (await fetch('/api/logs?lines=500')).json();
     const v = await (await fetch('/api/version')).json();
-    const text = `Domestique v${v.version} | ${v.platform} | Python ${v.python}\n${'='.repeat(60)}\n${(d.lines||[]).join('\n')}`;
+    const text = `PPC v${v.version} | ${v.platform} | Python ${v.python}\n${'='.repeat(60)}\n${(d.lines||[]).join('\n')}`;
     await navigator.clipboard.writeText(text);
     alert('Logs copied to clipboard! Paste them in a bug report.');
   } catch(e) { alert('Failed: ' + e.message); }
@@ -16054,7 +16054,7 @@ async function copyLogs() {
 async function viewVersion() {
   try {
     const v = await (await fetch('/api/version')).json();
-    showToast(`Domestique v${v.version} · Python ${v.python} · ${v.platform}${v.frozen ? ' · packaged' : ''}`, 6000);
+    showToast(`PPC v${v.version} · Python ${v.python} · ${v.platform}${v.frozen ? ' · packaged' : ''}`, 6000);
   } catch(e) { showToast('Version check failed: ' + e.message, 4000); }
 }
 
@@ -19840,7 +19840,7 @@ async function downloadGeneratedZwo(type, durationMin, name) {
   let ftp = 250;
   try { const s = await (await fetch('/api/settings')).json(); ftp = s.ftp || 250; } catch(e) {}
   const blocks = buildPowerBlocks(type, durationMin, ftp);
-  let xml = `<?xml version="1.0" encoding="utf-8"?>\n<workout_file>\n  <author>Domestique Library</author>\n  <name>${esc(name)}</name>\n  <sportType>bike</sportType>\n  <workout>\n`;
+  let xml = `<?xml version="1.0" encoding="utf-8"?>\n<workout_file>\n  <author>PPC Library</author>\n  <name>${esc(name)}</name>\n  <sportType>bike</sportType>\n  <workout>\n`;
   for (const b of blocks) {
     if (b.pctLow !== b.pctHigh) {
       const tag = b.name === 'Warmup' ? 'Warmup' : 'Cooldown';
@@ -20260,7 +20260,7 @@ function dismissSyncBanner() {
 // Sample API response shape for visual QA / mocking:
 // { current: "1.8.6", latest: "1.8.7", update_available: true,
 //   release_url: "https://github.com/...", download_url: "https://...",
-//   asset_name: "Domestique-v1.8.7.dmg",
+//   asset_name: "PPC.dmg",
 //   release_body: "## What's new\n- bullet 1\n- bullet 2\n\nSee https://example.com" }
 
 // Minimal markdown renderer for release notes. NO external libraries

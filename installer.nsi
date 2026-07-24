@@ -6,7 +6,7 @@
 !define APPNAME "PPC"
 !define APPNAMEFULL "PPC - Programming Cycling Coach"
 !define PUBLISHER "PPC"
-!define VERSION "3.5.2"
+!define VERSION "4.0.0"
 !define INSTDIR "$PROGRAMFILES64\PPC"
 
 Name "${APPNAMEFULL}"

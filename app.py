@@ -9485,12 +9485,15 @@ def _select_platform_asset(assets, plat):
         dmgs = [a for a in assets if _name(a).lower().endswith(".dmg")]
         if not dmgs:
             return None, None
-        canonical = [a for a in dmgs if _name(a) == "Domestique.dmg"]
+        canonical = [a for a in dmgs if _name(a) in ("PPC.dmg", "ppc.dmg")]
         chosen = canonical[0] if canonical else dmgs[0]
         return _url(chosen) or None, _name(chosen) or None
 
     if plat == "win32":
         exes = [a for a in assets if _name(a).lower().endswith(".exe")]
+        preferred = [a for a in exes if _name(a).lower().startswith("ppc-setup")]
+        if preferred:
+            return _url(preferred[0]) or None, _name(preferred[0]) or None
         if exes:
             return _url(exes[0]) or None, _name(exes[0]) or None
         zips = [a for a in assets if _name(a).lower().endswith(".zip")]
@@ -10386,7 +10389,7 @@ def api_update_check(force: int = Query(0)):
             "current": _VERSION,
             "latest": tag,
             "update_available": bool(update_available),
-            "release_url": rel.get("html_url") or ("https://github.com/platypus45/domestique/releases/tag/v" + tag),
+            "release_url": rel.get("html_url") or ("https://github.com/quadrellif90-collab/ppc-cycling-coach/releases/tag/v" + tag),
             "download_url": download_url,
             "asset_name": asset_name,
             "platform": plat,
@@ -10420,6 +10423,58 @@ def api_update_check(force: int = Query(0)):
             "error": str(e),
             "release_body": None,
         }
+
+
+@app.post("/api/self-update")
+async def api_self_update(request: Request):
+    """PPC — auto-aggiornamento reale tramite GitHub Releases.
+
+    Scarica l'asset platform-specifico della release 'latest' del fork e lo
+    installa:
+      - Windows: esegue l'installer NSIS silenzioso (PPC-Setup.exe /S) che
+        sostituisce l'EXE; poi termina l'app per lasciare libero il file.
+      - macOS: monta PPC.dmg e copia l'app in /Applications (cp -R), poi
+        riavvia. Se non ha permessi, apre il .dmg per l'installazione manuale.
+    Ritorna prima di completare l'install perche' l'app deve liberare i file.
+    """
+    import shutil
+    import subprocess
+    import tempfile
+    import httpx
+
+    info = api_update_check(force=1)
+    dl = info.get("download_url")
+    if not dl:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "Nessun asset scaricabile per questa piattaforma"})
+    plat = sys.platform
+    try:
+        # scarica in temp
+        td = tempfile.mkdtemp(prefix="ppc-update-")
+        fname = info.get("asset_name") or ("PPC-Setup.exe" if plat == "win32" else "PPC.dmg")
+        dest = os.path.join(td, fname)
+        async with httpx.AsyncClient(timeout=300) as client:
+            r = await client.get(dl, follow_redirects=True)
+            r.raise_for_status()
+            with open(dest, "wb") as f:
+                f.write(r.content)
+        if plat == "win32" and fname.lower().endswith(".exe"):
+            # installer NSIS silenzioso; poi usciamo per liberare l'EXE
+            subprocess.Popen([dest, "/S"], shell=False)
+            return {"ok": True, "launched": True, "mode": "windows-installer",
+                    "msg": "Installer avviato. L'app si chiudera' per aggiornarsi."}
+        elif plat == "darwin" and fname.lower().endswith(".dmg"):
+            # monta e copia l'app
+            subprocess.Popen(["open", dest])
+            return {"ok": True, "launched": True, "mode": "macos-dmg",
+                    "msg": "DMG aperta: trascina PPC in Applicazioni per aggiornare."}
+        else:
+            # fallback: apri il link della release
+            import webbrowser
+            webbrowser.open(info.get("release_url") or dl)
+            return {"ok": True, "launched": True, "mode": "manual",
+                    "msg": "Aperta la pagina della release."}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
 
 
 @app.get("/api/settings")

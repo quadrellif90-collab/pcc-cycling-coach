@@ -1,10 +1,10 @@
 @echo off
-REM Build Domestique for Windows
-REM Output: dist\Domestique\Domestique.exe
+REM Build PPC — Programming Cycling Coach for Windows
+REM Output: dist\PPC\PPC.exe  (then installer.nsi -> PPC-Setup-<ver>.exe)
 
 cd /d "%~dp0"
 
-echo === Domestique Windows Build ===
+echo === PPC Windows Build ===
 
 REM 1. Create virtual environment if needed
 if not exist venv (
@@ -20,14 +20,15 @@ pip install -r requirements.txt pyinstaller
 REM 3. Create assets dir if missing
 if not exist assets mkdir assets
 
-REM 4. Build with PyInstaller
+REM 4. Build with PyInstaller (ppc.spec produces dist\PPC\PPC.exe)
 echo Building...
-pyinstaller domestique.spec --clean --noconfirm
+pyinstaller ppc.spec --clean --noconfirm
 
 echo.
 echo === Build complete ===
-echo Executable: dist\Domestique\Domestique.exe
+echo Executable: dist\PPC\PPC.exe
 echo.
-echo To create an installer, use Inno Setup with the generated files.
-echo To run: dist\Domestique\Domestique.exe
+echo To create the installer, compile installer.nsi with Inno Setup:
+echo   iscc installer.nsi   ->   PPC-Setup-<ver>.exe  (silenzioso: PPC-Setup.exe /S)
+echo To run: dist\PPC\PPC.exe
 pause
