@@ -4,6 +4,7 @@ logs/
 # Build artifacts
 build/
 dist/
+dist_new2/
 *.pyc
 __pycache__/
 *.spec.bak
