@@ -221,24 +221,39 @@ def parse_bia_text(text: str) -> dict:
 
 
 def parse_bia_pdf(pdf_bytes: bytes) -> dict:
-    """Estrae testo dal PDF via PyMuPDF; se vuoto -> scansionato."""
+    """Estrae testo dal PDF via PyMuPDF; se vuoto -> scansionato.
+
+    Nel caso scansionato, ritorna anche le immagini delle pagine (PNG base64)
+    cosi' l'UI puo' mostrarle all'atleta e fargli inserire/confermare i valori.
+    """
     import io
+    import base64
     try:
         import fitz  # PyMuPDF
     except ImportError:
         return {"scanned": True, "error": "PyMuPDF non installato",
                 "reading": BIAReading(source="pdf_scanned").to_dict(),
-                "found_fields": [], "missing_fields": sorted(_LABEL_PATTERNS)}
+                "found_fields": [], "missing_fields": sorted(_LABEL_PATTERNS),
+                "pages": []}
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     parts = []
-    for pg in doc:
+    page_images = []
+    for i, pg in enumerate(doc):
         parts.append(pg.get_text() or "")
+        # renderizza la pagina in PNG base64 per l'UI (utile nei PDF scansionati)
+        try:
+            pix = pg.get_pixmap(matrix=fitz.Matrix(1.4, 1.4))
+            img_bytes = pix.tobytes("png")
+            page_images.append("data:image/png;base64," + base64.b64encode(img_bytes).decode("ascii"))
+        except Exception:
+            pass
     text = "\n".join(parts).strip()
     if not text:
         return {"scanned": True,
                 "reading": BIAReading(source="pdf_scanned").to_dict(),
                 "found_fields": [], "missing_fields": sorted(_LABEL_PATTERNS),
-                "note": "PDF scansionato: testo non estraibile. Incolla i valori o usa un export testuale."}
+                "note": "PDF scansionato: testo non estraibile. Incolla i valori o usa l'import manuale.",
+                "pages": page_images}
     return parse_bia_text(text)
 
 

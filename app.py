@@ -4322,12 +4322,20 @@ async def api_bia_import(request: Request):
         # JSON esplicito
         if "application/json" in ctype or body.lstrip().startswith(b"{"):
             data = _json.loads(body.decode("utf-8") or "{}")
-            from bia_parser import BIAReading, to_icu_wellness
-            r = BIAReading(**{k: v for k, v in data.items()
-                              if k in BIAReading.__dataclass_fields__})
-            r.source = "manual"
-            if not r.date:
-                r.date = __import__("datetime").date.today().isoformat()
+            from bia_parser import BIAReading, to_icu_wellness, parse_bia_text
+            # testo incollato: fai il parse regex invece di leggerlo come campi strutturati
+            if data.get("raw_text"):
+                pt = parse_bia_text(data["raw_text"])
+                r = BIAReading(**pt["reading"])
+                r.source = "pdf"
+                if not r.date:
+                    r.date = __import__("datetime").date.today().isoformat()
+            else:
+                r = BIAReading(**{k: v for k, v in data.items()
+                                  if k in BIAReading.__dataclass_fields__})
+                r.source = "manual"
+                if not r.date:
+                    r.date = __import__("datetime").date.today().isoformat()
         else:
             # multipart: file PDF
             from bia_parser import parse_bia_pdf, BIAReading
@@ -4341,19 +4349,29 @@ async def api_bia_import(request: Request):
             r = BIAReading(**res["reading"])
             if not r.date:
                 r.date = __import__("datetime").date.today().isoformat()
-        # salva nello storico
+        # salva nello storico (solo se ci sono campi reali)
         from bia_parser import to_icu_wellness
-        hist = _bia_load_history()
-        entry = r.to_dict()
-        hist = [h for h in hist if h.get("date") != r.date]
-        hist.append(entry)
-        hist.sort(key=lambda x: x.get("date", ""))
-        saved = _bia_save_history(hist)
-        icu = to_icu_wellness(r, r.date)
-        return {"ok": True, "scanned": scanned,
-                "reading": entry, "found_fields": sorted(r.filled_fields().keys()),
+        filled = r.filled_fields()
+        if filled:
+            hist = _bia_load_history()
+            entry = r.to_dict()
+            hist = [h for h in hist if h.get("date") != r.date]
+            hist.append(entry)
+            hist.sort(key=lambda x: x.get("date", ""))
+            saved = _bia_save_history(hist)
+            count = len(hist)
+        else:
+            saved = False
+            count = len(_bia_load_history())
+        icu = to_icu_wellness(r, r.date) if filled else None
+        resp = {"ok": True, "scanned": scanned,
+                "reading": r.to_dict(), "found_fields": sorted(filled.keys()),
                 "icu_payload": icu, "history_saved": saved,
-                "history_count": len(hist)}
+                "history_count": count}
+        if scanned:
+            resp["pages"] = res.get("pages", [])
+            resp["note"] = res.get("note", "PDF scansionato: testo non estraibile.")
+        return resp
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": f"BIA import fallito: {e}"})
 

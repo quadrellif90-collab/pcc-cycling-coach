@@ -7637,6 +7637,7 @@ async function importBIA() {
   const msg = document.getElementById('bia-import-msg');
   if (!inp || !inp.files || !inp.files[0]) return;
   msg.textContent = 'Estrazione PDF…';
+  msg.style.color = 'var(--red)';
   try {
     const fd = new FormData();
     fd.append('file', inp.files[0]);
@@ -7644,13 +7645,79 @@ async function importBIA() {
     const j = await res.json();
     if (!res.ok) { msg.textContent = 'Errore: ' + (j.error || 'PDF non leggibile'); return; }
     if (j.scanned) {
-      msg.textContent = 'PDF scansionato: testo non estraibile. Incolla i valori qui sopra o usa un export testuale.';
+      // mostra l'immagine del PDF e pre-compila il form manuale
+      msg.style.color = 'var(--text2)';
+      msg.textContent = 'PDF scansionato: testo non estraibile automaticamente. Controlla l\'immagine qui sotto e inserisci i valori nel form (oppure incolla il testo).';
+      showBIAscan(j);
       return;
     }
     msg.style.color = 'var(--green)';
     msg.textContent = `Importati ${j.found_fields.length} campi (${j.reading.date}). Ora puoi fare Sync ICU.`;
+    prefillBIAform(j.reading);
     loadBIAHistory();
   } catch (e) { msg.textContent = 'Errore import'; }
+}
+
+// Mostra l'immagine del PDF scansionato e un pulsante per compilare il form
+function showBIAscan(j) {
+  let host = document.getElementById('bia-scan');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'bia-scan';
+    host.style.cssText = 'margin-top:8px;border-top:1px solid var(--border);padding-top:8px;';
+    const after = document.getElementById('bia-import-msg');
+    after.parentNode.insertBefore(host, after.nextSibling);
+  }
+  const pages = (j.pages || []).map((src,i) =>
+    `<img src="${src}" style="max-width:100%;border:1px solid var(--border);border-radius:6px;margin:4px 0;display:block;cursor:zoom-in;" onclick="window.open(this.src)" title="Clicca per ingrandire">`
+  ).join('');
+  host.innerHTML = `
+    <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">
+      <b>PDF scansionato — leggi i valori e inseriscili nel form qui sotto:</b>
+    </div>
+    ${pages}
+    <div style="margin-top:6px;">
+      <label class="btn" style="font-size:11px;padding:3px 10px;cursor:pointer;">
+        📋 Incolla testo PDF (OCR esterno / copia valori)
+        <textarea id="bia-paste" placeholder="Incolla qui il testo del report (es. Peso 71.4 kg, BMI 25.3, Massa grassa 14.6 kg…)" style="display:block;width:100%;height:60px;margin-top:4px;font-size:11px;"></textarea>
+      </label>
+      <button class="btn" style="font-size:11px;padding:4px 12px;margin-top:6px;background:var(--accent);color:#fff;" onclick="parseBIApaste()">Estrai valori dal testo</button>
+    </div>`;
+}
+
+// Parsa il testo incollato tramite l'endpoint (riusa parse_bia_text)
+async function parseBIApaste() {
+  const ta = document.getElementById('bia-paste');
+  const msg = document.getElementById('bia-import-msg');
+  if (!ta || !ta.value.trim()) { msg.textContent = 'Incolla prima il testo.'; return; }
+  msg.textContent = 'Estrazione…';
+  try {
+    const res = await fetch('/api/bia-import', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ raw_text: ta.value })
+    });
+    const j = await res.json();
+    if (!res.ok || !j.ok) { msg.textContent = 'Errore: ' + (j.error||'testo non leggibile'); return; }
+    msg.style.color = 'var(--green)';
+    msg.textContent = `Estratti ${j.found_fields.length} campi. Conferma con "Salva misurazione".`;
+    prefillBIAform(j.reading);
+    loadBIAHistory();
+  } catch (e) { msg.textContent = 'Errore parsing'; }
+}
+
+function prefillBIAform(r) {
+  if (!r) return;
+  const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+  set('bia-date', r.date);
+  set('bia-weight', r.weight_kg);
+  set('bia-height', r.height_cm);
+  set('bia-fat', r.fat_mass_kg);
+  set('bia-ffm', r.fat_free_mass_kg);
+  set('bia-tbw', r.tbw_l);
+  set('bia-smm', r.smm_kg);
+  set('bia-bcm', r.bcm_kg);
+  set('bia-pha', r.phase_angle);
+  set('bia-bmi', r.bmi);
 }
 
 async function saveBIAmanual() {
