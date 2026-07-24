@@ -1874,6 +1874,12 @@ def get_budget_for_phase(phase_name: str) -> "IntensityBudget":
         # pyramidal/threshold/custom tables rebuild build1, and an alias
         # entry would silently keep pointing at the polarized object).
         phase_name = "build1"
+    if phase_name == "base_recall":
+        # v4.4: the long-base VO2max/threshold recall block fuels & budgets
+        # like build1 (2 HIT/wk, top-end focus) — alias here so every
+        # per-name lookup (intensity budget, HIT blueprint, nutrition, workout
+        # mix) treats it as build1 instead of falling back to the aerobic base.
+        phase_name = "build1"
     return table.get(phase_name, table["base"])
 
 
@@ -2671,6 +2677,14 @@ def generate_phases(goal: Goal, current_ctl: float,
     # the global week counter, so the deload rhythm is unchanged); each block is
     # its own Phase row, so week_in_phase-driven variety resets per block and
     # the phase panel shows the block structure instead of one 39-week slab.
+    #
+    # v4.4 (modern block periodization): a long base of 10 identical aerobic
+    # blocks lets top-end (VO2max/threshold) decay for months. Rønnestad 2014/
+    # 2019 + Stöggl 2014: interleave short VO2max "recall" blocks every ~3 base
+    # blocks so the ceiling is maintained WITHOUT compromising the aerobic
+    # build. Each 4th block becomes a 3-week threshold/VO2max recall (still
+    # under the base TSS ceiling → no premature peaking), giving the long
+    # runway real structure: base·base·base·recall·base·base·base·recall…
     if base_weeks > 20:
         _split_defs = []
         for _pd in phase_defs:
@@ -2679,11 +2693,27 @@ def generate_phases(goal: Goal, current_ctl: float,
                 continue
             _name, _wks, _tss, _focus, _z2, _hit, _types = _pd
             _n_blocks = -(-_wks // 4)  # ceil
+            _base_blk_idx = 0  # counts only real base blocks (for recall cadence)
             for _bi in range(_n_blocks):
                 _blk = min(4, _wks - 4 * _bi)
-                _split_defs.append((_name, _blk, _tss,
-                                    f"{_focus} [block {_bi + 1}/{_n_blocks}]",
-                                    _z2, _hit, _types))
+                # Every 4th block (after 3 aerobic blocks) and only when at
+                # least 3 weeks remain in it → a VO2max/threshold recall block.
+                _is_recall = (_base_blk_idx > 0 and _base_blk_idx % 3 == 0
+                              and _blk >= 3 and _bi < _n_blocks - 1)
+                if _is_recall:
+                    _split_defs.append((
+                        "base_recall", _blk, round(_tss * 1.05),
+                        f"Richiamo VO2max/soglia (blocco {_bi + 1}/{_n_blocks}) — "
+                        "mantiene il top-end durante la base lunga "
+                        "(Rønnestad 2019 block periodization).",
+                        72, 2,
+                        ["z2", "vo2max", "threshold", "overunder", "long_z2"]))
+                else:
+                    _split_defs.append((
+                        _name, _blk, _tss,
+                        f"{_focus} [block {_bi + 1}/{_n_blocks}]",
+                        _z2, _hit, _types))
+                _base_blk_idx += 1
         phase_defs = _split_defs
 
     # v1.0.0: append a 1-week CONSOLIDATION phase after peak for non-event
@@ -6405,15 +6435,22 @@ def generate_plan(
     # (app.py surfaces these as a 400).
     _entry_sd = getattr(goal, "start_date", None)
     if _entry_sd is not None:
-        if _entry_sd > date.today():
+        # v4.4: FUTURE start is now ALLOWED — "il programma deve poter partire
+        # dalla data che decido". A future start_date anchors the whole plan
+        # forward (phases/weeks laid from that date); no elapsed weeks, no
+        # entry recognition. Guardrails: max 1 year ahead, and it must still
+        # leave a runway before the target.
+        if _entry_sd > date.today() + timedelta(days=365):
             raise ValueError(
-                f"Start date {_entry_sd.isoformat()} is in the future — "
-                "\"training since\" must be today or earlier."
+                f"Start date {_entry_sd.isoformat()} is more than a year "
+                "ahead — pick a closer start."
             )
         if goal.target_date is not None and _entry_sd >= goal.target_date:
             raise ValueError(
-                f"Start date {_entry_sd.isoformat()} is on or after the "
-                f"target date {goal.target_date.isoformat()} — no runway left."
+                f"La data di partenza {_entry_sd.isoformat()} è successiva o "
+                f"uguale alla data dell'evento {goal.target_date.isoformat()} "
+                "— nessun margine di allenamento. Scegli una partenza prima "
+                "dell'evento."
             )
         # G2 (v3.3.3 L4): with NO target date there is no future anchor — the
         # plan spans start_date .. start_date + weeks_available()×7, so a

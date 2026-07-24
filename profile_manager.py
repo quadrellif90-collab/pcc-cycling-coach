@@ -442,6 +442,16 @@ class ProfileManager:
         """
         safe_dir = _safe_profile_dir(self, profile_id)
 
+        # v4.4: deleting the ACTIVE profile is allowed — if another profile
+        # exists, hot-swap to it FIRST (switch() takes _switch_lock itself,
+        # so this must happen before we acquire the lock below). If it's the
+        # only profile, the delete-last path below clears the pointer.
+        if profile_id == self._active_id:
+            _others = [p["id"] for p in self._registry.get("profiles", [])
+                       if p["id"] != profile_id]
+            if _others:
+                self.switch(_others[0])
+
         with self._switch_lock:
             # Active-profile check MUST be inside the lock to avoid TOCTOU
             # against a concurrent switch(). Exception: if this is ALSO the
@@ -452,7 +462,9 @@ class ProfileManager:
             profiles = self._registry.get("profiles", [])
             is_last = len(profiles) <= 1
             if profile_id == self._active_id and not is_last:
-                raise ValueError("Cannot delete active profile")
+                # concurrent switch raced us back onto this profile — treat
+                # like delete-last: clear the pointer via the same path.
+                is_last = True
 
             # rmtree FIRST. If it fails the registry entry is preserved so the
             # user can retry later; otherwise we'd leak the on-disk data and

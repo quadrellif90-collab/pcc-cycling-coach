@@ -3349,6 +3349,25 @@ window.addEventListener('unhandledrejection', function(e) {
         <button class="btn btn-sm" id="icu-disconnect-btn" style="display:none;" onclick="icuDisconnect()">Disconnetti</button>
         <div id="icu-conn-error" style="display:none;font-size:12px;color:var(--red);margin-top:6px;"></div>
         <div style="font-size:11px;color:var(--text3);margin-top:6px;">Accedi a intervals.icu e autorizza PPC — nessuna chiave da copiare.</div>
+        <!-- v4.4: gestione profilo — Disconnetti (sopra), Reset dati, Elimina -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
+          <button class="btn btn-sm" onclick="resetActiveProfile()" title="Svuota rides, piani, wellness e credenziali ICU ma mantiene il profilo">🧹 Reset profilo</button>
+          <button class="btn btn-sm" style="color:var(--red);" onclick="deleteActiveProfile()" title="Elimina definitivamente il profilo e tutti i suoi dati">🗑️ Elimina profilo</button>
+        </div>
+        <!-- v4.4: connessione persistente via API key (l'OAuth di questa build
+             non ha il client_secret → il login non veniva mai salvato). -->
+        <details id="icu-apikey-block" style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
+          <summary style="cursor:pointer;font-size:13px;font-weight:600;">🔑 Connetti con API key (consigliato — resta connesso)</summary>
+          <div style="font-size:11px;color:var(--text3);margin:6px 0;">
+            Su intervals.icu → Settings → Developer → copia <b>Athlete ID</b> (es. i130499) e <b>API Key</b>. La connessione viene salvata nel profilo e non scade.
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input type="text" id="icu-manual-id" placeholder="Athlete ID (i…)" style="width:130px;" autocomplete="off">
+            <input type="password" id="icu-manual-key" placeholder="API Key" style="width:180px;" autocomplete="off">
+            <button class="btn btn-sm btn-primary" onclick="icuSaveApiKey()">Salva e connetti</button>
+          </div>
+          <div id="icu-apikey-msg" style="font-size:12px;margin-top:6px;"></div>
+        </details>
       </div>
       <!-- v3.0.1 IP_ICU_PUSH: keep-in-sync toggle (default OFF). Hidden until
            the connection state is known; disabled with a reconnect hint when
@@ -3642,6 +3661,29 @@ function toggleProfileDropdown(e) {
 }
 
 let _deletingProfile = false;
+// v4.4 — Reset profilo attivo: svuota dati + disconnette ICU, mantiene il profilo.
+async function resetActiveProfile() {
+  const p = (_profileData && _profileData.active) || 'default';
+  if (!confirm('Reset profilo?\n\nSvuota rides, piani, wellness e credenziali Intervals.icu.\nIl profilo resta e riparti pulito.\n\nContinuare?')) return;
+  try {
+    const res = await fetch(`/api/profiles/${encodeURIComponent(p)}/reset`, {method:'POST'});
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.ok) { alert('Reset fallito: ' + (j.error || res.status)); return; }
+    alert('Profilo resettato. La pagina verrà ricaricata.');
+    window.location.reload();
+  } catch (e) { alert('Reset fallito: ' + e.message); }
+}
+// v4.4 — Elimina il profilo ATTIVO (anche l'ultimo → torna al wizard).
+async function deleteActiveProfile() {
+  const p = (_profileData && _profileData.active) || 'default';
+  const name = (_profileData && (_profileData.profiles||[]).find(x=>x.id===p)||{}).name || p;
+  if (!confirm(`Eliminare DEFINITIVAMENTE il profilo "${name}"?\n\nRimuove per sempre:\n• Tutte le uscite e i dati\n• Piani di allenamento\n• Credenziali Intervals.icu\n• Database\n\nOperazione irreversibile.`)) return;
+  try {
+    const res = await fetch(`/api/profiles/${encodeURIComponent(p)}`, {method:'DELETE'});
+    if (!res.ok) { const b = await res.text().catch(()=> ''); alert(`Eliminazione fallita (${res.status}): ${b}`); return; }
+    window.location.href = '/profile-picker';
+  } catch (e) { alert('Eliminazione fallita: ' + e.message); }
+}
 async function deleteProfileFromBadge(id, name) {
   if (_deletingProfile) return;
   const confirmMsg =
@@ -11848,7 +11890,52 @@ function _syncPlanDateToWeeks() {
     if (!ed || !pw) return;
     const computed = _computePlanWeeksFromEventDate(ed.value);
     if (computed) pw.value = computed;
+    // v4.4: cap the "Allenamento dal" picker at the day BEFORE the event so
+    // the user can't pick a start on/after the race (no runway → 400 error).
+    _clampEntrySdateMax();
   } finally { _planSyncing = false; }
+}
+
+// v4.4 — keep the start-date picker's max in sync with the event date and
+// warn inline if the current value has no runway left.
+function _clampEntrySdateMax() {
+  const sd = document.getElementById('plan-sdate');
+  const ed = document.getElementById('plan-edate');
+  if (!sd) return;
+  if (ed && ed.value) {
+    // day before the event (start must be strictly < event)
+    const evt = new Date(ed.value + 'T12:00:00');
+    evt.setDate(evt.getDate() - 1);
+    sd.max = evt.toISOString().slice(0, 10);
+  } else {
+    sd.removeAttribute('max');
+  }
+  _validateEntrySdate();
+}
+
+// Returns true when the start date is valid (or empty); shows/clears an inline
+// note otherwise. Called on edit and before generate.
+function _validateEntrySdate() {
+  const sd = document.getElementById('plan-sdate');
+  const ed = document.getElementById('plan-edate');
+  const note = document.getElementById('entry-recognized-note');
+  if (!sd || !sd.value) return true;
+  if (ed && ed.value && sd.value >= ed.value) {
+    sd.style.borderColor = 'var(--red)';
+    if (note) {
+      note.style.display = 'inline';
+      note.style.color = 'var(--red)';
+      note.textContent = "La data di partenza deve precedere l'evento (" + ed.value + ").";
+    }
+    return false;
+  }
+  sd.style.borderColor = '';
+  if (note && note.style.color === 'var(--red)') {
+    note.style.display = 'none';
+    note.style.color = 'var(--text3)';
+    note.textContent = 'posizionata dalle tue uscite';
+  }
+  return true;
 }
 
 // v1.8.9 Bug 8 — when the user edits plan-weeks, push the computed date
@@ -12058,6 +12145,7 @@ function onEntryModeChange() {
 function onEntrySdateEdited() {
   _setEntryRecognized(false);  // user overrode the recognizer → "declared"
   window._entryArm = null;     // L4-UX 5: a typed date is the user's own, not a stored re-arm
+  _validateEntrySdate();       // v4.4: inline runway check (start must precede event)
   refreshPlanPreview();
 }
 
@@ -13126,6 +13214,16 @@ async function generatePlan(opts) {
     _syncPhaseSplitError();
     return;
   }
+  // v4.4: block a start date on/after the event (no runway) before we POST —
+  // the server would 400 with "no runway left". Give the reason in Italian.
+  if (typeof _validateEntrySdate === 'function'
+      && ($('plan-backdate-on') || {}).checked && !_validateEntrySdate()) {
+    const ed = ($('plan-edate') || {}).value || 'evento';
+    $('plan-status').textContent =
+      "La data di partenza deve precedere la data dell'evento (" + ed + ").";
+    $('plan-status').style.color = 'var(--red)';
+    return;
+  }
   $('plan-status').textContent = 'Generating plan...';
   $('plan-status').style.color = 'var(--accent)';
 
@@ -13228,6 +13326,16 @@ async function generatePlan(opts) {
     }
     $('plan-status').textContent = 'Plan generated!';
     $('plan-status').style.color = 'var(--green)';
+    // v4.4: surface a runway advisory (short/compressed window) so the user
+    // knows why the plan looks the way it does and how to re-plan.
+    if (d.warning) {
+      try { showToast(d.warning, 9000, 'warning'); } catch (_) {}
+      const ps = $('plan-status');
+      if (ps) {
+        ps.textContent = '⚠ ' + d.warning;
+        ps.style.color = 'var(--yellow)';
+      }
+    }
     await renderPlanJSON(d.plan_json);
     // L4-UX 4 — recognized-entry landing: scroll the grid to TODAY's week,
     // highlight it, note "picked up at week X of Y". Never land at week 1.
@@ -16735,6 +16843,27 @@ async function icuDisconnect() {
   } catch (e) { showToast('Disconnect failed', 3000, 'error'); }
 }
 
+// v4.4 — connessione persistente via API key (non scade, resta connesso).
+async function icuSaveApiKey() {
+  const id = ($('icu-manual-id') || {}).value || '';
+  const key = ($('icu-manual-key') || {}).value || '';
+  const msg = $('icu-apikey-msg');
+  if (!key.trim()) { if (msg) { msg.textContent = 'Inserisci la API key.'; msg.style.color = 'var(--red)'; } return; }
+  if (msg) { msg.textContent = 'Verifica in corso…'; msg.style.color = 'var(--text3)'; }
+  try {
+    const res = await fetch('/api/setup/save', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({icu_athlete_id: id.trim(), icu_api_key: key.trim()})
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) { if (msg) { msg.textContent = 'Errore: ' + (j.detail || res.status); msg.style.color = 'var(--red)'; } return; }
+    if (msg) { msg.textContent = '✓ Connesso e salvato nel profilo.'; msg.style.color = 'var(--green)'; }
+    const kEl = $('icu-manual-key'); if (kEl) kEl.value = '';
+    loadIcuConnection();
+    try { icuPushRefreshButton(); } catch (_) {}
+  } catch (e) { if (msg) { msg.textContent = 'Errore: ' + e.message; msg.style.color = 'var(--red)'; } }
+}
+
 // ═══ v3.0.1 IP_ICU_PUSH — calendar push button + keep-in-sync toggle ═══════
 
 // Plan-tab button state: hidden (no connection) / normal / reconnect-link.
@@ -16879,6 +17008,15 @@ function handleIcuOauthReturn() {
     if (!icu) return;
     if (icu === 'connected') showToast('intervals.icu connected ✓', 4000, 'success');
     else if (icu === 'unavailable') showToast("intervals.icu connect isn't enabled in this build yet — coming soon.", 6000, 'warning');
+    else if (icu === 'oauth_unavailable') {
+      // v4.4: build senza client_secret — il login OAuth non può essere
+      // salvato. Indirizza al percorso API key (persistente) e apri il blocco.
+      showToast('Login one-click non disponibile in questa build — usa la API key qui sotto (resta connesso).', 8000, 'warning');
+      try {
+        const blk = document.getElementById('icu-apikey-block');
+        if (blk) { blk.open = true; blk.scrollIntoView({behavior:'smooth', block:'center'}); }
+      } catch (_) {}
+    }
     else if (icu === 'error') {
       // AC3d: friendly per-reason copy; no_athlete_id is a hard error the
       // connection card must keep showing (nothing was saved — retry is clean).

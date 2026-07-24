@@ -212,10 +212,13 @@ class TestDeleteActiveProfileRaises(unittest.TestCase):
         ProfileManager._instance = None
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_delete_active_raises(self):
-        with self.assertRaises(ValueError) as ctx:
-            self.pm.delete_profile("default")
-        self.assertIn("active", str(ctx.exception).lower())
+    def test_delete_active_switches_then_deletes(self):
+        # v4.4: deleting the ACTIVE profile no longer raises — it hot-swaps to
+        # another profile first ("Elimina profilo" button must always work).
+        assert self.pm.delete_profile("default") is True
+        ids = [p["id"] for p in self.pm._registry["profiles"]]
+        self.assertNotIn("default", ids)
+        self.assertEqual(self.pm.active_id, "other")
 
 
 class TestDeleteLastClearsActive(unittest.TestCase):

@@ -87,7 +87,13 @@ class TestRoutes(unittest.TestCase):
 
     def test_start_redirects_to_icu_with_state(self):
         config.ICU_OAUTH_CLIENT_ID = "CID"
-        r = self.client.get("/oauth/icu/start", follow_redirects=False)
+        # v4.4: without a client_secret the exchange can only fail, so /start
+        # bounces to ?icu=oauth_unavailable — give the test a secret.
+        config.ICU_OAUTH_CLIENT_SECRET = "SEC"
+        try:
+            r = self.client.get("/oauth/icu/start", follow_redirects=False)
+        finally:
+            config.ICU_OAUTH_CLIENT_SECRET = ""
         self.assertIn(r.status_code, (302, 307))
         loc = r.headers["location"]
         self.assertIn("intervals.icu/oauth/authorize", loc)

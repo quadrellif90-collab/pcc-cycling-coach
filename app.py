@@ -558,7 +558,7 @@ except OSError:
 # through plain HTTP; the heavy lifting happens in the user's preferred
 # indoor app (Tacx / MyWhoosh / Golden Cheetah), and Domestique imports
 # the resulting FIT afterward via POST /api/ride/import.
-APP_VERSION = "4.0.0-alpha"
+APP_VERSION = _VERSION
 
 # v1.0.2 IMPL-MIGRATION: cached migration-check result for the dashboard.
 # Populated once at lifespan startup; consumed by GET /api/migrations/last-run-result.
@@ -1757,6 +1757,61 @@ def api_profiles_delete(profile_id: str):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     return {"ok": True}
+
+
+@app.post("/api/profiles/{profile_id}/reset")
+def api_profiles_reset(profile_id: str):
+    """v4.4 — 'Reset profilo': svuota TUTTI i dati (rides, piani, wellness,
+    DB, credenziali ICU) ma mantiene il profilo. L'app riparte pulita senza
+    passare dal wizard di creazione."""
+    from profile_manager import ProfileManager
+    _validate_profile_id(profile_id)
+    pm = ProfileManager.get()
+    if not any(p["id"] == profile_id
+               for p in pm._registry.get("profiles", [])):
+        return JSONResponse({"error": "profilo non trovato"}, status_code=404)
+    # 1. best-effort: rimuovi gli eventi pushati sul calendario ICU
+    try:
+        import icu_calendar_push as _icp
+        _icp.sweep_all()
+    except Exception:
+        _log.debug("reset: icu calendar sweep failed (best-effort)",
+                   exc_info=True)
+    # 2. purge dati sincronizzati dal DB
+    try:
+        db.purge_profile_data(profile_id)
+    except db.SyncBusy:
+        return JSONResponse(
+            {"ok": False, "error": "sync busy — riprova tra un momento"},
+            status_code=503)
+    except Exception as e:
+        _log.warning("reset: purge_profile_data failed: %s", e)
+    # 3. cancella file dati del profilo (plans/rides/wellness) mantenendo
+    #    la directory e il profilo stesso
+    import shutil as _sh
+    pdir = Path.home() / ".domestique" / "profiles" / profile_id
+    removed = []
+    for sub in ("plans", "rides", "wellness"):
+        d = pdir / sub
+        if d.exists():
+            try:
+                _sh.rmtree(str(d))
+                removed.append(sub)
+            except OSError as e:
+                _log.warning("reset: rmtree %s failed: %s", d, e)
+    # 4. disconnetti ICU (token + api key + athlete id)
+    try:
+        pm.save_env("", "", "")
+    except Exception as e:
+        _log.warning("reset: save_env clear failed: %s", e)
+    for k in ("ICU_ATHLETE_ID", "ICU_API_KEY", "ICU_ACCESS_TOKEN"):
+        os.environ.pop(k, None)
+        try:
+            delattr(config, k)
+        except AttributeError:
+            pass
+    _log.info("EVENT=profile_reset profile=%s removed=%s", profile_id, removed)
+    return {"ok": True, "removed": removed}
 
 
 # v3.6.0-fix35e: post-FTP-test FTP adoption endpoint.
@@ -3813,7 +3868,7 @@ def api_mobility_plan(days: int = Query(7)):
 
 
 @app.post("/api/plan/inject-strength")
-def api_inject_strength(request: Request):
+async def api_inject_strength(request: Request):
     """PPC — Inietta sessioni forza + mobilità nel piano settimanale.
 
     Legge current_plan.json, aggiunge sedute strength (2×/sett base, 1× peak)
@@ -3823,7 +3878,8 @@ def api_inject_strength(request: Request):
     import json as _json
     body = {}
     try:
-        body = _json.loads(request.body().read().decode("utf-8") or "{}")
+        raw = await request.body()
+        body = _json.loads(raw.decode("utf-8") or "{}")
     except Exception:
         body = {}
     phase = body.get("phase", "base")
@@ -3876,9 +3932,14 @@ def api_inject_strength(request: Request):
         # giorno vuoto. Un giorno può avere ciclismo + forza + mobilità.
         training_days = [s["day"] for s in sessions if s.get("day")
                          and s.get("session_type") != "rest"]
+        training_days = list(dict.fromkeys(training_days))  # de-dupe, keep order
         if i < len(strength_plan) and strength_plan[i].get("sessions") and training_days:
-            target_day = training_days[0]
-            for sess in strength_plan[i]["sessions"][:sessions_per_week]:
+            # Distribuisci le sedute forza su giorni DIVERSI (spaziatura ~48h),
+            # non tutte sul primo giorno (bug: sessioni multiple stesso giorno).
+            n_str = min(sessions_per_week, len(strength_plan[i]["sessions"]))
+            step = max(1, len(training_days) // max(1, n_str))
+            for k, sess in enumerate(strength_plan[i]["sessions"][:sessions_per_week]):
+                target_day = training_days[min(k * step, len(training_days) - 1)]
                 # evita duplicati: se quel giorno ha già una sessione strength identica
                 dup = any(s.get("session_type") == "strength"
                           and s.get("day") == target_day
@@ -3917,7 +3978,6 @@ def api_inject_strength(request: Request):
 
         week["sessions"] = sessions
 
-    plan_path.write_text(_json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
     plan_path.write_text(_json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
     return {"ok": True, "injected": injected, "phase": phase,
             "weeks": len(plan.get("weeks", []))}
@@ -3981,24 +4041,26 @@ async def api_inject_multidiscipline(request: Request):
                         if disc in f.name.lower()][:40]
                 if hits:
                     lib_files[disc] = hits
-                else:
-                    # ultimo fallback: usa tutti i .zwo della libreria
-                    all_z = [f.name for f in base.glob("*.zwo")][:40]
-                    if all_z:
-                        lib_files[disc] = all_z
+                # NIENTE fallback "tutti i .zwo": assegnava workout bici
+                # a running/MTB (duplicati endurance_clean_* nel piano).
 
     for i, week in enumerate(plan.get("weeks", [])):
         sessions = week.get("sessions", [])
         training_days = [s["day"] for s in sessions if s.get("day")
                          and s.get("session_type") != "rest"]
+        # de-dupe mantenendo l'ordine (un giorno con bici+forza+mobilità
+        # compariva N volte → target ripetuti → sessioni duplicate)
+        training_days = list(dict.fromkeys(training_days))
         if not training_days:
             continue
         if do_strength:
             proto = STRENGTH_PROTOCOLS.get(phase, STRENGTH_PROTOCOLS["base"])
             sp = build_strength_plan(phase, 1, one_rm_kg=one_rm)
             if sp and sp[0].get("sessions"):
-                td = training_days[0]
-                for sess in sp[0]["sessions"][:proto["sessions_per_week"]]:
+                n_str = min(proto["sessions_per_week"], len(sp[0]["sessions"]))
+                step = max(1, len(training_days) // max(1, n_str))
+                for k, sess in enumerate(sp[0]["sessions"][:proto["sessions_per_week"]]):
+                    td = training_days[min(k * step, len(training_days) - 1)]
                     if any(s.get("session_type") == "strength" and s.get("day") == td
                            and s.get("description", "").startswith(sess["exercise"])
                            for s in sessions):
@@ -9685,6 +9747,14 @@ def api_oauth_icu_start(return_to: str = Query("/")):
     from urllib.parse import urlencode
     if not getattr(config, "ICU_OAUTH_CLIENT_ID", ""):
         return RedirectResponse(url="/?icu=unavailable")
+    # v4.4: senza client_secret l'exchange fallisce SEMPRE (404 "Client
+    # and/or secret not found") — l'utente veniva mandato su ICU, autorizzava,
+    # e tornava "sloggato" in loop. Meglio dirlo subito: la UI mostra il
+    # percorso API key.
+    if not getattr(config, "ICU_OAUTH_CLIENT_SECRET", ""):
+        _log.warning("EVENT=icu_oauth_start_blocked reason=no_client_secret "
+                     "— use the API-key path instead")
+        return RedirectResponse(url="/?icu=oauth_unavailable")
     now = time.time()
     _icu_oauth_prune(now)
     try:
@@ -9854,6 +9924,19 @@ def api_icu_disconnect():
                 {"ok": False, "error": "sync busy — try again in a moment"},
                 status_code=503)
         pm.save_icu_token("", None)
+        # v4.4: clear ALSO the API-key credentials — disconnect must drop
+        # BOTH auth methods, otherwise an apikey connection survives and the
+        # UI still shows "connected" after Disconnetti.
+        try:
+            pm.save_env("", "", "")
+        except Exception:
+            _log.warning("icu disconnect: save_env clear failed", exc_info=True)
+        for _k in ("ICU_ATHLETE_ID", "ICU_API_KEY", "ICU_ACCESS_TOKEN"):
+            os.environ.pop(_k, None)
+            try:
+                delattr(config, _k)
+            except AttributeError:
+                pass
         try:
             delattr(config, "ICU_ACCESS_TOKEN")
         except AttributeError:
@@ -13447,9 +13530,9 @@ async def api_plan_generate(request: Request):
         # event goals the week count is ALWAYS derived from the actual
         # anchor→target span, never trusted from the form.
         if body.get("goal") in ("event", "event_preparation") and target_date:
-            _anchor_for_weeks = (start_date
-                                 if (start_date and start_date < date.today())
-                                 else date.today())
+            # v4.4: any explicit start_date (past OR future) anchors the week
+            # count — the runway is start→target, not today→target.
+            _anchor_for_weeks = (start_date if start_date else date.today())
             _days = (target_date - _anchor_for_weeks).days
             plan_weeks = max(4, -(-_days // 7))  # ceil division
 
@@ -13766,10 +13849,25 @@ async def api_plan_generate(request: Request):
         if (goal.goal_type in ("event", "ctl") and goal.target_date
                 and len(phases) == 1 and phases[0].name == "taper"):
             plan_dict["warning"] = (
-                f"{goal.event_name or 'Your event'} is under two weeks away — "
-                "this is a race-week plan (rest, openers, race), not a "
-                "training block. Fitness for the event is already set; "
-                "arriving fresh is what's left to win."
+                f"{goal.event_name or 'Il tuo evento'} è a meno di due "
+                "settimane — questo è un piano da settimana-gara (riposo, "
+                "aperture, gara), non un blocco di allenamento. La forma per "
+                "l'evento è ormai fissata; arrivare freschi è ciò che resta. "
+                "Per un vero blocco di preparazione servono almeno 6-8 "
+                "settimane: valuta un obiettivo intermedio o sposta la data."
+            )
+        # v4.4: 2-5 week runway builds a compressed/minimal plan (build+peak,
+        # little or no base). It's valid but the user asked to be told when the
+        # window is tight so they can re-plan. Advisory, non-blocking.
+        elif (goal.goal_type in ("event", "ctl") and goal.target_date
+              and 0 < len(weeks) <= 5):
+            plan_dict["warning"] = (
+                f"Runway breve ({len(weeks)} settimane): il piano è compresso "
+                "(build + peak, base ridotta). Funziona, ma per una "
+                "periodizzazione completa (base → build → peak → taper) "
+                "servono ~12+ settimane. Se puoi, anticipa la partenza; "
+                "altrimenti questo piano massimizza ciò che è possibile nel "
+                "tempo disponibile."
             )
 
         tp.atomic_write_plan(json_path, plan_dict)
@@ -17937,6 +18035,60 @@ async def api_plan_rematch(request: Request, apply: int = Query(0)):
     except Exception:
         _log.exception("Plan rematch failed")
         return JSONResponse({"detail": "Rematch failed"}, 500)
+
+
+@app.post("/api/plan/delete-session")
+async def api_plan_delete_session(request: Request):
+    """v4.4 — elimina una sessione dal piano per data (e opzionalmente tipo).
+
+    Body: {"date": "YYYY-MM-DD", "session_type": "z2"|... (opzionale)}.
+    Il giorno diventa rest se non restano sessioni. La scrittura passa da
+    atomic_write_plan → il post-write hook fa partire il reconcile ICU
+    debounced, che CANCELLA l'evento corrispondente dal calendario
+    intervals.icu (stesso motore del push: un'unica source of truth).
+    """
+    try:
+        body = await _get_json_body(request)
+    except Exception:
+        body = {}
+    day_iso = str(body.get("date") or "").strip()
+    stype = str(body.get("session_type") or "").strip() or None
+    if not day_iso:
+        return JSONResponse({"error": "date (YYYY-MM-DD) required"}, 400)
+    try:
+        date.fromisoformat(day_iso)
+    except ValueError:
+        return JSONResponse({"error": "Invalid date format (use YYYY-MM-DD)"}, 400)
+    json_path = _plan_dir() / "current_plan.json"
+    if not json_path.exists():
+        return JSONResponse({"error": "No active plan found"}, 404)
+    with open(json_path, encoding="utf-8") as f:
+        plan = json.load(f)
+    removed = 0
+    for week in plan.get("weeks", []):
+        sessions = week.get("sessions", [])
+        keep = []
+        for s in sessions:
+            if s.get("day") == day_iso and (stype is None
+                                            or s.get("session_type") == stype):
+                removed += 1
+                continue
+            keep.append(s)
+        if removed and len(keep) < len(sessions):
+            # se il giorno resta vuoto, marca rest esplicito
+            if not any(s.get("day") == day_iso for s in keep):
+                keep.append({"day": day_iso, "session_type": "rest",
+                             "duration_min": 0, "tss_estimate": 0,
+                             "description": "Rest (sessione eliminata)",
+                             "zwo_file": "", "zwo_name": ""})
+            week["sessions"] = keep
+    if not removed:
+        return JSONResponse({"error": f"No session at {day_iso}"
+                             + (f" ({stype})" if stype else "")}, 404)
+    tp.atomic_write_plan(json_path, plan)  # → hook push ICU (delete evento)
+    _log.info("EVENT=plan_delete_session day=%s type=%s removed=%s",
+              day_iso, stype, removed)
+    return {"ok": True, "day": day_iso, "removed": removed}
 
 
 @app.post("/api/plan/re-draw")

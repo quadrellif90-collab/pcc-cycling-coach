@@ -297,8 +297,8 @@ class TestFix4AtomicWrites(unittest.TestCase):
             src,
         )
         self.assertEqual(
-            len(helper_calls), 22,  # 3.4.0 W2: +2 sanctioned sites (continuous deload advance + revert)
-            f"Expected 22 tp.atomic_write_plan() sites, found {len(helper_calls)}",
+            len(helper_calls), 23,  # 3.4.0 W2 +2 (continuous deload advance/revert); v4.4 +1 (delete-session)
+            f"Expected 23 tp.atomic_write_plan() sites, found {len(helper_calls)}",
         )
 
     def test_no_inline_tmp_rename_pattern(self):

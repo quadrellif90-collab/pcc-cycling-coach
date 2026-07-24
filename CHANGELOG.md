@@ -1,6 +1,29 @@
 # Changelog
 
+## v4.4.0 — Login one-click che resta, profili che si cancellano, e un motore che ragiona sul tempo che hai (2026-07-24)
+
+**Login intervals.icu con singola autorizzazione (OAuth), e resta connesso.**
+- Il collegamento a intervals.icu ora usa la **singola autorizzazione one-click** (OAuth): premi *Collega intervals.icu*, autorizzi sul sito, e torni connesso — senza incollare API key. Il token viene salvato nel profilo e **sopravvive ai riavvii**.
+- Il tasto **Disconnetti** ora azzera *entrambi* i metodi (token OAuth *e* eventuale API key): prima una API key salvata sopravviveva alla disconnessione, dando la sensazione di "restare sempre connesso".
+- Se il build non ha le credenziali OAuth, il flusso non entra più in loop: mostra un avviso chiaro invece di rimandarti alla pagina di login all'infinito.
+
+**Gestione profili completa.**
+- Tre controlli nel profilo: **Disconnetti ICU** (pulisce le credenziali), **Reset profilo** (svuota rides/piani/wellness ma mantiene il profilo), **Elimina profilo** — ora funziona anche sull'**ultimo/attivo** profilo (hot-swap a un altro profilo se esiste, altrimenti riparte il wizard). Prima l'app rifiutava di eliminare il profilo attivo.
+
+**Il motore di pianificazione ora ragiona sul runway (tempo fino all'evento).**
+- **Data di partenza scelta da te.** Il piano può partire dalla data che decidi (anche futura, fino a 1 anno avanti), non più solo "da oggi". Le fasi vengono ancorate da lì.
+- **Data impossibile bloccata con chiarezza.** Se scegli una partenza successiva all'evento, il selettore la impedisce (limite alla vigilia della gara) e il messaggio è in italiano e spiega perché — niente più errore criptico "no runway left".
+- **Avvisi intelligenti sul runway.** Meno di 2 settimane → avviso "piano da settimana-gara" con consiglio (obiettivo intermedio o sposta la data). 2-5 settimane → avviso "piano compresso" con consiglio di anticipare la partenza. Runway normale (~12+ settimane) → nessun avviso.
+- **Periodizzazione a blocchi moderna sui piani lunghi.** Una base molto lunga non è più una fila di 10 blocchi identici: ogni 3 blocchi aerobici viene inserito un **richiamo VO2max/soglia** (block periodization, Rønnestad 2019) per mantenere il top-end durante la base — senza compromettere la costruzione aerobica.
+
+**Sotto il cofano.**
+- Iniettore forza reso idempotente: niente più sessioni duplicate lo stesso giorno; la forza viene distribuita su giorni distinti (~48h).
+- Nuovo endpoint per **eliminare/sostituire** una sessione pianificata, con riconciliazione automatica su intervals.icu.
+- Il nome fase `base_recall` è aliasato a `build1` in tutti i lookup (budget intensità, HIT blueprint, nutrizione, workout mix) così i richiami generano davvero sessioni ad alta intensità.
+- Suite di test aggiornata (start_date futuro ammesso, delete-session, disconnect completo). Test core piano/OAuth/profili: verde.
+
 ## v3.5.2 — Cooldowns that actually cool down (2026-07-21)
+
 
 - **776 workouts ended with a "cooldown" that ramped UP.** The chart drew it descending, but the file told chronological trainer apps (MyWhoosh, Tacx) to ramp from 25% to 75% FTP at the end of the ride — one tester finished a VO2max session with an unplanned climb to threshold. All 776 now genuinely descend, matching the 2,873 workouts that were already authored correctly, and the descriptions say what the file does. One bonus find: a 30-second "cooldown" to 130% FTP. A permanent test keeps ascending cooldowns out of the library for good.
 

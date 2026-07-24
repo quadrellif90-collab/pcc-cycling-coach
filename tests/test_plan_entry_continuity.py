@@ -203,10 +203,20 @@ def test_ramp_clamp_remaining_weeks_only():
 
 # ── input gate ───────────────────────────────────────────────────────────────
 
-def test_future_start_date_rejected():
+def test_future_start_date_allowed():
+    # v4.4: a future start anchors the whole plan forward ("il programma deve
+    # poter partire dalla data che decido"). Guardrail: > 1 year ahead rejected.
     g = tp.Goal(goal_type="general", plan_weeks=8,
                 start_date=ANCHOR + timedelta(days=3))
-    with pytest.raises(ValueError, match="future"):
+    phases, weeks = _gen(g)
+    assert weeks, "future start must still yield schedulable weeks"
+    assert min(w.start for w in weeks) >= ANCHOR + timedelta(days=3)
+
+
+def test_far_future_start_date_rejected():
+    g = tp.Goal(goal_type="general", plan_weeks=8,
+                start_date=ANCHOR + timedelta(days=400))
+    with pytest.raises(ValueError, match="year"):
         _gen(g)
 
 
