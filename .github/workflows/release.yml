@@ -362,14 +362,21 @@ jobs:
         env:
           PPC_VER: ${{ needs.read-version.outputs.version }}
         run: |
-          # Install Inno Setup (iscc) — present on the runner via Chocolatey.
-          choco install innosetup -y --no-progress 2>&1 | Out-Null
+          # Install Inno Setup (iscc) via Chocolatey.
+          choco install innosetup -y --no-progress
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
-          if (-not (Test-Path $iscc)) { Write-Error "::error::ISCC not found after install"; exit 1 }
-          # Compile the installer, passing the version so the output is PPC-Setup-<ver>.exe
-          & "$iscc" installer.nsi /DVERSION=$env:PPC_VER
-          $out = "PPC-Setup-$env:PPC_VER.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Error "::error::ISCC not found after install at $iscc"
+            Get-ChildItem "C:\Program Files (x86)\Inno Setup 6" -ErrorAction SilentlyContinue
+            exit 1
+          }
+          Write-Host "Using ISCC: $iscc"
+          # Compile the installer. OUTDIR assoluto (cartella repo) + VERSION.
+          $repoRoot = (Get-Location).Path
+          & "$iscc" installer.nsi /DVERSION=$env:PPC_VER "/DOUTDIR=$repoRoot"
+          if ($LASTEXITCODE -ne 0) { Write-Error "::error::ISCC failed (exit $LASTEXITCODE)"; exit 1 }
+          $out = Join-Path $repoRoot "PPC-Setup-$env:PPC_VER.exe"
           if (-not (Test-Path $out)) { Write-Error "::error::installer not produced at $out"; exit 1 }
           Write-Host "Built installer: $out ($([math]::Round((Get-Item $out).Length/1MB,1)) MB)"
 

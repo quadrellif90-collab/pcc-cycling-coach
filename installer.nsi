@@ -14,7 +14,12 @@
 !define INSTDIR "$PROGRAMFILES64\PPC"
 
 Name "${APPNAMEFULL}"
-OutFile "PPC-Setup-${VERSION}.exe"
+; OutFile assoluto per evitare ambiguità di cwd su CI (GitHub Actions).
+; Define OUTDIR passato dal CI; default alla cartella corrente se compilato a mano.
+!ifndef OUTDIR
+  !define OUTDIR "."
+!endif
+OutFile "${OUTDIR}\PPC-Setup-${VERSION}.exe"
 InstallDir "${INSTDIR}"
 RequestExecutionLevel admin
 
