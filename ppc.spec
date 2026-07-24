@@ -14,10 +14,20 @@ and intervals.icu connections survive upgrades without migration.
 
 import sys
 import os
+import importlib.util
 from pathlib import Path
 
 block_cipher = None
 app_name = "PPC"
+
+# v4.4.0 BUILD-FIX: scipy 1.18 dropped the importable `scipy._lib.array_api_compat`
+# shim that earlier versions exposed, so a hard hidden-import of it makes
+# PyInstaller's analysis abort ("Hidden import ... not found"). Only add it when
+# it actually resolves in the build env — older scipy keeps working, newer scipy
+# no longer breaks the build.
+_scipy_hidden = ["scipy", "scipy.optimize", "scipy.linalg"]
+if importlib.util.find_spec("scipy._lib.array_api_compat") is not None:
+    _scipy_hidden.append("scipy._lib.array_api_compat")
 
 # Single source of truth for the bundle version — read the repo's VERSION
 # file at build time. `SPEC` is the absolute path to this spec file that
@@ -139,10 +149,9 @@ a = Analysis(
         # `_lib.array_api_compat` shim, which scipy.optimize imports on
         # first call — without these explicit hidden imports the frozen
         # bundle raises ModuleNotFoundError on the first τ-fit run.
-        "scipy",
-        "scipy.optimize",
-        "scipy.linalg",
-        "scipy._lib.array_api_compat",
+        # v4.4.0: array_api_compat is added conditionally (see _scipy_hidden
+        # above) — scipy 1.18 removed it and a hard entry aborts the build.
+        *_scipy_hidden,
     ],
     hookspath=[],
     hooksconfig={},
