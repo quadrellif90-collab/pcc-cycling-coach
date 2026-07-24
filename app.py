@@ -4382,8 +4382,9 @@ async def api_bia_sync_icu(request: Request):
         body = {}
     aid = None
     try:
-        import training as _training
-        aid = getattr(_training, "ICU_ATHLETE_ID", None)
+        from profile_manager import ProfileManager
+        _pm = ProfileManager.get()
+        aid = _pm.icu_athlete_id
     except Exception:
         pass
     auth_header = _icu_wellness_auth()
