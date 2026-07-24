@@ -362,17 +362,27 @@ jobs:
         env:
           PPC_VER: ${{ needs.read-version.outputs.version }}
         run: |
-          # Install Inno Setup (iscc) via Chocolatey.
-          choco install innosetup -y --no-progress
+          # Install Inno Setup (ISCC) — Chocolatey is unreliable on the runner,
+          # so download the official installer and install it silently.
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $iscc)) { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
           if (-not (Test-Path $iscc)) {
-            Write-Error "::error::ISCC not found after install at $iscc"
-            Get-ChildItem "C:\Program Files (x86)\Inno Setup 6" -ErrorAction SilentlyContinue
-            exit 1
+            $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe"
+          }
+          if (-not (Test-Path $iscc)) {
+            Write-Host "ISCC not found — downloading Inno Setup 6..."
+            $url = "https://files.jrsoftware.org/is/6/innosetup-6.4.3.exe"
+            $inst = "$env:TEMP\innosetup.exe"
+            Invoke-WebRequest -Uri $url -OutFile $inst -UseBasicParsing
+            Start-Process -FilePath $inst -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/ALLUSERS" -Wait
+            if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+              $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+            } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
+              $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe"
+            } else {
+              Write-Error "::error::ISCC still not found after silent install"; exit 1
+            }
           }
           Write-Host "Using ISCC: $iscc"
-          # Compile the installer. OUTDIR assoluto (cartella repo) + VERSION.
           $repoRoot = (Get-Location).Path
           & "$iscc" installer.nsi /DVERSION=$env:PPC_VER "/DOUTDIR=$repoRoot"
           if ($LASTEXITCODE -ne 0) { Write-Error "::error::ISCC failed (exit $LASTEXITCODE)"; exit 1 }
