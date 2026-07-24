@@ -1,0 +1,283 @@
+"""PPC — Parser BIA (Body Impedance Analysis) + mappatura Intervals.icu.
+
+Supporta report di bilance BIA / bioimpedenziometri (InBody, Tanita, AKERN
+BODYGRAM, Garmin Index, ecc.). Il PDF puo' essere:
+  - testuale (export nativo): il testo viene estratto e parsato via regex;
+  - scansionato (immagine): il testo non e' estraibile -> il parser ritorna
+    `scanned: True` e l'UI chiede all'atleta di incollare i valori o usare
+    un export testuale (il backend PPC non include OCR).
+
+Campi estratti (schema comune, unita incluse):
+  weight_kg, height_cm, bmi,
+  fat_mass_kg, fat_mass_pct,
+  fat_free_mass_kg, fat_free_mass_pct,
+  tbw_l (acqua totale), ecw_l, icw_l, hydration_pct,
+  bcm_kg (massa cellulare), smm_kg (massa muscolo-scheletrica),
+  asmm_kg (massa muscolare appendicolare), muscle_mass_kg,
+  bone_kg, protein_kg, protein_pct,
+  visceral_fat, metabolic_age, phase_angle (PhA, gradi),
+  chi (indice nutrizionale, opzionale)
+
+Mappatura -> Intervals.icu /wellness (POST /athlete/{id}/wellness/{date}):
+  weight      -> weight
+  fat_mass_pct-> bodyFat        (ICU lo intende come %)
+  fat_mass_pct-> pctBodyFat
+  fat_free_kg -> (nessun campo diretto; non inviato)
+  muscle_mass -> muscleMass     (usiamo SMM se presente, altrimenti FFM)
+  hydration_pct-> hydration
+  bone_kg     -> boneMass
+  protein_kg  -> protein
+  bmi         -> bmi
+  visceral_fat-> visceralFat
+  metabolic_age-> metabolicAge
+ICU NON gestisce dieta/piano alimentare: quella parte resta locale.
+"""
+
+import re
+import json
+from dataclasses import dataclass, field, asdict
+from typing import Optional
+
+
+# Pattern: cattura "Etichetta 12.3 unita" o "Etichetta: 12.3".
+# L'etichetta puo' essere IT o EN. I valori sono float (ammessi decimali).
+_LABEL_PATTERNS = {
+    "weight_kg": [
+        r"peso\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"weight\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"body\s*weight\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+    ],
+    "height_cm": [
+        r"altezza\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*cm",
+        r"height\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*cm",
+    ],
+    "bmi": [
+        r"bmi\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+        r"imc\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+        r"indice\s*di\s*massa\s*corporea\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+    ],
+    "fat_mass_kg": [
+        r"massa\s*grassa\s*\(fm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"fat\s*mass\s*\(fm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"\bfm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+    ],
+    "fat_mass_pct": [
+        r"massa\s*grassa\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+        r"fat\s*mass\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+        r"\bfm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+        r"percentuale\s*di\s*grasso\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+    ],
+    "fat_free_mass_kg": [
+        r"massa\s*magra\s*\(ffm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"fat\s*free\s*mass\s*\(ffm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"\bffm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+    ],
+    "fat_free_mass_pct": [
+        r"massa\s*magra\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+        r"fat\s*free\s*mass\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+    ],
+    "tbw_l": [
+        r"acqua\s*totale\s*\(tbw\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
+        r"total\s*body\s*water\s*\(tbw\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
+        r"\btbw\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
+    ],
+    "ecw_l": [
+        r"acqua\s*extra\s*cellulare\s*\(ecw\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
+        r"\becw\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
+    ],
+    "icw_l": [
+        r"acqua\s*intra\s*cellulare\s*\(icw\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
+        r"\bicw\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
+    ],
+    "hydration_pct": [
+        r"idratazione\s*tissutale\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+        r"hydration\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+        r"tbw/ffm\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+    ],
+    "bcm_kg": [
+        r"massa\s*cellulare\s*\(bcm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"\bbcm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+    ],
+    "smm_kg": [
+        r"massa\s*muscolo[- ]?scheletrica\s*\(smm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"skeletal\s*muscle\s*mass\s*\(smm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"\bsmm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+    ],
+    "asmm_kg": [
+        r"massa\s*muscolare\s*appendicolare\s*\(asmm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"appendicular\s*skeletal\s*muscle\s*mass\s*\(asmm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"\basmm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+    ],
+    "muscle_mass_kg": [
+        r"massa\s*muscolare\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"muscle\s*mass\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+    ],
+    "bone_kg": [
+        r"massa\s*ossea\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"bone\s*mass\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+    ],
+    "protein_kg": [
+        r"proteine\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+        r"protein\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
+    ],
+    "protein_pct": [
+        r"proteine\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+        r"protein\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
+    ],
+    "visceral_fat": [
+        r"grasso\s*viscerale\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+        r"visceral\s*fat\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+    ],
+    "metabolic_age": [
+        r"et[aà]\s*metabolica\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+        r"metabolic\s*age\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+    ],
+    "phase_angle": [
+        r"angolo\s*di\s*fase\s*\(pha\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+        r"phase\s*angle\s*\(pha\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+        r"\bpha\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+    ],
+    "chi": [
+        r"indice\s*nutrizionale\s*\(chi\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+        r"chi\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
+    ],
+}
+
+
+@dataclass
+class BIAReading:
+    date: str = ""
+    weight_kg: Optional[float] = None
+    height_cm: Optional[float] = None
+    bmi: Optional[float] = None
+    fat_mass_kg: Optional[float] = None
+    fat_mass_pct: Optional[float] = None
+    fat_free_mass_kg: Optional[float] = None
+    fat_free_mass_pct: Optional[float] = None
+    tbw_l: Optional[float] = None
+    ecw_l: Optional[float] = None
+    icw_l: Optional[float] = None
+    hydration_pct: Optional[float] = None
+    bcm_kg: Optional[float] = None
+    smm_kg: Optional[float] = None
+    asmm_kg: Optional[float] = None
+    muscle_mass_kg: Optional[float] = None
+    bone_kg: Optional[float] = None
+    protein_kg: Optional[float] = None
+    protein_pct: Optional[float] = None
+    visceral_fat: Optional[float] = None
+    metabolic_age: Optional[float] = None
+    phase_angle: Optional[float] = None
+    chi: Optional[float] = None
+    source: str = "manual"  # manual | pdf | pdf_scanned
+    raw_text: str = ""
+
+    def to_dict(self):
+        return asdict(self)
+
+    def filled_fields(self):
+        return {k: v for k, v in asdict(self).items()
+                if v is not None and k not in ("date", "source", "raw_text")}
+
+
+def _num(s: str) -> float:
+    return float(s.replace(",", "."))
+
+
+def parse_bia_text(text: str) -> dict:
+    """Estrae i campi BIA dal testo del PDF (PDF testuale)."""
+    low = text.lower()
+    r = BIAReading(source="pdf")
+    found = {}
+    for field_name, patterns in _LABEL_PATTERNS.items():
+        for pat in patterns:
+            m = re.search(pat, low)
+            if m:
+                try:
+                    val = _num(m.group(1))
+                    setattr(r, field_name, val)
+                    found[field_name] = val
+                except ValueError:
+                    pass
+                break
+    # Deriva le percentuali mancanti da kg / peso (se peso presente)
+    if r.weight_kg and r.weight_kg > 0:
+        if r.fat_mass_kg is not None and r.fat_mass_pct is None:
+            r.fat_mass_pct = round(r.fat_mass_kg / r.weight_kg * 100, 1)
+            found["fat_mass_pct"] = r.fat_mass_pct
+        if r.fat_free_mass_kg is not None and r.fat_free_mass_pct is None:
+            r.fat_free_mass_pct = round(r.fat_free_mass_kg / r.weight_kg * 100, 1)
+            found["fat_free_mass_pct"] = r.fat_free_mass_pct
+        if r.muscle_mass_kg is None and r.smm_kg is not None:
+            r.muscle_mass_kg = r.smm_kg
+            found["muscle_mass_kg"] = r.muscle_mass_kg
+    r.raw_text = text
+    return {
+        "scanned": False,
+        "reading": r.to_dict(),
+        "found_fields": sorted(found.keys()),
+        "missing_fields": sorted(set(_LABEL_PATTERNS) - set(found.keys())),
+    }
+
+
+def parse_bia_pdf(pdf_bytes: bytes) -> dict:
+    """Estrae testo dal PDF via PyMuPDF; se vuoto -> scansionato."""
+    import io
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        return {"scanned": True, "error": "PyMuPDF non installato",
+                "reading": BIAReading(source="pdf_scanned").to_dict(),
+                "found_fields": [], "missing_fields": sorted(_LABEL_PATTERNS)}
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    parts = []
+    for pg in doc:
+        parts.append(pg.get_text() or "")
+    text = "\n".join(parts).strip()
+    if not text:
+        return {"scanned": True,
+                "reading": BIAReading(source="pdf_scanned").to_dict(),
+                "found_fields": [], "missing_fields": sorted(_LABEL_PATTERNS),
+                "note": "PDF scansionato: testo non estraibile. Incolla i valori o usa un export testuale."}
+    return parse_bia_text(text)
+
+
+# ── Mappatura BIA -> Intervals.icu /wellness ───────────────────────────────
+# Campi che ICU accetta in POST /athlete/{id}/wellness/{date}
+ICU_WELLNESS_FIELDS = [
+    "weight", "bodyFat", "pctBodyFat", "hydration", "boneMass",
+    "muscleMass", "pctMuscle", "protein", "bmi", "visceralFat",
+    "metabolicAge",
+]
+
+
+def to_icu_wellness(r: BIAReading, date: str) -> dict:
+    """Costruisce il payload ICU /wellness per una misurazione BIA.
+
+    Restituisce {"date":..., "payload": {...}} con solo i campi disponibili.
+    """
+    d = r.to_dict()
+    payload = {}
+    if r.weight_kg is not None:
+        payload["weight"] = round(r.weight_kg, 1)
+    if r.fat_mass_pct is not None:
+        payload["bodyFat"] = round(r.fat_mass_pct, 1)
+        payload["pctBodyFat"] = round(r.fat_mass_pct, 1)
+    if r.hydration_pct is not None:
+        payload["hydration"] = round(r.hydration_pct, 1)
+    if r.bone_kg is not None:
+        payload["boneMass"] = round(r.bone_kg, 1)
+    # muscleMass: ICU lo intende come massa muscolare; usiamo SMM se presente
+    mm = r.smm_kg if r.smm_kg is not None else r.muscle_mass_kg
+    if mm is not None:
+        payload["muscleMass"] = round(mm, 1)
+    if r.protein_kg is not None:
+        payload["protein"] = round(r.protein_kg, 1)
+    if r.bmi is not None:
+        payload["bmi"] = round(r.bmi, 1)
+    if r.visceral_fat is not None:
+        payload["visceralFat"] = round(r.visceral_fat, 1)
+    if r.metabolic_age is not None:
+        payload["metabolicAge"] = round(r.metabolic_age, 1)
+    use_date = date or r.date or ""
+    return {"date": use_date, "payload": payload}

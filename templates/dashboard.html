@@ -1427,12 +1427,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div>
       <h1><img src="/static/icon.png" alt="" style="height:28px;vertical-align:middle;margin-right:6px;border-radius:6px;">PPC<span id="app-version" style="font-size:10px;font-weight:400;color:var(--text3);vertical-align:middle;margin-left:7px;"></span></h1>
       <div style="font-size:12px;color:var(--text2)" id="date-header"></div>
-      <div style="position:absolute;right:16px;top:12px;">
-        <select id="theme-select" style="font-size:10px;padding:2px 4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="applyTheme(this.value)">
-          <option value="dark">🌙 Dark</option>
-          <option value="light">☀️ Light</option>
-        </select>
-      </div>
+      <div style="position:absolute;right:16px;top:12px;"></div>
     </div>
     <!-- Header sync chip — spinner + "Updating activities" next to the logo while
          a sync/backfill runs. Driven by _setSyncTopbar (same source as the full
@@ -1506,6 +1501,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="tab" data-tab="analysis">Analisi</div>
   <div class="tab" data-tab="dfa">DFA α1</div>
   <div class="tab" data-tab="nutrition">Alimentazione</div>
+  <div class="tab" data-tab="bia">Composizione</div>
   <div class="tab" data-tab="settings">Impostazioni</div>
 </div>
 
@@ -1518,12 +1514,16 @@ window.addEventListener('unhandledrejection', function(e) {
        payload loadHome() already fetches. Click → opens the Analysis tab. -->
   <div class="card" id="home-fitness-sparkline-card" style="margin-bottom:12px;cursor:pointer;" role="link" aria-label="Fitness and form trend — open the Analysis tab" title="Open Analysis — full Fitness &amp; Form chart" onclick="document.querySelector('.tab[data-tab=analysis]').click()">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
-      <div style="min-width:120px;">
+      <div style="min-width:150px;">
         <h3 style="margin:0;">Fitness &amp; Form</h3>
-        <div id="home-fitness-sparkline-stats" style="font-size:11px;color:var(--text3);margin-top:2px;">Caricamento…</div>
+        <div id="home-fitness-sparkline-stats" style="font-size:14px;color:var(--text2);margin-top:6px;font-weight:600;">
+          <span style="font-size:22px;font-weight:800;color:var(--accent);">—</span> CTL
+          &nbsp;·&nbsp;
+          <span style="font-size:22px;font-weight:800;color:var(--green);">—</span> TSB
+          <div style="font-size:10px;color:var(--text3);font-weight:400;margin-top:2px;">ultimi 42g · Analisi ↗</div>
+        </div>
       </div>
-      <div id="home-fitness-sparkline" style="flex:1;min-width:180px;max-width:460px;"></div>
-      <span style="font-size:11px;color:var(--text3);white-space:nowrap;">Analisi ↗</span>
+      <div id="home-fitness-sparkline" style="flex:1;min-width:220px;max-width:520px;"></div>
     </div>
   </div>
 
@@ -1541,7 +1541,9 @@ window.addEventListener('unhandledrejection', function(e) {
        to a one-line summary once logged) → collapsed recovery details.
        Verdict + action read the canonical /api/readiness (severity chained on
        in v2.2.5); the deprecated /api/readiness/composite is no longer used. -->
-  <div class="card" style="margin-bottom:12px;" id="today-card">
+  <!-- Oggi + Questa settimana affiancati (metà larghezza ciascuno su desktop) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;">
+  <div class="card" style="margin-bottom:0;" id="today-card">
     <h3>Oggi</h3>
     <div id="today-verdict" style="margin-top:8px;">
       <div style="font-size:12px;color:var(--text3);">Caricamento…</div>
@@ -1587,6 +1589,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="weekly-rollup"></div>
     <div class="weekly-bar" id="weekly-summary" style="margin-top:8px;"></div>
   </div>
+  </div><!-- /grid Oggi + Questa settimana -->
 
   <!-- v4.4.0 IMPL-UI: On-track summary bar (closes user bug #4).
        Shows compliance/CTL/polarized/phase headline + Z1+Z2 / Z3+Z4 / Z5+ / TSS
@@ -1652,7 +1655,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </details>
 
   <!-- PPC: Integrazione (card separata, compressa) -->
-  <details class="card" style="margin-top:12px;" id="supplement-card">
+  <details class="card" style="margin-top:12px;" id="supplement-card" open>
     <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
       💊 Integrazione <span style="font-size:10px;color:var(--text3);font-weight:400;">(Gruppo A, dosi su peso)</span>
     </summary>
@@ -3133,6 +3136,49 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 </div>
 
+<!-- ═══ COMPOSIZIONE CORPOREA / BIA (PPC) ══════════════════════════════ -->
+<div class="section" id="sec-bia">
+  <div class="card" style="margin-bottom:12px;">
+    <h3>Composizione corporea (BIA)</h3>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+      <label class="btn" style="font-size:11px;padding:3px 10px;cursor:pointer;">
+        ⤓ Importa PDF BIA<input type="file" id="bia-pdf" accept="application/pdf" style="display:none;" onchange="importBIA()">
+      </label>
+      <span style="font-size:10px;color:var(--text3);">oppure incolla i valori (JSON) o usa l'import manuale qui sotto</span>
+    </div>
+    <div id="bia-import-msg" style="font-size:10px;color:var(--red);margin-bottom:6px;"></div>
+    <div class="grid g3" style="font-size:11px;">
+      <div class="form-group"><label>Data</label><input type="date" id="bia-date"></div>
+      <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" id="bia-weight"></div>
+      <div class="form-group"><label>Altezza (cm)</label><input type="number" step="0.1" id="bia-height"></div>
+      <div class="form-group"><label>Massa grassa (kg)</label><input type="number" step="0.1" id="bia-fat"></div>
+      <div class="form-group"><label>Massa magra (kg)</label><input type="number" step="0.1" id="bia-ffm"></div>
+      <div class="form-group"><label>Acqua totale (L)</label><input type="number" step="0.1" id="bia-tbw"></div>
+      <div class="form-group"><label>SMM (kg)</label><input type="number" step="0.1" id="bia-smm"></div>
+      <div class="form-group"><label>BCM (kg)</label><input type="number" step="0.1" id="bia-bcm"></div>
+      <div class="form-group"><label>Angolo di fase (°)</label><input type="number" step="0.1" id="bia-pha"></div>
+      <div class="form-group"><label>BMI</label><input type="number" step="0.1" id="bia-bmi"></div>
+    </div>
+    <button class="btn" style="font-size:11px;padding:4px 12px;margin-top:6px;" onclick="saveBIAmanual()">Salva misurazione</button>
+    <button class="btn" style="font-size:11px;padding:4px 12px;margin-top:6px;background:var(--accent);color:#fff;" onclick="syncBIAicu()">⇧ Sync Intervals.icu</button>
+    <span id="bia-sync-msg" style="font-size:10px;color:var(--text3);margin-left:6px;"></span>
+  </div>
+  <div class="card">
+    <h3>Storico misurazioni</h3>
+    <div id="bia-history" style="font-size:11px;color:var(--text2);">Caricamento…</div>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <h3>Cosa va su Intervals.icu</h3>
+    <div style="font-size:11px;color:var(--text2);">
+      Ogni misurazione BIA importata qui viene sincronizzata su Intervals.icu
+      (<code>/wellness</code>): <b>peso, % massa grassa, idratazione%, massa muscolare (SMM),
+      BMI</b> (più massa ossea/proteine/grasso viscerale/età metabolica se presenti).
+      Serve Intervals.icu collegato (Impostazioni → Connessione ICU).
+      La dieta del nutrizionista resta locale (ICU non gestisce piani alimentari).
+    </div>
+  </div>
+</div>
+
 <!-- ═══ SETTINGS ═══════════════════════════════════════════════════════════ -->
 <div class="section" id="sec-settings">
   <div class="grid g2">
@@ -3713,7 +3759,8 @@ document.querySelectorAll('.tab[data-tab]').forEach(t => {
                      }, settings:()=>{loadSettings();loadIcuConnection();icuCalSyncRefresh();}, library:loadWorkouts,
                      analysis:()=>{ if (typeof loadAnalysisTab === 'function') loadAnalysisTab(); },
                      dfa:()=>{ if (typeof loadDfaTab === 'function') loadDfaTab(); },
-                     nutrition:()=>{ if (typeof loadNutriPlan === 'function') { loadNutriPlan(); renderNutriCompare(); } }};
+                     nutrition:()=>{ if (typeof loadNutriPlan === 'function') { loadNutriPlan(); renderNutriCompare(); } },
+                     bia:()=>{ if (typeof loadBIAHistory === 'function') loadBIAHistory(); }};
     if (loaders[tab]) loaders[tab]();
   });
 });
@@ -5504,7 +5551,7 @@ function renderHomeFitnessSparkline(wellness) {
     if (stats) stats.textContent = 'Not enough data yet — open Analysis for details';
     return;
   }
-  const W = 460, H = 44, pad = 2;
+  const W = 520, H = 64, pad = 2;
   const min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
   const range = (max - min) || 1;
   const X = i => pad + (i / (rows.length - 1)) * (W - 2 * pad);
@@ -5522,15 +5569,16 @@ function renderHomeFitnessSparkline(wellness) {
   const zeroY = (min <= 0 && 0 <= max) ? Y(0) : null;
   host.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="width:100%;height:' + H + 'px;display:block;">'
     + (zeroY != null ? '<line x1="' + pad + '" y1="' + zeroY.toFixed(1) + '" x2="' + (W - pad) + '" y2="' + zeroY.toFixed(1) + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 3"/>' : '')
-    + '<path d="' + pathOf(ctl) + '" fill="none" stroke="var(--accent)" stroke-width="1.6"/>'
-    + '<path d="' + pathOf(tsb) + '" fill="none" stroke="var(--green)" stroke-width="1.3" opacity="0.9"/>'
+    + '<path d="' + pathOf(ctl) + '" fill="none" stroke="var(--accent)" stroke-width="2"/>'
+    + '<path d="' + pathOf(tsb) + '" fill="none" stroke="var(--green)" stroke-width="1.6" opacity="0.9"/>'
     + '</svg>';
   if (stats) {
     const lastOf = s => { for (let i = s.length - 1; i >= 0; i--) if (s[i] != null && !isNaN(s[i])) return s[i]; return null; };
     const c = lastOf(ctl), t = lastOf(tsb);
-    stats.innerHTML = 'CTL <b style="color:var(--accent);">' + (c != null ? Math.round(c) : '—') + '</b>'
-      + ' · TSB <b style="color:var(--green);">' + (t != null ? (t > 0 ? '+' : '') + Math.round(t) : '—') + '</b>'
-      + ' <span style="color:var(--text3);">· ultimi 42g</span>';
+    stats.innerHTML = '<span style="font-size:22px;font-weight:800;color:var(--accent);">' + (c != null ? Math.round(c) : '—') + '</span> CTL'
+      + '&nbsp;·&nbsp;'
+      + '<span style="font-size:22px;font-weight:800;color:var(--green);">' + (t != null ? (t > 0 ? '+' : '') + Math.round(t) : '—') + '</span> TSB'
+      + '<div style="font-size:10px;color:var(--text3);font-weight:400;margin-top:2px;">ultimi 42g · Analisi ↗</div>';
   }
 }
 
@@ -7564,7 +7612,82 @@ async function renderNutriCompare() {
   } catch (e) { box.innerHTML = ''; }
 }
 
-// PPC — Inietta forza+mobilità + running/MTB (multidisciplinare)
+// ═══ SCHEDA COMPOSIZIONE CORPOREA / BIA (PPC) ════════════════════════════
+async function importBIA() {
+  const inp = document.getElementById('bia-pdf');
+  const msg = document.getElementById('bia-import-msg');
+  if (!inp || !inp.files || !inp.files[0]) return;
+  msg.textContent = 'Estrazione PDF…';
+  try {
+    const fd = new FormData();
+    fd.append('file', inp.files[0]);
+    const res = await fetch('/api/bia-import', { method: 'POST', body: fd });
+    const j = await res.json();
+    if (!res.ok) { msg.textContent = 'Errore: ' + (j.error || 'PDF non leggibile'); return; }
+    if (j.scanned) {
+      msg.textContent = 'PDF scansionato: testo non estraibile. Incolla i valori qui sopra o usa un export testuale.';
+      return;
+    }
+    msg.style.color = 'var(--green)';
+    msg.textContent = `Importati ${j.found_fields.length} campi (${j.reading.date}). Ora puoi fare Sync ICU.`;
+    loadBIAHistory();
+  } catch (e) { msg.textContent = 'Errore import'; }
+}
+
+async function saveBIAmanual() {
+  const g = id => (document.getElementById(id).value || '');
+  const data = { date: g('bia-date') || new Date().toISOString().slice(0,10) };
+  const map = { 'bia-weight':'weight_kg','bia-height':'height_cm','bia-fat':'fat_mass_kg',
+    'bia-ffm':'fat_free_mass_kg','bia-tbw':'tbw_l','bia-smm':'smm_kg','bia-bcm':'bcm_kg',
+    'bia-pha':'phase_angle','bia-bmi':'bmi' };
+  for (const [el,key] of Object.entries(map)) {
+    const v = parseFloat(g(el));
+    if (!isNaN(v)) data[key] = v;
+  }
+  const msg = document.getElementById('bia-import-msg');
+  try {
+    const res = await fetch('/api/bia-import', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const j = await res.json();
+    if (!res.ok) { msg.textContent = 'Errore: ' + (j.error||''); return; }
+    msg.style.color = 'var(--green)';
+    msg.textContent = `Salvato (${j.history_count} misurazioni). Ora puoi fare Sync ICU.`;
+    loadBIAHistory();
+  } catch (e) { msg.textContent = 'Errore salvataggio'; }
+}
+
+async function loadBIAHistory() {
+  const host = document.getElementById('bia-history');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/bia-history');
+    const j = await res.json();
+    if (!j.history.length) { host.innerHTML = '<i>Nessuna misurazione. Importa un PDF BIA o inserisci i valori.</i>'; return; }
+    let html = '';
+    for (const h of j.history) {
+      const f = [];
+      if (h.weight_kg) f.push(`<b>${h.weight_kg} kg</b>`);
+      if (h.fat_mass_pct!=null) f.push(`grassa ${h.fat_mass_pct}%`);
+      if (h.fat_mass_kg) f.push(`(${h.fat_mass_kg} kg)`);
+      if (h.smm_kg) f.push(`SMM ${h.smm_kg} kg`);
+      if (h.bmi) f.push(`BMI ${h.bmi}`);
+      if (h.phase_angle!=null) f.push(`PhA ${h.phase_angle}°`);
+      html += `<div style="padding:3px 0;border-bottom:1px solid var(--border);"><b>${h.date}</b> — ${f.join(' · ') || 'dati grezzi'}</div>`;
+    }
+    host.innerHTML = html;
+  } catch (e) { host.textContent = 'Storico non disponibile'; }
+}
+
+async function syncBIAicu() {
+  const msg = document.getElementById('bia-sync-msg');
+  msg.textContent = 'Sync in corso…';
+  try {
+    const res = await fetch('/api/bia-sync-icu', { method:'POST', headers:{'Content-Type':'application/json'}, body: '{}' });
+    const j = await res.json();
+    if (!j.ok) { msg.textContent = '⚠ ' + (j.error||'errore'); msg.style.color='var(--red)'; return; }
+    msg.style.color = 'var(--green)';
+    msg.textContent = `⇧ ${j.synced} misurazione/i sincronizzata/e su Intervals.icu`;
+  } catch (e) { msg.textContent = 'Errore sync'; }
+}
 async function injectMultidiscipline() {
   const phase = ($('strength-phase') || {}).value || 'base';
   const oneR = ($('profile-one-rm') && parseFloat($('profile-one-rm').value)) || 0;

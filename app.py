@@ -4255,6 +4255,169 @@ async def api_diet_pdf_import(request: Request):
         return JSONResponse(status_code=400, content={"error": f"PDF non leggibile: {e}"})
 
 
+# ═══ BIA — Body Impedance Analysis: import + storico + sync Intervals.icu ═══
+import json as _json
+
+def _bia_history_path():
+    """File storico BIA nel profile attivo (bianco/neutro, coerente con athlete.json)."""
+    try:
+        from pathlib import Path as _P
+        from profile_manager import ProfileManager
+        pm = ProfileManager.get()
+        aid = getattr(pm, "_active_id", None) or "default"
+        d = _P.home() / ".domestique" / "profiles" / aid
+        return d / "bia_history.json"
+    except Exception:
+        return None
+
+
+def _bia_load_history():
+    p = _bia_history_path()
+    if p and p.exists():
+        try:
+            return _json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+    return []
+
+
+def _bia_save_history(hist):
+    p = _bia_history_path()
+    if p is None:
+        return False
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(_json.dumps(hist, indent=2, ensure_ascii=False), encoding="utf-8")
+        return True
+    except Exception:
+        return False
+
+def _icu_wellness_auth():
+    """Ritorna l'header Authorization esatto di training.py (Bearer o Basic base64),
+    o None se ICU non e' configurato. Usa _auth_header() (che raise se mancano
+    le credenziali) per rilevare lo stato in modo coerente col resto dell'app.
+    """
+    try:
+        import training as _training
+        return _training._auth_header()
+    except Exception:
+        return None
+
+
+@app.post("/api/bia-import")
+async def api_bia_import(request: Request):
+    """PPC — importa un report BIA (PDF testuale, PDF scansionato o JSON).
+
+    - PDF testuale: estrazione automatica dei campi.
+    - PDF scansionato: ritorna scanned=True + campi vuoti (il backend non ha OCR);
+      l'UI chiede all'atleta di incollare i valori.
+    - JSON: {date, weight_kg, fat_mass_kg, ...} letto direttamente.
+    Salva la misurazione nello storico BIA del profilo.
+    """
+    import io
+    try:
+        ctype = request.headers.get("content-type", "")
+        body = await request.body()
+        scanned = False
+        # JSON esplicito
+        if "application/json" in ctype or body.lstrip().startswith(b"{"):
+            data = _json.loads(body.decode("utf-8") or "{}")
+            from bia_parser import BIAReading, to_icu_wellness
+            r = BIAReading(**{k: v for k, v in data.items()
+                              if k in BIAReading.__dataclass_fields__})
+            r.source = "manual"
+            if not r.date:
+                r.date = __import__("datetime").date.today().isoformat()
+        else:
+            # multipart: file PDF
+            from bia_parser import parse_bia_pdf, BIAReading
+            form = await request.form()
+            f = form.get("file")
+            if not f:
+                return JSONResponse(status_code=400, content={"error": "Nessun file PDF o JSON inviato"})
+            pdf_bytes = f.file.read() if hasattr(f, "file") else f.read()
+            res = parse_bia_pdf(pdf_bytes)
+            scanned = res.get("scanned", False)
+            r = BIAReading(**res["reading"])
+            if not r.date:
+                r.date = __import__("datetime").date.today().isoformat()
+        # salva nello storico
+        from bia_parser import to_icu_wellness
+        hist = _bia_load_history()
+        entry = r.to_dict()
+        hist = [h for h in hist if h.get("date") != r.date]
+        hist.append(entry)
+        hist.sort(key=lambda x: x.get("date", ""))
+        saved = _bia_save_history(hist)
+        icu = to_icu_wellness(r, r.date)
+        return {"ok": True, "scanned": scanned,
+                "reading": entry, "found_fields": sorted(r.filled_fields().keys()),
+                "icu_payload": icu, "history_saved": saved,
+                "history_count": len(hist)}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": f"BIA import fallito: {e}"})
+
+
+@app.get("/api/bia-history")
+def api_bia_history():
+    """PPC — storico misurazioni BIA del profilo attivo."""
+    hist = _bia_load_history()
+    return {"ok": True, "history": hist, "count": len(hist)}
+
+
+@app.post("/api/bia-sync-icu")
+async def api_bia_sync_icu(request: Request):
+    """PPC — sincronizza le misurazioni BIA su Intervals.icu (/wellness).
+
+    Invia peso, bodyFat%, hydration%, muscleMass, bmi, boneMass, protein,
+    visceralFat, metabolicAge per ogni misurazione dello storico.
+    Richiede Intervals.icu configurato (Settings → Connessione ICU).
+    """
+    import httpx
+    body = {}
+    try:
+        raw = await request.body()
+        body = _json.loads(raw.decode("utf-8") or "{}")
+    except Exception:
+        body = {}
+    aid = None
+    try:
+        import training as _training
+        aid = getattr(_training, "ICU_ATHLETE_ID", None)
+    except Exception:
+        pass
+    auth_header = _icu_wellness_auth()
+    if not aid or not auth_header:
+        return {"ok": False, "error": "Intervals.icu non configurato. Vai in Impostazioni → Connessione ICU."}
+    hist = _bia_load_history()
+    if not hist:
+        return {"ok": False, "error": "Nessuna misurazione BIA da sincronizzare."}
+    # filtra per data se richiesto
+    only_date = body.get("date")
+    to_sync = [h for h in hist if (not only_date or h.get("date") == only_date)]
+    bulk = []
+    for h in to_sync:
+        from bia_parser import BIAReading, to_icu_wellness
+        r = BIAReading(**{k: v for k, v in h.items() if k in BIAReading.__dataclass_fields__})
+        icu = to_icu_wellness(r, r.date)
+        if icu["payload"]:
+            item = {"id": icu["date"] or r.date}
+            item.update(icu["payload"])
+            bulk.append(item)
+    if not bulk:
+        return {"ok": False, "error": "Nessun campo BIA mappabile su ICU nelle misurazioni selezionate."}
+    # Endpoint ufficiale ICU: PUT /wellness-bulk con array di {id, ...campi}
+    url = f"https://intervals.icu/api/v1/athlete/{aid}/wellness-bulk"
+    try:
+        resp = httpx.put(url, headers=auth_header, json=bulk, timeout=20)
+        if resp.status_code in (200, 201):
+            return {"ok": True, "synced": len(bulk), "results": bulk}
+        return {"ok": False, "error": f"ICU ha risposto {resp.status_code}: {resp.text[:200]}",
+                "results": bulk}
+    except Exception as e:
+        return {"ok": False, "error": f"Errore di rete ICU: {e}", "results": bulk}
+
+
 @app.get("/api/export-plan-html")
 def api_export_plan_html(athlete: str = Query("Atleta"), goal: str = Query(""),
                          phase: str = Query("base")):
