@@ -24,11 +24,6 @@
   --card: #ffffff;  /* opaque — see dark-theme note */
   --text: #1e293b; --text2: #475569; --text3: #64748b;
 }
-[data-theme="green"] {
-  --bg: #0a1a0a; --surface: #0f2a0f; --surface2: #143014; --border: #1e4d1e;
-  --accent: #22c55e; --green: #22c55e; --card: #0f2a0f;
-  --text: #d1fae5; --text2: #86efac; --text3: #4ade80;
-}
   --green: #16a34a; --yellow: #ca8a04; --orange: #ea580c; --red: #dc2626; --purple: #9333ea;
   --z1: #94a3b8; --z2: #3b82f6; --z3: #16a34a; --z4: #ca8a04; --z5: #ea580c; --z6: #dc2626; --z7: #475569;
 }
@@ -1436,7 +1431,6 @@ window.addEventListener('unhandledrejection', function(e) {
         <select id="theme-select" style="font-size:10px;padding:2px 4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="applyTheme(this.value)">
           <option value="dark">🌙 Dark</option>
           <option value="light">☀️ Light</option>
-          <option value="green">🚴 Green</option>
         </select>
       </div>
     </div>
@@ -1511,6 +1505,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="tab" data-tab="plan">Piano di allenamento</div>
   <div class="tab" data-tab="analysis">Analisi</div>
   <div class="tab" data-tab="dfa">DFA α1</div>
+  <div class="tab" data-tab="nutrition">Alimentazione</div>
   <div class="tab" data-tab="settings">Impostazioni</div>
 </div>
 
@@ -1639,31 +1634,37 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 
   <!-- BETA Fase 7b: Nutrizione & Integrazione -->
-  <div class="card" style="margin-top:12px;" id="nutrition-card">
-    <h3 data-tip="Carboidrati periodizzati (GSSI SSE 231, 'fuel for the work required'): 7-12 g/kg nei giorni di carico, 3-5 a riposo; durante sforzo 30-90 g/h in glucosio-fruttosio 1:0.8. Supplement Gruppo A (Jeukendrup/UCI 2026, PMC12239112): caffeina, beta-alanina, nitrato, bicarbonato, creatina.">Nutrizione &amp; Integrazione</h3>
-    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+  <!-- PPC: Nutrizione (compressa con <details>, decide da sola il carico) -->
+  <details class="card" style="margin-top:12px;" id="nutrition-card" open>
+    <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
+      🍎 Nutrizione <span id="nutri-summary-badge" style="font-size:10px;color:var(--text3);font-weight:400;"></span>
+    </summary>
+    <div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center;">
       <label style="font-size:11px;color:var(--text2);">Obiettivo:</label>
       <select id="nutri-goal" style="font-size:11px;padding:3px 6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;" onchange="loadNutrition()">
         <option value="maintain">Mantenimento / forma</option>
         <option value="cut">Dimagrimento</option>
         <option value="gain">Aumento massa</option>
       </select>
-      <label style="font-size:11px;color:var(--text2);">Carico oggi:</label>
-      <select id="nutri-load" style="font-size:11px;padding:3px 6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;" onchange="loadNutrition()">
-        <option value="0">Riposo/facile</option>
-        <option value="150">Moderato</option>
-        <option value="350">Alto</option>
-        <option value="600">Gara/carico max</option>
-      </select>
+      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="loadNutritionAuto()" title="L app decide da sola il carico in base a piano e ICU (ieri svolto/non svolto)">Auto (da piano/ICU)</button>
     </div>
     <div id="nutrition-plan" style="font-size:12px;color:var(--text2);">Caricamento…</div>
-  </div>
+  </details>
+
+  <!-- PPC: Integrazione (card separata, compressa) -->
+  <details class="card" style="margin-top:12px;" id="supplement-card">
+    <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
+      💊 Integrazione <span style="font-size:10px;color:var(--text3);font-weight:400;">(Gruppo A, dosi su peso)</span>
+    </summary>
+    <div id="supplement-plan" style="font-size:12px;color:var(--text2);margin-top:6px;">Caricamento…</div>
+  </details>
+
   <div class="card" style="margin-top:12px;" id="daily-adapt-card">
-    <h3 data-tip="Adattamento giornaliero (BETA): combina HRV (rMSSD), DFA α1, sonno e TSB del giorno in un fattore di carico 0.80–1.10. HRV-guided training (Casanova-Lizón 2025), Hooper 1995, DFA α1 (Rogers 2021).">Adattamento giornaliero</h3>
+    <h3 data-tip="Adattamento giornaliero (BETA): combina HRV (rMSSD), DFA a1, sonno e TSB del giorno in un fattore di carico 0.80-1.10. HRV-guided training (Casanova-Lizon 2025), Hooper 1995, DFA a1 (Rogers 2021).">Adattamento giornaliero</h3>
     <div id="daily-adapt" style="font-size:12px;color:var(--text2);">Calcolo…</div>
   </div>
 
-  <!-- BETA Fase 7a: Forza & Mobilità -->
+  <!-- BETA Fase 7a: Forza e Mobilita -->
   <div class="card" style="margin-top:12px;" id="strength-card">
     <h3 data-tip="Forza in palestra (Llanos-Lagos 2025, meta-analisi 17 studi/262 ciclisti: la forza pesante migliora efficienza di pedalata + TT). Mobilità quotidiana 15 min (Warneke 2025) riduce infortuni.">Forza &amp; Mobilità</h3>
     <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
@@ -1672,7 +1673,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <option value="peak">Peak</option><option value="taper">Taper</option>
       </select>
       <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadStrength()">Genera piano</button>
-      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="injectStrength()" title="Inserisce sedute forza+mobilità nel tuo piano settimanale">⚡ Inietta nel piano</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="injectMultidiscipline()" title="Inserisce forza+mobilità + running/MTB (se nei discipline) nel piano, affine al ciclismo">⚡ Inietta multi</button>
       <a class="btn" style="font-size:11px;padding:3px 10px;" href="/api/export-plan-html?athlete=Atleta&phase=base" target="_blank" rel="noopener">⤓ Esporta piano (PDF/HTML)</a>
     </div>
     <div id="strength-summary" style="font-size:12px;color:var(--text2);margin-bottom:8px;"></div>
@@ -1692,21 +1693,39 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 
   <!-- PPC: Piano alimentare settimanale (creatore di diete) -->
-  <div class="card" style="margin-top:12px;" id="diet-card">
-    <h3 data-tip="Piano pasti settimanale personalizzato: alimenti specifiche, timing, cosa mangiare/cosa evitare. Calorie calcolate o impostate dal nutrizionista.">Piano alimentare</h3>
-    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
-      <label style="font-size:11px;color:var(--text2);">Obiettivo:</label>
-      <select id="diet-goal" style="font-size:11px;padding:3px 6px;" onchange="loadDiet()">
-        <option value="maintain">Mantenimento / forma</option>
-        <option value="cut">Dimagrimento</option>
-        <option value="gain">Aumento massa</option>
+  <details class="card" style="margin-top:12px;" id="diet-card">
+    <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
+      🍽️ Piano alimentare <span style="font-size:10px;color:var(--text3);font-weight:400;">(sorgente + import PDF)</span>
+    </summary>
+    <div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center;">
+      <label style="font-size:11px;color:var(--text2);">Sorgente:</label>
+      <select id="diet-source" style="font-size:11px;padding:3px 6px;" onchange="onDietSourceChange()">
+        <option value="app">App PPC</option>
+        <option value="none">Nessuna</option>
+        <option value="nutritionist">Nutrizionista (PDF)</option>
+        <option value="macro">Solo macro</option>
+        <option value="micro">Macro + micro</option>
+        <option value="extra">Solo extra da sforzo</option>
       </select>
-      <label style="font-size:11px;color:var(--text2);">Calorie (0 = calcola):</label>
-      <input type="number" id="diet-cal" style="width:70px;font-size:11px;padding:3px;" placeholder="0">
+      <span id="diet-goal-wrap">
+        <label style="font-size:11px;color:var(--text2);">Obiettivo:</label>
+        <select id="diet-goal" style="font-size:11px;padding:3px 6px;" onchange="loadDiet()">
+          <option value="maintain">Mantenimento / forma</option>
+          <option value="cut">Dimagrimento</option>
+          <option value="gain">Aumento massa</option>
+        </select>
+      </span>
+      <span id="diet-cal-wrap">
+        <label style="font-size:11px;color:var(--text2);">Calorie (0=calc):</label>
+        <input type="number" id="diet-cal" style="width:60px;font-size:11px;padding:3px;" placeholder="0">
+      </span>
       <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadDiet()">Carica</button>
+      <label class="btn" style="font-size:11px;padding:3px 10px;cursor:pointer;">
+        ⤓ Import PDF<input type="file" id="diet-pdf" accept="application/pdf" style="display:none;" onchange="importDietPDF()">
+      </label>
     </div>
     <div id="diet-weekly" style="font-size:11px;color:var(--text2);">Caricamento…</div>
-  </div>
+  </details>
 
   <div class="grid g3" style="margin-top:12px;">
     <div class="card">
@@ -3064,6 +3083,56 @@ window.addEventListener('unhandledrejection', function(e) {
   <div id="dfa-perride-host" style="display:none;"></div>
 </div>
 
+<!-- ═══ ALIMENTAZIONE (PPC — scheda dedicata) ═══════════════════════════ -->
+<div class="section" id="sec-nutrition">
+  <!-- Sorgente dieta -->
+  <div class="card" style="margin-bottom:12px;">
+    <h3>Alimentazione — sorgente e import</h3>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+      <label style="font-size:11px;color:var(--text2);">Sorgente:</label>
+      <select id="nutri-source-tab" style="font-size:11px;padding:3px 6px;" onchange="onNutriSourceChange()">
+        <option value="app">App PPC (calcolata)</option>
+        <option value="nutritionist">Nutrizionista (PDF)</option>
+        <option value="none">Nessuna</option>
+        <option value="macro">Solo macro</option>
+        <option value="micro">Macro + micro</option>
+        <option value="extra">Solo extra da sforzo</option>
+      </select>
+      <label class="btn" style="font-size:11px;padding:3px 10px;cursor:pointer;">
+        ⤓ Importa PDF nutrizionista<input type="file" id="nutri-pdf-tab" accept="application/pdf" style="display:none;" onchange="importNutriPDF()">
+      </label>
+      <span id="nutri-pdf-meta" style="font-size:10px;color:var(--text3);"></span>
+    </div>
+    <div id="nutri-target" style="font-size:11px;color:var(--text2);"></div>
+  </div>
+
+  <!-- Confronto macro dieta vs target PPC -->
+  <div class="grid g2" id="nutri-compare" style="margin-bottom:12px;"></div>
+
+  <!-- Piano settimanale (App PPC o scelta alternative da PDF) -->
+  <div class="card">
+    <h3 id="nutri-plan-title">Piano alimentare settimanale</h3>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+      <label style="font-size:11px;color:var(--text2);">Obiettivo:</label>
+      <select id="nutri-goal-tab" style="font-size:11px;padding:3px 6px;" onchange="loadNutriPlan()">
+        <option value="maintain">Mantenimento / forma</option>
+        <option value="cut">Dimagrimento</option>
+        <option value="gain">Aumento massa</option>
+      </select>
+      <label style="font-size:11px;color:var(--text2);">Calorie (0=calc):</label>
+      <input type="number" id="nutri-cal-tab" style="width:60px;font-size:11px;padding:3px;" placeholder="0">
+      <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadNutriPlan()">Carica</button>
+    </div>
+    <div id="nutri-plan" style="font-size:11px;color:var(--text2);">Caricamento…</div>
+  </div>
+
+  <!-- Integrazione / supplementi (Gruppo A) -->
+  <div class="card" style="margin-top:12px;">
+    <h3>Integrazione &amp; timing (Gruppo A, dosi su peso)</h3>
+    <div id="nutri-supplements" style="font-size:11px;color:var(--text2);">Caricamento…</div>
+  </div>
+</div>
+
 <!-- ═══ SETTINGS ═══════════════════════════════════════════════════════════ -->
 <div class="section" id="sec-settings">
   <div class="grid g2">
@@ -3081,7 +3150,21 @@ window.addEventListener('unhandledrejection', function(e) {
         <div class="form-group"><label>Altezza (cm)</label><input type="number" id="set-height"></div>
         <div class="form-group"><label>1RM Squat (kg)</label><input type="number" id="set-onerm" step="0.5">
           <div style="font-size:10px;color:var(--text3);margin-top:3px;">Usato per calcolare i carichi di forza in palestra.</div></div>
-      </div>
+          </div>
+          <div class="form-row" style="margin-top:8px;">
+          <div class="form-group" style="grid-column:1 / -1;">
+            <label>Discipline (multidisciplinare)</label>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;">
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="disc-cb" value="cycling" checked> Ciclismo</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="disc-cb" value="running"> Corsa</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="disc-cb" value="mtb"> MTB</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="disc-cb" value="swim"> Nuoto</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="disc-cb" value="strength"> Forza (palestra)</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="disc-cb" value="mobility"> Mobilità</label>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px;">Nel piano vengono iniettate forza/mobilità e (se selezionate) corsa/MTB campionate dalla libreria, affine al ciclismo.</div>
+          </div>
+          </div>
       <div class="form-row">
         <div class="form-group">
           <label>FTP (watts) <span id="set-ftp-source-badge" style="display:none;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;margin-left:6px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);vertical-align:middle;"></span></label>
@@ -3629,7 +3712,8 @@ document.querySelectorAll('.tab[data-tab]').forEach(t => {
                        icuPushRefreshButton();
                      }, settings:()=>{loadSettings();loadIcuConnection();icuCalSyncRefresh();}, library:loadWorkouts,
                      analysis:()=>{ if (typeof loadAnalysisTab === 'function') loadAnalysisTab(); },
-                     dfa:()=>{ if (typeof loadDfaTab === 'function') loadDfaTab(); }};
+                     dfa:()=>{ if (typeof loadDfaTab === 'function') loadDfaTab(); },
+                     nutrition:()=>{ if (typeof loadNutriPlan === 'function') { loadNutriPlan(); renderNutriCompare(); } }};
     if (loaders[tab]) loaders[tab]();
   });
 });
@@ -7204,22 +7288,20 @@ async function loadTidHeatmap() {
   loadDiet();
 }
 
-// PPC — Nutrizione & Integrazione (piano completo individualizzato)
+// PPC — Nutrizione (piano completo individualizzato, senza select carico)
 async function loadNutrition() {
   const host = document.getElementById('nutrition-plan');
   if (!host) return;
   try {
     const goal = ($('nutri-goal') && $('nutri-goal').value) || 'maintain';
-    const load = ($('nutri-load') && parseInt($('nutri-load').value)) || 0;
-    const res = await fetch(`/api/nutrition-full?goal_type=${encodeURIComponent(goal)}&planned_tss_today=${load}`);
+    const res = await fetch(`/api/nutrition-full?goal_type=${encodeURIComponent(goal)}`);
     if (!res.ok) return;
     const p = await res.json();
     const m = p.macros || {};
     const lc = p.load_compensation || {};
-    const sup = (p.supplements || []).map(s =>
-      `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);">
-        <span>${esc(s.name)} <b style="color:var(--green);">${esc(s.evidence)}</b></span>
-        <span style="color:var(--accent);font-weight:700;">${esc(s.dose || '')}</span></div>`).join('');
+    // badge riepilogo nella summary
+    const badge = document.getElementById('nutri-summary-badge');
+    if (badge) badge.textContent = `· ${p.target_kcal} kcal · C ${m.carb_g}g/P ${m.protein_g}g/G ${m.fat_g}g`;
     host.innerHTML = `
       <div style="font-size:11px;color:var(--text2);">${esc(p.note_goal || '')}</div>
       <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">
@@ -7228,19 +7310,84 @@ async function loadNutrition() {
         <span>🍞 Carb <b>${m.carb_g}</b> g (${m.carb_g_per_kg} g/kg)</span>
         <span>🥑 Grassi <b>${m.fat_g}</b> g</span>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:3px;">Compensazione carico (lavoro richiesto): oggi ${lc.planned_tss_today} TSS + ieri ${lc.prev_day_tss} → <b style="color:var(--accent);">${lc.carb_g_per_kg} g/kg carb</b> · ${esc(lc.basis || '')}</div>
-      <div style="font-size:11px;font-weight:600;margin-top:8px;">Supplementi (Gruppo A, dosi su ${p.bodyweight_kg} kg):</div>
-      <div style="margin-top:2px;">${sup || '<i>nessuno</i>'}</div>`;
+      <div style="font-size:10px;color:var(--text3);margin-top:3px;">Carico richiesto (GSSI SSE 231): range carb <b style="color:var(--accent);">${lc.carb_g_per_kg_range ? lc.carb_g_per_kg_range[0]+'-'+lc.carb_g_per_kg_range[1] : '?'} g/kg</b> · ${esc(lc.basis || '')}</div>`;
+    // supplementi nella card Integrazione
+    const sh = document.getElementById('supplement-plan');
+    if (sh) {
+      const sup = (p.supplements || []).map(s =>
+        `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);">
+          <span>${esc(s.name)} <b style="color:var(--green);">${esc(s.evidence)}</b></span>
+          <span style="color:var(--accent);font-weight:700;">${esc(s.dose || '')}</span></div>`).join('');
+      sh.innerHTML = `<div style="font-size:10px;color:var(--text3);">Dosi su ${p.bodyweight_kg} kg · ${esc((p.profile_used||{}).sex||'')}</div>` + (sup || '<i>nessuno</i>');
+    }
   } catch (e) { /* non bloccare */ }
+}
+
+// PPC — Nutrizione AUTO: l'app decide il carico da piano + ICU
+async function loadNutritionAuto() {
+  const host = document.getElementById('nutrition-plan');
+  if (!host) return;
+  host.innerHTML = 'Calcolo automatico (piano + ICU)…';
+  try {
+    const goal = ($('nutri-goal') && $('nutri-goal').value) || 'maintain';
+    const res = await fetch(`/api/nutrition-auto?goal_type=${encodeURIComponent(goal)}`);
+    if (!res.ok) return;
+    const p = await res.json();
+    const m = p.macros || {};
+    const a = p.auto || {};
+    const badge = document.getElementById('nutri-summary-badge');
+    if (badge) badge.textContent = `· AUTO · ${p.target_kcal} kcal`;
+    host.innerHTML = `
+      <div style="font-size:11px;color:var(--green);font-weight:600;">⚡ Auto: ${esc(a.decision || '')}</div>
+      <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">
+        <span>🔥 <b>${p.target_kcal}</b> kcal</span>
+        <span>🥩 P <b>${m.protein_g}</b> g</span>
+        <span>🍞 Carb <b>${m.carb_g}</b> g (${m.carb_g_per_kg} g/kg)</span>
+        <span>🥑 G <b>${m.fat_g}</b> g</span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px;">Oggi previsto ${a.planned_tss_today} TSS · ieri previsto ${a.planned_tss_yesterday} / eseguito ${a.actual_tss_yesterday} TSS → carb <b style="color:var(--accent);">${a.carb_g_per_kg_day} g/kg</b></div>`;
+    const sh = document.getElementById('supplement-plan');
+    if (sh) {
+      const sup = (p.supplements || []).map(s =>
+        `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);">
+          <span>${esc(s.name)} <b style="color:var(--green);">${esc(s.evidence)}</b></span>
+          <span style="color:var(--accent);font-weight:700;">${esc(s.dose || '')}</span></div>`).join('');
+      sh.innerHTML = `<div style="font-size:10px;color:var(--text3);">Dosi su ${p.bodyweight_kg} kg</div>` + (sup || '<i>nessuno</i>');
+    }
+  } catch (e) { host.textContent = 'Auto non disponibile'; }
 }
 
 // PPC — Piano alimentare settimanale (creatore di diete)
 async function loadDiet() {
   const host = document.getElementById('diet-weekly');
   if (!host) return;
+  const source = ($('diet-source') && $('diet-source').value) || 'app';
+  if (source === 'none') { host.innerHTML = '<i>Nessun piano alimentare (atleta gestisce da solo).</i>'; return; }
   try {
     const goal = ($('diet-goal') && $('diet-goal').value) || 'maintain';
     const cal = ($('diet-cal') && parseFloat($('diet-cal').value)) || 0;
+    if (source === 'nutritionist') {
+      host.innerHTML = (window.__dietPdfText)
+        ? `<div style="font-size:10px;color:var(--text3);white-space:pre-wrap;">${esc(window.__dietPdfText)}</div>`
+        : '<i>Importa il PDF del nutrizionista (bottone ⤓ Import PDF).</i>';
+      return;
+    }
+    if (source === 'macro' || source === 'micro' || source === 'extra') {
+      // mostra solo i macro (o extra da sforzo) senza alimenti dettagliati
+      const url = `/api/diet-weekly?goal_type=${encodeURIComponent(goal)}` + (cal ? `&custom_calories=${cal}` : '');
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const j = await res.json();
+      let html = `<div style="font-size:10px;color:var(--text3);margin-bottom:6px;">${source==='extra'?'Solo carboidrati extra da sforzo (aggiungi ai pasti normali)':'Macro '+(source==='micro'?'+ micro':'giornalieri')} · ${j.bodyweight_kg} kg</div>`;
+      for (const d of (j.days || [])) {
+        const extra = (source === 'extra') ? ` +${Math.round(d.total_carb*0.15)}g carb da sforzo` : '';
+        html += `<div style="font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);">
+          <b>${esc(d.day)}</b> <span style="color:var(--text3);">${esc(d.day_type)}</span>
+          <span style="color:var(--accent);">${d.total_kcal} kcal</span> · C ${d.total_carb}g P ${d.total_protein}g F ${d.total_fat}g${extra}</div>`;
+      }
+      host.innerHTML = html;
+      return;
+    }
     const url = `/api/diet-weekly?goal_type=${encodeURIComponent(goal)}` + (cal ? `&custom_calories=${cal}` : '');
     const res = await fetch(url);
     if (!res.ok) return;
@@ -7251,9 +7398,10 @@ async function loadDiet() {
         <div style="font-weight:600;">${esc(d.day)} <span style="color:var(--text3);font-size:10px;">· ${esc(d.day_type)}</span>
           <span style="color:var(--accent);font-size:10px;">${d.total_kcal} kcal</span></div>`;
       for (const m of (d.meals || [])) {
+        const grams = Object.entries(m.food_grams || {}).map(([k,v]) => `${esc(k)} ${v}g`).join(', ');
         html += `<div style="margin:3px 0;font-size:10px;">
           <span style="font-weight:600;">${esc(m.name)}</span> <span style="color:var(--text3);">${esc(m.timing)}</span>
-          <div style="color:var(--text2);">${esc(m.foods.join(', '))}</div>
+          <div style="color:var(--text2);">${esc((m.foods||[]).join(', '))}${grams ? ' — <b>'+grams+'</b>' : ''}</div>
           <div style="color:var(--text3);">C ${Math.round(m.carb_g)}g · P ${Math.round(m.protein_g)}g · F ${Math.round(m.fat_g)}g</div>`;
         if (m.note) html += `<div style="color:var(--text3);font-style:italic;">${esc(m.note)}</div>`;
         html += `</div>`;
@@ -7265,7 +7413,175 @@ async function loadDiet() {
   } catch (e) { host.textContent = 'Piano alimentare non disponibile'; }
 }
 
-// PPC — Inietta forza + mobilità nel piano settimanale
+// PPC — mostra/nasconde opzioni in base alla sorgente dieta
+function onDietSourceChange() {
+  const source = ($('diet-source') && $('diet-source').value) || 'app';
+  const showGoal = (source === 'app' || source === 'macro' || source === 'micro' || source === 'extra');
+  const showCal = (source === 'app' || source === 'macro' || source === 'micro' || source === 'extra');
+  const gw = document.getElementById('diet-goal-wrap');
+  const cw = document.getElementById('diet-cal-wrap');
+  if (gw) gw.style.display = showGoal ? '' : 'none';
+  if (cw) cw.style.display = showCal ? '' : 'none';
+  loadDiet();
+}
+
+// PPC — import PDF dieta del nutrizionista (testo estratto via backend)
+async function importDietPDF() {
+  const inp = document.getElementById('diet-pdf');
+  const host = document.getElementById('diet-weekly');
+  if (!inp || !inp.files || !inp.files[0]) return;
+  host.innerHTML = 'Estrazione PDF…';
+  try {
+    const fd = new FormData();
+    fd.append('file', inp.files[0]);
+    const res = await fetch('/api/diet-pdf-import', { method: 'POST', body: fd });
+    if (!res.ok) { host.textContent = 'PDF non leggibile'; return; }
+    const j = await res.json();
+    window.__dietPdfText = j.text || '(nessun testo estraibile)';
+    if ($('diet-source')) $('diet-source').value = 'nutritionist';
+    host.innerHTML = `<div style="font-size:10px;color:var(--text3);white-space:pre-wrap;">${esc(window.__dietPdfText)}</div>`;
+  } catch (e) { host.textContent = 'Errore import PDF'; }
+}
+
+// ═══ SCHEDA ALIMENTAZIONE (PPC) ════════════════════════════════════════════
+function onNutriSourceChange() {
+  const src = ($('nutri-source-tab') || {}).value || 'app';
+  const showGoal = (src === 'app' || src === 'macro' || src === 'micro' || src === 'extra');
+  const gw = document.getElementById('nutri-goal-wrap');
+  const calw = document.getElementById('nutri-cal-wrap');
+  if ($('nutri-goal-tab')) $('nutri-goal-tab').style.display = showGoal ? '' : 'none';
+  if ($('nutri-cal-tab')) $('nutri-cal-tab').style.display = showGoal ? '' : 'none';
+  loadNutriPlan();
+}
+
+async function loadNutriPlan() {
+  const host = document.getElementById('nutri-plan');
+  if (!host) return;
+  const src = ($('nutri-source-tab') || {}).value || 'app';
+  if (src === 'none') { host.innerHTML = '<i>Nessun piano alimentare (gestisci da solo).</i>'; return; }
+  if (src === 'nutritionist') {
+    if (window.__nutriPdf) { renderNutriPdf(host, window.__nutriPdf); }
+    else { host.innerHTML = '<i>Importa il PDF del nutrizionista (bottone ⤓).</i>'; }
+    return;
+  }
+  try {
+    const goal = ($('nutri-goal-tab') || {}).value || 'maintain';
+    const cal = ($('nutri-cal-tab') || {}).value ? parseFloat($('nutri-cal-tab').value) : 0;
+    const url = `/api/diet-weekly?goal_type=${encodeURIComponent(goal)}` + (cal ? `&custom_calories=${cal}` : '');
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const j = await res.json();
+    if (src === 'macro' || src === 'micro' || src === 'extra') {
+      let html = `<div style="font-size:10px;color:var(--text3);margin-bottom:6px;">${src==='extra'?'Solo carboidrati extra da sforzo (aggiungi ai pasti)':'Macro '+(src==='micro'?'+ micro':'giornalieri')} · ${j.bodyweight_kg} kg</div>`;
+      for (const d of (j.days||[])) {
+        const extra = (src==='extra') ? ` +${Math.round(d.total_carb*0.15)}g carb` : '';
+        html += `<div style="font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);"><b>${esc(d.day)}</b> <span style="color:var(--text3);">${esc(d.day_type)}</span> <span style="color:var(--accent);">${d.total_kcal} kcal</span> · C ${d.total_carb}g P ${d.total_protein}g F ${d.total_fat}g${extra}</div>`;
+      }
+      host.innerHTML = html; return;
+    }
+    // App PPC completa con grammi
+    let html = `<div style="font-size:10px;color:var(--text3);margin-bottom:6px;">${esc(j.calorie_source)} · ${j.bodyweight_kg} kg</div>`;
+    for (const d of (j.days||[])) {
+      html += `<div style="background:var(--surface2);border-radius:6px;padding:6px 8px;margin-bottom:6px;"><div style="font-weight:600;">${esc(d.day)} <span style="color:var(--text3);font-size:10px;">· ${esc(d.day_type)}</span> <span style="color:var(--accent);font-size:10px;">${d.total_kcal} kcal</span></div>`;
+      for (const m of (d.meals||[])) {
+        const grams = Object.entries(m.food_grams||{}).map(([k,v])=>`${esc(k)} ${v}g`).join(', ');
+        html += `<div style="margin:3px 0;font-size:10px;"><span style="font-weight:600;">${esc(m.name)}</span> <span style="color:var(--text3);">${esc(m.timing)}</span><div style="color:var(--text2);">${esc((m.foods||[]).join(', '))}${grams?' — <b>'+grams+'</b>':''}</div><div style="color:var(--text3);">C ${Math.round(m.carb_g)}g · P ${Math.round(m.protein_g)}g · F ${Math.round(m.fat_g)}g</div></div>`;
+        if (m.note) html += `<div style="color:var(--text3);font-style:italic;">${esc(m.note)}</div>`;
+      }
+      if (d.avoid && d.avoid.length) html += `<div style="font-size:10px;color:var(--red);margin-top:2px;">❌ Evita: ${esc(d.avoid.join(', '))}</div>`;
+      html += `</div>`;
+    }
+    host.innerHTML = html;
+  } catch (e) { host.textContent = 'Piano non disponibile'; }
+}
+
+async function importNutriPDF() {
+  const inp = document.getElementById('nutri-pdf-tab');
+  if (!inp || !inp.files || !inp.files[0]) return;
+  const meta = document.getElementById('nutri-pdf-meta');
+  meta.textContent = 'Estrazione…';
+  try {
+    const fd = new FormData();
+    fd.append('file', inp.files[0]);
+    const res = await fetch('/api/diet-pdf-import', { method: 'POST', body: fd });
+    if (!res.ok) { meta.textContent = 'PDF non leggibile'; return; }
+    const j = await res.json();
+    window.__nutriPdf = j;
+    if ($('nutri-source-tab')) $('nutri-source-tab').value = 'nutritionist';
+    meta.textContent = `${j.day_count} giorni · ${j.pages} pagine` + (j.unknown_foods && j.unknown_foods.length ? ` · ⚠ ${j.unknown_foods.length} alimenti sconosciuti` : '');
+    loadNutriPlan();
+    renderNutriCompare();
+  } catch (e) { meta.textContent = 'Errore'; }
+}
+
+function renderNutriPdf(host, j) {
+  // Mostra la dieta del nutrizionista con scelta alternative e macro reali
+  let html = `<div style="font-size:10px;color:var(--text3);margin-bottom:6px;">Dieta nutrizionista · ${j.day_count} giorni · clicca un'alternativa per selezionarla</div>`;
+  for (const d of (j.summary||[])) {
+    html += `<div style="background:var(--surface2);border-radius:6px;padding:6px 8px;margin-bottom:6px;"><div style="font-weight:600;">${esc(d.day)} <span style="color:var(--accent);font-size:10px;">${d.kcal} kcal</span> · C${d.carb_g}g P${d.protein_g}g G${d.fat_g}g</div>`;
+    for (const m of (d.meals||[])) {
+      html += `<div style="margin:3px 0;font-size:10px;"><b>${esc(m.name)}</b></div>`;
+      for (const it of (m.items||[])) {
+        const sel = it.is_alt ? 'color:var(--text3);cursor:pointer;' : 'font-weight:600;';
+        const tag = it.is_alt ? ' ○' : '';
+        html += `<div style="${sel}" onclick="toggleAlt(this)">${esc(it.name)} ${it.grams}g${tag} <span style="color:var(--text3);">${it.kcal} kcal</span></div>`;
+      }
+    }
+    html += `</div>`;
+  }
+  host.innerHTML = html;
+}
+
+function toggleAlt(el) { el.style.textDecoration = el.style.textDecoration ? '' : 'line-through'; }
+
+async function renderNutriCompare() {
+  // Confronto macro dieta vs target PPC
+  const box = document.getElementById('nutri-compare');
+  if (!box) return;
+  const goal = ($('nutri-goal-tab') || {}).value || 'maintain';
+  try {
+    const [ppc, full] = await Promise.all([
+      fetch(`/api/nutrition-full?goal_type=${goal}`).then(r=>r.json()),
+      fetch(`/api/diet-weekly?goal_type=${goal}`).then(r=>r.json()),
+    ]);
+    const ppcK = ppc.target_kcal, dietK = (window.__nutriPdf && window.__nutriPdf.summary) ? Math.round(window.__nutriPdf.summary.reduce((a,b)=>a+b.kcal,0)/window.__nutriPdf.summary.length) : 0;
+    box.innerHTML = `
+      <div class="card"><h3>Target PPC</h3>
+        <div style="font-size:12px;">🔥 <b>${ppcK}</b> kcal · C ${ppc.macros.carb_g}g · P ${ppc.macros.protein_g}g · G ${ppc.macros.fat_g}g</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px;">Carico richiesto (GSSI SSE 231): range carb ${ppc.load_compensation.carb_g_per_kg_range[0]}-${ppc.load_compensation.carb_g_per_kg_range[1]} g/kg</div>
+      </div>
+      <div class="card"><h3>Dieta nutrizionista</h3>
+        <div style="font-size:12px;">🔥 <b>${dietK}</b> kcal/giorno (media)</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px;">Confronta con il target: ${dietK>ppcK?'+':''}${dietK-ppcK} kcal/giorno</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px;">Integrazione Gruppo A (Jeukendrup/UCI 2026) sempre applicabile sopra i pasti.</div>
+      </div>`;
+    // supplementi
+    const sup = document.getElementById('nutri-supplements');
+    if (sup) {
+      const s = (ppc.supplements||[]).map(x=>`<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);"><span>${esc(x.name)} <b style="color:var(--green);">${esc(x.evidence)}</b></span><span style="color:var(--accent);font-weight:700;">${esc(x.dose||'')}</span></div>`).join('');
+      sup.innerHTML = `<div style="font-size:10px;color:var(--text3);">Dosi su ${ppc.bodyweight_kg} kg</div>` + (s||'<i>nessuno</i>');
+    }
+  } catch (e) { box.innerHTML = ''; }
+}
+
+// PPC — Inietta forza+mobilità + running/MTB (multidisciplinare)
+async function injectMultidiscipline() {
+  const phase = ($('strength-phase') || {}).value || 'base';
+  const oneR = ($('profile-one-rm') && parseFloat($('profile-one-rm').value)) || 0;
+  const btn = event && event.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Inietto…'; }
+  try {
+    const fd = new FormData();
+    fd.append('phase', phase);
+    if (oneR) fd.append('one_rm_kg', oneR);
+    const res = await fetch('/api/plan/inject-multidiscipline', { method: 'POST', body: fd });
+    if (!res.ok) { alert('Errore inject: ' + res.status); return; }
+    const j = await res.json();
+    if (btn) btn.textContent = `✓ +${j.injected} sessioni`;
+    setTimeout(() => { if (btn) btn.textContent = '⚡ Inietta multi'; btn.disabled = false; }, 2500);
+    loadMyCalendar();
+  } catch (e) { if (btn) { btn.textContent = '⚡ Inietta multi'; btn.disabled = false; } }
+}
 async function injectStrength() {
   const phase = ($('strength-phase') || {}).value || 'base';
   let oneRm = 0;
@@ -16055,6 +16371,9 @@ async function saveSettings() {
     one_rm_kg: parseFloat($('set-onerm').value),
   };
   for (const k in ext) { if (Number.isFinite(ext[k]) || (k === 'sex' && ext[k])) body[k] = ext[k]; }
+  // PPC — discipline multidisciplinari
+  const discs = Array.from(document.querySelectorAll('.disc-cb')).filter(c => c.checked).map(c => c.value);
+  body.disciplines = discs;
 
   // and 400s with a readable message; surfaced via the alert below.
   const tmSel = $('set-target-mode');

@@ -3,8 +3,8 @@
 PyInstaller spec for PPC — Programming Cycling Coach.
 
 Build:
-  macOS:   pyinstaller domestique.spec
-  Windows: pyinstaller domestique.spec
+  macOS:   pyinstaller ppc.spec
+  Windows: pyinstaller ppc.spec
 
 Output: dist/PPC.app (macOS) or dist/PPC/PPC.exe (Windows)
 

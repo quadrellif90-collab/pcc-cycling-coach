@@ -1299,6 +1299,16 @@ def setup_save(body: dict):
             profile["sex"] = str(body["sex"]).lower()
         if body.get("weight"):
             profile["lbm"] = round(float(body["weight"]) * 0.80, 1)
+        # Discipline multidisciplinari (ciclismo/running/mtb) — lista libera
+        if "disciplines" in body:
+            disc = body["disciplines"]
+            if isinstance(disc, str):
+                disc = [d.strip() for d in disc.split(",") if d.strip()]
+            if not isinstance(disc, list):
+                raise HTTPException(400, "disciplines deve essere una lista")
+            allowed = {"cycling", "running", "mtb", "swim", "strength", "mobility"}
+            disc = [str(d).lower() for d in disc if str(d).lower() in allowed]
+            extras["disciplines"] = disc
 
         # AC5b (D3): lthr < max_hr — same invariant update_settings enforces.
         # Effective values: payload wins, else the stored profile value.
@@ -3908,9 +3918,136 @@ def api_inject_strength(request: Request):
         week["sessions"] = sessions
 
     plan_path.write_text(_json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
+    plan_path.write_text(_json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
     return {"ok": True, "injected": injected, "phase": phase,
             "weeks": len(plan.get("weeks", []))}
 
+
+@app.post("/api/plan/inject-multidiscipline")
+async def api_inject_multidiscipline(request: Request):
+    """PPC — inietta forza/mobilità + discipline aggiuntive (running/MTB) nel piano.
+
+    Legge `disciplines` dal profilo atleta: se include 'strength'/'mobility'
+    inietta quelle sedute (come api_inject_strength); se include 'running' o
+    'mtb' campiona workout di quelle discipline dalla libreria e li inserisce
+    nei giorni corretti (non cercando giorni vuoti — affianco al ciclismo).
+    Cosi un atleta multidisciplinare vede nel piano anche corsa/MTB con
+    distribuzione evidence-based (Stöggl 2015 per running, impatti MTB).
+    """
+    import random
+    from profile_manager import ProfileManager
+    from strength_mobility import build_strength_plan, STRENGTH_PROTOCOLS
+    from pathlib import Path as _P
+    import json as _json
+    body = {}
+    try:
+        raw = await request.body()
+        body = _json.loads(raw.decode("utf-8") or "{}")
+    except Exception:
+        body = {}
+    phase = body.get("phase", "base")
+    one_rm = float(body.get("one_rm_kg", 0) or 0)
+
+    pm = ProfileManager.get()
+    a = pm._athlete or {}
+    if not one_rm:
+        one_rm = float(a.get("one_rm_kg") or 0)
+    disciplines = set(d.lower() for d in (a.get("disciplines") or []))
+    do_strength = True
+    do_mobility = True
+    do_running = "running" in disciplines
+    do_mtb = "mtb" in disciplines
+
+    plan_dir = _P.home() / ".domestique" / "plans"
+    if not (plan_dir / "current_plan.json").exists():
+        plan_dir = _P.home() / ".domestique" / "profiles" / (pm._active_id or "default") / "plans"
+    plan_path = plan_dir / "current_plan.json"
+    if not plan_path.exists():
+        raise HTTPException(404, "Nessun piano generato. Genera prima il piano.")
+    plan = _json.loads(plan_path.read_text(encoding="utf-8"))
+
+    injected = 0
+    lib_map = {"running": "running", "mtb": "mtb"}
+    lib_files = {}
+    for disc, folder in lib_map.items():
+        d = _P("workouts") / folder
+        if d.exists():
+            lib_files[disc] = [f.name for f in d.glob("*.zwo")][:40]
+        else:
+            # fallback: campiona dalla libreria generale filtrando per nome
+            base = _P("workouts")
+            if base.exists():
+                hits = [f.name for f in base.glob("*.zwo")
+                        if disc in f.name.lower()][:40]
+                if hits:
+                    lib_files[disc] = hits
+                else:
+                    # ultimo fallback: usa tutti i .zwo della libreria
+                    all_z = [f.name for f in base.glob("*.zwo")][:40]
+                    if all_z:
+                        lib_files[disc] = all_z
+
+    for i, week in enumerate(plan.get("weeks", [])):
+        sessions = week.get("sessions", [])
+        training_days = [s["day"] for s in sessions if s.get("day")
+                         and s.get("session_type") != "rest"]
+        if not training_days:
+            continue
+        if do_strength:
+            proto = STRENGTH_PROTOCOLS.get(phase, STRENGTH_PROTOCOLS["base"])
+            sp = build_strength_plan(phase, 1, one_rm_kg=one_rm)
+            if sp and sp[0].get("sessions"):
+                td = training_days[0]
+                for sess in sp[0]["sessions"][:proto["sessions_per_week"]]:
+                    if any(s.get("session_type") == "strength" and s.get("day") == td
+                           and s.get("description", "").startswith(sess["exercise"])
+                           for s in sessions):
+                        continue
+                    sessions.append({
+                        "day": td, "session_type": "strength", "duration_min": 45,
+                        "tss_estimate": 30,
+                        "description": f"{sess['exercise']} {sess['sets']}×{sess['reps']} @ {sess['pct_1rm']}%" +
+                                       (f" ({sess['load_kg']} kg)" if sess.get("load_kg") else ""),
+                        "zwo_file": "", "zwo_name": "",
+                    })
+                    injected += 1
+        if do_mobility:
+            for td in training_days:
+                if any(s.get("session_type") == "mobility" and s.get("day") == td for s in sessions):
+                    continue
+                sessions.append({
+                    "day": td, "session_type": "mobility", "duration_min": 15,
+                    "tss_estimate": 5,
+                    "description": "Mobilità quotidiana 15 min (Warneke 2025)",
+                    "zwo_file": "", "zwo_name": "",
+                })
+                injected += 1
+        for disc in ("running", "mtb"):
+            if disc not in disciplines or disc not in lib_files:
+                continue
+            files = lib_files[disc]
+            if not files:
+                continue
+            n = 2 if disc == "running" else 1
+            picks = random.sample(files, min(n, len(files)))
+            for j, fn in enumerate(picks):
+                td = training_days[min(j, len(training_days) - 1)]
+                if any(s.get("session_type") == disc and s.get("day") == td for s in sessions):
+                    continue
+                sessions.append({
+                    "day": td, "session_type": disc, "duration_min": 40,
+                    "tss_estimate": 40,
+                    "description": f"{disc.capitalize()} (libreria: {fn})",
+                    "zwo_file": str(_P("workouts") / lib_map[disc] / fn),
+                    "zwo_name": fn,
+                })
+                injected += 1
+        week["sessions"] = sessions
+
+    plan_path.write_text(_json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
+    return {"ok": True, "injected": injected, "phase": phase,
+            "disciplines": sorted(disciplines),
+            "weeks": len(plan.get("weeks", []))}
 
 
 def api_nutrition(day_type: str = Query("moderate"), bodyweight_kg: float = Query(72.0), during_min: int = Query(0)):
@@ -3952,6 +4089,110 @@ def api_race_fueling(duration_h: float = Query(2.0), bodyweight_kg: float = Quer
     return race_fueling(duration_h, bodyweight_kg)
 
 
+@app.get("/api/nutrition-auto")
+def api_nutrition_auto(goal_type: str = Query("maintain")):
+    """PPC — nutrizione AUTO: decide da solo il carico in base a piano + ICU.
+
+    Calcola il TSS previsto OGGI (dal piano), il TSS previsto + ESEGUITO
+    ieri (piano vs attività reale da intervals.icu), e adegua i carbohydrate
+    "fuel for the work required" (GSSI SSE 231). Se l'atleta NON ha svolto
+    l'allenamento previsto, il carico cala; se l'ha svolto o è più alto, sale.
+    Nessun select manuale: l'app ragiona sui dati reali.
+    """
+    from nutrition import day_macros, supplement_doses
+    from profile_manager import ProfileManager
+    from my_progress import load_plan_weeks, fetch_actual_tss_by_week, iso_week_monday
+    import datetime as _dt
+    pm = ProfileManager.get()
+    a = pm._athlete or {}
+    bw = float(a.get("weight_kg") or 72.0)
+    age = int(a.get("age") or 30)
+    sex = str(a.get("sex") or "m")
+    height = float(a.get("height_cm") or 178.0)
+
+    today = _dt.date.today()
+    yesterday = today - _dt.timedelta(days=1)
+    planned_today = 0.0
+    planned_yesterday = 0.0
+    actual_yesterday = 0.0
+    decision = "nessun piano disponibile"
+
+    try:
+        weeks = load_plan_weeks()
+        for w in weeks:
+            for s in w.get("sessions", []):
+                sd = s.get("day")
+                if not sd:
+                    continue
+                try:
+                    d = _dt.date.fromisoformat(sd[:10])
+                except Exception:
+                    continue
+                tss = float(s.get("tss_estimate") or 0)
+                if d == today:
+                    planned_today += tss
+                elif d == yesterday:
+                    planned_yesterday += tss
+        try:
+            key = a.get("icu_api_key") or pm._get_env("ICU_API_KEY")
+            aid = a.get("icu_athlete_id") or pm._get_env("ICU_ATHLETE_ID")
+            if key and aid:
+                oldest = (yesterday - _dt.timedelta(days=1)).isoformat()
+                newest = yesterday.isoformat()
+                actual_by_week = fetch_actual_tss_by_week(key, aid, oldest, newest)
+                wl = iso_week_monday(yesterday)
+                actual_yesterday = float(actual_by_week.get(wl, 0) or 0)
+        except Exception:
+            actual_yesterday = 0.0
+
+        if planned_today == 0 and planned_yesterday == 0:
+            decision = "recupero / nessun carico previsto -> carb base"
+        elif actual_yesterday == 0 and planned_yesterday > 0:
+            decision = "ieri NON svolto -> carb ridotti vs piano (niente eccesso a vuoto)"
+        elif actual_yesterday >= planned_yesterday * 0.85:
+            decision = "ieri svolto come da piano (o oltre) -> carb pieno oggi"
+        else:
+            decision = "ieri parzialmente svolto -> carb moderati oggi"
+    except Exception as e:
+        decision = f"fallback piano non leggibile: {e}"
+
+    effective_prev = actual_yesterday if actual_yesterday > 0 else (planned_yesterday * 0.5)
+    plan = day_macros("moderate", goal_type, bw, height, age, sex,
+                      planned_tss_today=planned_today, prev_day_tss=effective_prev)
+    # normalizza chiavi per la UI (stessa forma di /api/nutrition-full)
+    carb_g = float(plan.get("carb_g") or 0)
+    protein_g = float(plan.get("protein_g") or 0)
+    fat_g = float(plan.get("fat_g") or 0)
+    target_kcal = int(plan.get("target_kcal") or round(carb_g * 4 + protein_g * 4 + fat_g * 9))
+    macros = {
+        "carb_g": round(carb_g, 1),
+        "protein_g": round(protein_g, 1),
+        "fat_g": round(fat_g, 1),
+        "carb_g_per_kg": round(carb_g / bw, 1) if bw else 0,
+        "protein_g_per_kg": round(protein_g / bw, 1) if bw else 0,
+    }
+    carb_g_per_kg_day = round(carb_g / bw, 1) if bw else 0
+    plan["macros"] = macros
+    plan["target_kcal"] = target_kcal
+    plan["carb_g"] = round(carb_g, 1)
+    plan["protein_g"] = round(protein_g, 1)
+    plan["fat_g"] = round(fat_g, 1)
+    plan["carb_g_per_kg_day"] = carb_g_per_kg_day
+    plan["bodyweight_kg"] = bw
+    plan["profile_used"] = {"weight_kg": bw, "age": age, "sex": sex, "height_cm": height}
+    plan["auto"] = {
+        "planned_tss_today": round(planned_today, 1),
+        "planned_tss_yesterday": round(planned_yesterday, 1),
+        "actual_tss_yesterday": round(actual_yesterday, 1),
+        "decision": decision,
+        "carb_g_per_kg_day": carb_g_per_kg_day,
+    }
+    plan["supplements"] = supplement_doses(bw)
+    plan["sources"] = ["GSSI SSE 231 (fuel for the work required)", "Jeukendrup/UCI 2026",
+                       "Burke 2018", "Morton 2018"]
+    return plan
+
+
 @app.get("/api/diet")
 def api_diet(day_type: str = Query("moderate"),
              goal_type: str = Query("maintain"),
@@ -3991,6 +4232,27 @@ def api_diet_weekly(goal_type: str = Query("maintain"),
     height = float(a.get("height_cm") or 178.0)
     return build_weekly_diet(goal_type, bw, custom_calories=custom_calories,
                              height_cm=height, age=age, sex=sex)
+
+
+@app.post("/api/diet-pdf-import")
+async def api_diet_pdf_import(request: Request):
+    """PPC — importa il PDF della dieta redatta dal nutrizionista.
+
+    Estrae il testo via PyPDF2 e lo PARSA in struttura giorni/pasti/alimenti
+    con grammi e macro reali (diet_parser). L'atleta vede la dieta del
+    professionista, sceglie le alternative, e confronta i macro con il
+    target PPC. I macro extra da sforzo restano calcolabili sopra i pasti.
+    """
+    try:
+        body = await request.body()
+        from diet_parser import parse_diet_pdf, day_macros_summary
+        struct = parse_diet_pdf(body)
+        struct["summary"] = day_macros_summary(struct)
+        # rimuovi raw_text pesante dall'output API (gia in struct se serve)
+        struct.pop("raw_text", None)
+        return {"ok": True, **struct}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": f"PDF non leggibile: {e}"})
 
 
 @app.get("/api/export-plan-html")
@@ -12809,20 +13071,31 @@ def api_profile_get():
 
 
 @app.post("/api/profile")
-def api_profile_put(request: Request):
+async def api_profile_put(request: Request):
     """Aggiorna il profilo atleta e (se connesso a ICU) sincronizza i campi
     corrispondenti su intervals.icu (invio/ricezione bidirezionale)."""
     from profile_manager import ProfileManager
     import httpx
     body = {}
     try:
-        body = json.loads(request.body().read().decode("utf-8") or "{}")
+        raw = await request.body()
+        body = json.loads(raw.decode("utf-8") or "{}")
     except Exception:
         body = {}
     pm = ProfileManager.get()
     allowed = ("weight", "ftp", "lthr", "max_hr", "age", "height_cm",
                "one_rm_kg", "sex")
     updates = {k: body[k] for k in allowed if k in body}
+    # Discipline multidisciplinari (lista libera, non numerica)
+    disc_updates = {}
+    if "disciplines" in body:
+        disc = body["disciplines"]
+        if isinstance(disc, str):
+            disc = [d.strip() for d in disc.split(",") if d.strip()]
+        if not isinstance(disc, list):
+            raise HTTPException(400, "disciplines deve essere una lista")
+        _allowed_disc = {"cycling", "running", "mtb", "swim", "strength", "mobility"}
+        disc_updates["disciplines"] = [str(d).lower() for d in disc if str(d).lower() in _allowed_disc]
     for k in ("weight", "ftp", "lthr", "max_hr", "age", "height_cm", "one_rm_kg"):
         if k in updates:
             lo, hi = SETUP_LIMITS.get(k, [0, 1e9])
@@ -12838,10 +13111,13 @@ def api_profile_put(request: Request):
     # Mappa campi: l'endpoint usa 'weight', save_athlete si aspetta 'weight_kg'
     if "weight" in updates:
         updates["weight_kg"] = updates.pop("weight")
-    if not updates:
+    if not updates and not disc_updates:
         return {"ok": True, "profile": dict(pm._athlete or {})}
     try:
-        pm.save_athlete(updates)
+        if updates:
+            pm.save_athlete(updates)
+        if disc_updates:
+            pm.save_athlete(disc_updates)
     except ValueError as e:
         raise HTTPException(400, str(e))
     icu_msg = None
@@ -15018,9 +15294,18 @@ _PS_JSON_ONLY_KEYS = ("variation", "adapted_reason", "auto_moved")
 def _planned_session_from_json(s: dict) -> "tp.PlannedSession":
     """Reconstruct a PlannedSession from stored JSON, preserving ALL fields."""
     kwargs = {}
+    _DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     for f in _dataclasses.fields(tp.PlannedSession):
         if f.name == "day":
-            kwargs["day"] = date.fromisoformat(s["day"])
+            d = date.fromisoformat(s["day"])
+            kwargs["day"] = d
+            # deriva day_name se assente nel JSON
+            if "day_name" not in s:
+                kwargs["day_name"] = _DAY_NAMES[d.weekday()]
+            continue
+        if f.name == "day_name" and "day_name" not in s and "day" in s:
+            d = date.fromisoformat(s["day"])
+            kwargs["day_name"] = _DAY_NAMES[d.weekday()]
             continue
         if f.name in s:
             kwargs[f.name] = s[f.name]

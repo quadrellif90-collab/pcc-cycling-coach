@@ -46,6 +46,7 @@ class Meal:
     protein_g: float
     fat_g: float
     note: str = ""
+    food_grams: dict = field(default_factory=dict)  # alimento -> grammi (evidence-based)
 
 
 @dataclass
@@ -59,9 +60,10 @@ class DailyDiet:
     total_fat: float = 0.0
 
 
-def _meal(name, foods, timing, carb, protein_g=0, fat=0, note=""):
+def _meal(name, foods, timing, carb, protein_g=0, fat=0, note="", grams=None):
     return Meal(name=name, foods=foods, timing=timing, carb_g=carb,
-                protein_g=protein_g, fat_g=fat, note=note)
+                protein_g=protein_g, fat_g=fat, note=note,
+                food_grams=grams or {})
 
 
 def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
@@ -109,6 +111,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
         protein_g=round(target_prot * 0.25),
         fat=round(target_fat * 0.20),
         note="Avena lenta (β-glucani); yogurt greco per proteine complete.",
+        grams={"avena": 60, "yogurt greco": 150, "frutta di bosco": 80, "semi di lino": 10},
     ))
     # Spuntino mattina
     meals.append(_meal(
@@ -118,6 +121,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
         carb=round(target_carb * 0.10),
         protein_g=round(target_prot * 0.15),
         fat=round(target_fat * 0.15),
+        grams={"frutta": 150, "mandorle": 20},
     ))
     # PRANZO (o pre-allenamento se training_time=afternoon)
     if training_time == "afternoon":
@@ -129,6 +133,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
             protein_g=round(target_prot * 0.30),
             fat=round(target_fat * 0.15),
             note="Carb complesso 2-3h prima: rifornisce glicogeno senza gonfiore.",
+            grams={"riso integrale": 90, "petto pollo": 150, "broccoli": 150, "olio extravergine d'oliva": 10},
         ))
     else:
         meals.append(_meal(
@@ -138,6 +143,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
             carb=round(target_carb * 0.30),
             protein_g=round(target_prot * 0.30),
             fat=round(target_fat * 0.20),
+            grams={"pasta integrale": 80, "merluzzo": 150, "peperone": 100, "zucchine": 120},
         ))
     # PRE-allenamento (se training_time=morning)
     if training_time == "morning":
@@ -149,6 +155,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
             protein_g=round(target_prot * 0.05),
             fat=0,
             note="Carb semplice + basso proteine: rapido, niente gonfiore.",
+            grams={"banana": 100, "riso bianco": 50},
         ))
     # DURANTE allenamento (solo hard/race)
     if day_type in ("hard", "race", "high_intensity", "vo2max", "threshold"):
@@ -159,6 +166,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
             carb=round(target_carb * 0.10),
             protein_g=0, fat=0,
             note="60-90 g/h per sforzi >60min (Jeukendrup 2026).",
+            grams={},
         ))
     # POST-allenamento
     meals.append(_meal(
@@ -169,6 +177,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
         protein_g=round(target_prot * 0.25),
         fat=0,
         note="Proteine + carb entro finestra anabolica (Phillips 2016).",
+        grams={"yogurt greco": 150, "frutti di bosco": 80, "banana": 100},
     ))
     # Cena
     meals.append(_meal(
@@ -179,6 +188,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
         protein_g=round(target_prot * 0.20),
         fat=round(target_fat * 0.25),
         note="Carb moderati + grassi buoni: non gonfiore, supporto notturno.",
+        grams={"quinoa": 70, "salmone": 140, "spinaci": 120, "olio extravergine d'oliva": 10},
     ))
     # Spuntino sera (solo se gain/maintain)
     if goal_type in ("gain", "maintain"):
@@ -190,6 +200,7 @@ def build_daily_diet(day_type: str = "moderate", bodyweight_kg: float = 72.0,
             protein_g=round(target_prot * 0.10),
             fat=round(target_fat * 0.10),
             note="Proteine lente per sincetizzazione notturna.",
+            grams={"latte": 200, "noci": 25},
         ))
 
     # Calcola totali (somma pasti; può discostarsi di <2% per arrotondamenti)
