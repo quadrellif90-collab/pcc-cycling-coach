@@ -362,25 +362,19 @@ jobs:
         env:
           PPC_VER: ${{ needs.read-version.outputs.version }}
         run: |
-          # Install Inno Setup (ISCC) — Chocolatey is unreliable on the runner,
-          # so download the official installer and install it silently.
+          # Install Inno Setup (ISCC). Try winget first (preinstalled on the
+          # runner); fall back to the official silent installer if winget misses.
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
           if (-not (Test-Path $iscc)) {
-            $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe"
+            Write-Host "ISCC not found — installing via winget..."
+            winget install --id JRSoftware.InnoSetup --silent --accept-package-agreements --accept-source-agreements 2>&1 | Out-Null
+            if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") { $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" }
+            elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
+            elseif (Test-Path "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe") { $iscc = "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" }
           }
           if (-not (Test-Path $iscc)) {
-            Write-Host "ISCC not found — downloading Inno Setup 6..."
-            $url = "https://files.jrsoftware.org/is/6/innosetup-6.4.3.exe"
-            $inst = "$env:TEMP\innosetup.exe"
-            Invoke-WebRequest -Uri $url -OutFile $inst -UseBasicParsing
-            Start-Process -FilePath $inst -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/ALLUSERS" -Wait
-            if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
-              $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-            } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
-              $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe"
-            } else {
-              Write-Error "::error::ISCC still not found after silent install"; exit 1
-            }
+            Write-Error "::error::ISCC not found after install attempts"; exit 1
           }
           Write-Host "Using ISCC: $iscc"
           $repoRoot = (Get-Location).Path
