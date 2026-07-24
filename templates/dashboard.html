@@ -1350,8 +1350,25 @@ details > summary:hover::before { color: var(--accent); }
   text-align: left; z-index: 10000; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
   pointer-events: none;
 }
+
+/* ═══ PPC — layout: sidebar tab a sinistra + card draggable/resizable ═══ */
+.app-shell { display:flex; align-items:flex-start; gap:0; }
+.sidebar-tabs { display:flex; flex-direction:column; gap:4px; padding:10px 8px;
+  background:var(--surface); border-right:1px solid var(--border); min-width:150px;
+  height:calc(100vh - 0px); position:sticky; top:0; flex:0 0 auto; }
+.sidebar-tabs .tab { white-space:nowrap; }
+.main-content { flex:1 1 auto; min-width:0; padding:14px; }
+.card[data-card] { resize:both; overflow:auto; position:relative; }
+.card[data-card] .card-drag { position:absolute; top:6px; right:6px; width:16px; height:16px;
+  cursor:grab; opacity:0.35; font-size:13px; line-height:16px; text-align:center;
+  background:var(--surface2); border:1px solid var(--border); border-radius:4px; z-index:5; }
+.card[data-card] .card-drag:active { cursor:grabbing; opacity:1; }
+.card.dragging { outline:2px dashed var(--accent); opacity:0.85; }
+.home-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:12px; align-items:start; }
+.home-grid > .card { grid-column:span 12; }
+@media (max-width:780px){ .app-shell{flex-direction:column;} .sidebar-tabs{flex-direction:row;flex-wrap:wrap;width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);} }
 </style>
-<script src="/static/vendor/chart.umd.min.js"></script>
+
 </head>
 <body>
 <!-- v1.6.0 — Frontend error capture. Posts every uncaught error and
@@ -1492,7 +1509,8 @@ window.addEventListener('unhandledrejection', function(e) {
   <button class="btn btn-sm" style="margin-left:4px;" onclick="dismissIcuMigrate()">Later</button>
 </div>
 
-<div class="tabs" id="tabs">
+<div class="app-shell">
+<div class="sidebar-tabs tabs" id="tabs">
   <div class="tab active" data-tab="home">Inizio</div>
   <div class="tab" data-tab="picker">Workout Shuffle</div>
   <div class="tab" data-tab="library">Libreria workout</div>
@@ -1503,8 +1521,9 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="tab" data-tab="nutrition">Alimentazione</div>
   <div class="tab" data-tab="bia">Composizione</div>
   <div class="tab" data-tab="settings">Impostazioni</div>
-</div>
+</div><!-- /sidebar-tabs -->
 
+<div class="main-content">
 <!-- ═══ HOME ═══════════════════════════════════════════════════════════════ -->
 <div class="section active" id="sec-home">
   <!-- P3.1 — compact Fitness & Form sparkline. The full chart card (+ energy-
@@ -1603,7 +1622,7 @@ window.addEventListener('unhandledrejection', function(e) {
        this panel makes the CAUSE legible so the user knows why today's
        prescription was adjusted — and one-clicks the tier-down button above
        when the prior week was an overreach. -->
-  <div class="card" style="margin-bottom:12px;display:none;" id="last-week-feedback-card">
+  <div class="card" style="margin-bottom:12px;" id="last-week-feedback-card">
     <h3>Settimana scorsa — confronto carico effettivo</h3>
     <div id="last-week-feedback-content" style="font-size:12px;color:var(--text2);">
       Loading…
@@ -21256,6 +21275,68 @@ function initHintTooltips() {
 }
 document.addEventListener('DOMContentLoaded', initHintTooltips);
 
+// ═══ PPC — Card drag (riordina) + resize (resize:both CSS nativo) + persist per profilo ═══
+(function(){
+  const PROFILE_KEY = () => 'ppc-layout:' + (window.__ACTIVE_PROFILE_ID || 'default');
+  const home = document.getElementById('sec-home');
+  if (!home) return;
+  const cards = home.querySelectorAll('.card[data-card]');
+  if (!cards.length) return;
+  // ripristina ordine salvato
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROFILE_KEY()) || '[]');
+    if (saved.length) {
+      const order = {};
+      saved.forEach((id, i) => order[id] = i);
+      const sorted = [...cards].sort((a,b) => (order[a.dataset.card]||999) - (order[b.dataset.card]||999));
+      sorted.forEach(c => home.appendChild(c));
+    }
+  } catch(e){}
+  // drag handle + pointer events
+  cards.forEach(card => {
+    if (!card.querySelector('.card-drag')) {
+      const h = document.createElement('span');
+      h.className = 'card-drag'; h.textContent = '⋮⋮';
+      h.title = 'Trascina per riordinare';
+      card.prepend(h);
+    }
+    const handle = card.querySelector('.card-drag');
+    let dragging = null, placeholder = null;
+    handle.addEventListener('pointerdown', e => {
+      dragging = card;
+      card.classList.add('dragging');
+      placeholder = document.createElement('div');
+      placeholder.style.cssText = 'height:4px;background:var(--accent);border-radius:2px;margin:4px 0;';
+      card.parentNode.insertBefore(placeholder, card.nextSibling);
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    handle.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const siblings = [...home.querySelectorAll('.card:not(.dragging):not(.card-drag)')];
+      let insertBefore = null;
+      for (const s of siblings) {
+        const r = s.getBoundingClientRect();
+        if (e.clientY < r.top + r.height / 2) { insertBefore = s; break; }
+      }
+      if (insertBefore) home.insertBefore(placeholder, insertBefore);
+      else home.appendChild(placeholder);
+    });
+    handle.addEventListener('pointerup', () => {
+      if (!dragging) return;
+      if (placeholder && placeholder.parentNode) {
+        home.insertBefore(dragging, placeholder);
+        placeholder.remove();
+      }
+      dragging.classList.remove('dragging');
+      dragging = null; placeholder = null;
+      // salva ordine
+      const ids = [...home.querySelectorAll('.card[data-card]')].map(c => c.dataset.card);
+      localStorage.setItem(PROFILE_KEY(), JSON.stringify(ids));
+    });
+  });
+})();
+
 // Footer link injection — runs once on DOMContentLoaded so it always exists.
 document.addEventListener('DOMContentLoaded', function() {
   if (document.getElementById('diag-footer-link')) return;
@@ -21267,5 +21348,7 @@ document.addEventListener('DOMContentLoaded', function() {
   container.appendChild(footer);
 });
 </script>
+</div><!-- /main-content -->
+</div><!-- /app-shell -->
 </body>
 </html>
