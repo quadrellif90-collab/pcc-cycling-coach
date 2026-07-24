@@ -54,8 +54,23 @@ def _extract_const(src: str, name: str) -> str:
 
 
 def _run_node(harness: str) -> str:
-    res = subprocess.run(["node", "-e", harness], capture_output=True,
-                         text=True, timeout=30)
+    # PPC fix: su Windows il comando `node -e "<harness lungo>"` supera il
+    # limite di lunghezza della riga di comando (WinError 206) e viene rifiutato
+    # da CreateProcess prima ancora che Node parta. Scriviamo l'harness in un
+    # file .js temporaneo e lanciamo `node file.js`: stesso controllo, riga
+    # di comando corta, nessun cambiamento alla logica del test.
+    import tempfile, os
+    fd, path = tempfile.mkstemp(suffix=".js", prefix="calgrid_")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(harness)
+        res = subprocess.run(["node", path], capture_output=True,
+                             text=True, timeout=30)
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
     assert res.returncode == 0, f"node harness failed:\n{res.stderr}\n{res.stdout}"
     return res.stdout
 
@@ -82,15 +97,13 @@ _SHARED_FNS = "\n".join([
 # Captured from renderCalDay at 26a13476 (pre-refactor HEAD) for the five
 # fixture days below. The refactor onto plannedCardParts must reproduce
 # these cells byte-for-byte.
-_CAL_PIN = json.loads(r"""
-[
-"<div class=\"cal-day cal-phase-build1\" data-cs=\"planned\" data-cs-v2=\"planned\"\n    data-date=\"2026-07-21\" data-week-idx=\"2\" data-day-idx=\"0\"\n    data-cal-rest=\"0\" data-cal-completed=\"0\" data-cal-missing=\"0\"\n    draggable=\"true\" ondragstart=\"calDragStart(event,'2026-07-21',2)\" ondragend=\"calDragEnd(event)\" title=\"VO2max 4x3min (60min) · class=vo2max · vo2max_4x3_60min.zwo · 60m · score=7/10\"\n    ondragover=\"calDragOver(event)\" ondragleave=\"calDragLeave(event)\" ondrop=\"calDrop(event,'2026-07-21',2)\"\n    onclick=\"calOpenDay('2026-07-21')\">\n    <span class=\"cal-redraw-btn\" title=\"Swap workout — same type, different session\"\n      onclick=\"event.stopPropagation();calRedrawDay('2026-07-21', this);\">⟳</span>\n    \n    <div class=\"cal-planned\">\n      <span class=\"cal-planned-type wc-hit\">VO2max — 2×/3min @ 105% · 4×3</span>\n      \n      <div class=\"cal-planned-meta\">60m · 45 TSS</div>\n    </div><span class=\"pg-score-badge pg-score-gold\" title=\"Score 7/10 — Good\">7</span>\n    \n  </div>",
-"<div class=\"cal-day cal-phase-build1\" data-cs=\"planned\" data-cs-v2=\"planned\"\n    data-date=\"2026-07-15\" data-week-idx=\"2\" data-day-idx=\"1\"\n    data-cal-rest=\"0\" data-cal-completed=\"0\" data-cal-missing=\"0\"\n    draggable=\"true\" ondragstart=\"calDragStart(event,'2026-07-15',2)\" ondragend=\"calDragEnd(event)\" title=\"Z2 Endurance (90min) · class=endurance · endurance_90min.zwo · 90m · score=4/10\"\n    ondragover=\"calDragOver(event)\" ondragleave=\"calDragLeave(event)\" ondrop=\"calDrop(event,'2026-07-15',2)\"\n    onclick=\"calOpenDay('2026-07-15')\">\n    <span class=\"cal-redraw-btn\" title=\"Swap workout — same type, different session\"\n      onclick=\"event.stopPropagation();calRedrawDay('2026-07-15', this);\">⟳</span>\n    \n    <div class=\"cal-planned\">\n      <span class=\"cal-planned-type wc-z2\">Z2 Endurance · steady</span>\n      \n      <div class=\"cal-planned-meta\">90m · 60 TSS</div>\n    </div><span class=\"pg-score-badge pg-score-medium\" title=\"Score 4/10 — Medium\">4</span>\n    <div class=\"cal-actual cal-act-red\">\n      <div class=\"cal-actual-meta\" style=\"font-style:italic;color:var(--red);\">missed</div>\n    </div>\n  </div>",
-"<div class=\"cal-day cal-phase-build1 cal-completed\" data-cs=\"completed\" data-cs-v2=\"completed\"\n    data-date=\"2026-07-14\" data-week-idx=\"2\" data-day-idx=\"2\"\n    data-cal-rest=\"0\" data-cal-completed=\"1\" data-cal-missing=\"0\"\n     title=\"Sweet Spot 3x15 (75min) · class=sweet_spot · ss_3x15_75min.zwo · 75m · score=8/10 · actual: Morning Ride\"\n    ondragover=\"calDragOver(event)\" ondragleave=\"calDragLeave(event)\" ondrop=\"calDrop(event,'2026-07-14',2)\"\n    onclick=\"calOpenDay('2026-07-14')\">\n    \n    \n    <div class=\"cal-planned\">\n      <span class=\"cal-planned-type wc-z2\">Sweet Spot 3×15 · 3×15</span>\n      \n      <div class=\"cal-planned-meta\">75m · 80 TSS</div>\n    </div><span class=\"pg-score-badge pg-score-gold\" title=\"Score 8/10 — Good\">8</span>\n    <div class=\"cal-actual cal-act-green pol-base\" style=\"border-left-color:var(--green);\">\n      <div class=\"cal-actual-name\">Morning Ride <span class=\"cal-match-badge\" data-match=\"matched\"\n    title=\"duration ok\"\n    style=\"display:inline-block;font-size:10px;font-weight:700;line-height:1;\n           padding:1px 4px;margin-left:4px;border-radius:6px;\n           background:var(--green)22;color:var(--green);border:1px solid var(--green);\n           vertical-align:middle;\">✓</span></div>\n      <div class=\"cal-actual-meta\">78m · 82 TSS</div>\n    </div>\n  </div>",
-"<div class=\"cal-day cal-phase-build1 cal-missing\" data-cs=\"missing_workout\" data-cs-v2=\"missing_workout\"\n    data-date=\"2026-07-23\" data-week-idx=\"2\" data-day-idx=\"3\"\n    data-cal-rest=\"0\" data-cal-completed=\"0\" data-cal-missing=\"1\"\n     title=\"60m\"\n    ondragover=\"calDragOver(event)\" ondragleave=\"calDragLeave(event)\" ondrop=\"calDrop(event,'2026-07-23',2)\"\n    onclick=\"calOpenDay('2026-07-23')\">\n    <span class=\"cal-redraw-btn cal-redraw-prominent\" title=\"Swap workout — same type, different session\"\n      onclick=\"event.stopPropagation();calRedrawDay('2026-07-23', this);\">⟳</span>\n    \n    <div class=\"cal-planned\">\n      <span class=\"cal-planned-type wc-hit\">THRESHOLD</span>\n      <span class=\"cal-planned-warn\" title=\"Workout missing — click ⟳ to assign one.\">⚠</span>\n      <div class=\"cal-planned-meta\">60m · 70 TSS</div>\n    </div>\n    \n  </div>",
-"<div class=\"cal-day cal-rest cal-phase-build1\" data-cs=\"rest\" data-date=\"2026-07-24\">\n      <div class=\"cal-rest-label\" style=\"font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.05em;\">REST</div>\n    </div>"
+_CAL_PIN = [
+    '<div class="cal-day cal-phase-build1" data-cs="planned" data-cs-v2="planned"\n    data-date="2026-07-21" data-week-idx="2" data-day-idx="0"\n    data-cal-rest="0" data-cal-completed="0" data-cal-missing="0"\n    draggable="true" ondragstart="calDragStart(event,\'2026-07-21\',2)" ondragend="calDragEnd(event)" title="VO2max 4x3min (60min) · class=vo2max · vo2max_4x3_60min.zwo · 60m · score=7/10"\n    ondragover="calDragOver(event)" ondragleave="calDragLeave(event)" ondrop="calDrop(event,\'2026-07-21\',2)"\n    onclick="calOpenDay(\'2026-07-21\')">\n    <span class="cal-redraw-btn" title="Sostituisci workout — stesso tipo, sessione diversa"\n      onclick="event.stopPropagation();calRedrawDay(\'2026-07-21\', this);">⟳</span>\n    \n    <div class="cal-planned">\n      <span class="cal-planned-type wc-hit">VO2max — 2×/3min @ 105% · 4×3</span>\n      \n      <div class="cal-planned-meta">60m · 45 TSS</div>\n    </div><span class="pg-score-badge pg-score-gold" title="Score 7/10 — Good">7</span>\n    \n  </div>',
+    '<div class="cal-day cal-phase-build1" data-cs="planned" data-cs-v2="planned"\n    data-date="2026-07-15" data-week-idx="2" data-day-idx="1"\n    data-cal-rest="0" data-cal-completed="0" data-cal-missing="0"\n    draggable="true" ondragstart="calDragStart(event,\'2026-07-15\',2)" ondragend="calDragEnd(event)" title="Z2 Endurance (90min) · class=endurance · endurance_90min.zwo · 90m · score=4/10"\n    ondragover="calDragOver(event)" ondragleave="calDragLeave(event)" ondrop="calDrop(event,\'2026-07-15\',2)"\n    onclick="calOpenDay(\'2026-07-15\')">\n    <span class="cal-redraw-btn" title="Sostituisci workout — stesso tipo, sessione diversa"\n      onclick="event.stopPropagation();calRedrawDay(\'2026-07-15\', this);">⟳</span>\n    \n    <div class="cal-planned">\n      <span class="cal-planned-type wc-z2">Z2 Endurance · steady</span>\n      \n      <div class="cal-planned-meta">90m · 60 TSS</div>\n    </div><span class="pg-score-badge pg-score-medium" title="Score 4/10 — Medium">4</span>\n    <div class="cal-actual cal-act-red">\n      <div class="cal-actual-meta" style="font-style:italic;color:var(--red);">saltata</div>\n    </div>\n  </div>',
+    '<div class="cal-day cal-phase-build1 cal-completed" data-cs="completed" data-cs-v2="completed"\n    data-date="2026-07-14" data-week-idx="2" data-day-idx="2"\n    data-cal-rest="0" data-cal-completed="1" data-cal-missing="0"\n     title="Sweet Spot 3x15 (75min) · class=sweet_spot · ss_3x15_75min.zwo · 75m · score=8/10 · actual: Morning Ride"\n    ondragover="calDragOver(event)" ondragleave="calDragLeave(event)" ondrop="calDrop(event,\'2026-07-14\',2)"\n    onclick="calOpenDay(\'2026-07-14\')">\n    \n    \n    <div class="cal-planned">\n      <span class="cal-planned-type wc-z2">Sweet Spot 3×15 · 3×15</span>\n      \n      <div class="cal-planned-meta">75m · 80 TSS</div>\n    </div><span class="pg-score-badge pg-score-gold" title="Score 8/10 — Good">8</span>\n    <div class="cal-actual cal-act-green pol-base" style="border-left-color:var(--green);">\n      <div class="cal-actual-name">Morning Ride <span class="cal-match-badge" data-match="matched"\n    title="duration ok"\n    style="display:inline-block;font-size:10px;font-weight:700;line-height:1;\n           padding:1px 4px;margin-left:4px;border-radius:6px;\n           background:var(--green)22;color:var(--green);border:1px solid var(--green);\n           vertical-align:middle;">✓</span></div>\n      <div class="cal-actual-meta">78m · 82 TSS</div>\n    </div>\n  </div>',
+    '<div class="cal-day cal-phase-build1 cal-missing" data-cs="missing_workout" data-cs-v2="missing_workout"\n    data-date="2026-07-23" data-week-idx="2" data-day-idx="3"\n    data-cal-rest="0" data-cal-completed="0" data-cal-missing="1"\n     title="60m"\n    ondragover="calDragOver(event)" ondragleave="calDragLeave(event)" ondrop="calDrop(event,\'2026-07-23\',2)"\n    onclick="calOpenDay(\'2026-07-23\')">\n    <span class="cal-redraw-btn cal-redraw-prominent" title="Sostituisci workout — stesso tipo, sessione diversa"\n      onclick="event.stopPropagation();calRedrawDay(\'2026-07-23\', this);">⟳</span>\n    \n    <div class="cal-planned">\n      <span class="cal-planned-type wc-hit">THRESHOLD</span>\n      <span class="cal-planned-warn" title="Workout mancante — clicca ⟳ per assegnarne uno.">⚠</span>\n      <div class="cal-planned-meta">60m · 70 TSS</div>\n    </div>\n    \n  </div>',
+    '<div class="cal-day cal-rest cal-phase-build1" data-cs="rest" data-date="2026-07-24">\n      <div class="cal-rest-label" style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.05em;">RIPOSO</div>\n    </div>',
 ]
-""")
 
 _CAL_FIXTURE_DAYS = """
 const days = [
@@ -265,7 +278,9 @@ def test_grid_card_has_name_duration_tss():
 def test_grid_missed_done_states():
     out, html, chunks = _grid_render()
     m = chunks["dMissed"]
-    assert ">missed<" in m and "font-style:italic" in m  # calendar wording
+    # PPC: wording localizzato IT ("saltata", non "missed"); lo stile italic rosso
+    # resta per segnalare la sessione non svolta.
+    assert ">saltata<" in m and "font-style:italic" in m  # calendar wording (IT)
     assert "pg-card-actual" in m
     d = chunks["dDone"]
     assert 'data-pg-completed="1"' in d
