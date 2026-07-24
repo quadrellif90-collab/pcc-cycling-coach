@@ -358,29 +358,17 @@ jobs:
           }
 
       - name: Build Windows installer (Inno Setup)
+        uses: Minionguyjpro/Inno-Setup-Action@v1
+        with:
+          file: installer.nsi
+          extra_args: "/DVERSION=${{ needs.read-version.outputs.version }} /DOUTDIR=${{ github.workspace }}"
+
+      - name: Verify installer built
         shell: pwsh
         env:
           PPC_VER: ${{ needs.read-version.outputs.version }}
         run: |
-          # Install Inno Setup (ISCC). Try winget first (preinstalled on the
-          # runner); fall back to the official silent installer if winget misses.
-          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $iscc)) { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
-          if (-not (Test-Path $iscc)) {
-            Write-Host "ISCC not found — installing via winget..."
-            winget install --id JRSoftware.InnoSetup --silent --accept-package-agreements --accept-source-agreements 2>&1 | Out-Null
-            if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") { $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" }
-            elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
-            elseif (Test-Path "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe") { $iscc = "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" }
-          }
-          if (-not (Test-Path $iscc)) {
-            Write-Error "::error::ISCC not found after install attempts"; exit 1
-          }
-          Write-Host "Using ISCC: $iscc"
-          $repoRoot = (Get-Location).Path
-          & "$iscc" installer.nsi /DVERSION=$env:PPC_VER "/DOUTDIR=$repoRoot"
-          if ($LASTEXITCODE -ne 0) { Write-Error "::error::ISCC failed (exit $LASTEXITCODE)"; exit 1 }
-          $out = Join-Path $repoRoot "PPC-Setup-$env:PPC_VER.exe"
+          $out = Join-Path "${{ github.workspace }}" "PPC-Setup-$env:PPC_VER.exe"
           if (-not (Test-Path $out)) { Write-Error "::error::installer not produced at $out"; exit 1 }
           Write-Host "Built installer: $out ($([math]::Round((Get-Item $out).Length/1MB,1)) MB)"
 
