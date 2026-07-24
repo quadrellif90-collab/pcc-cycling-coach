@@ -191,7 +191,7 @@ if sys.platform == "darwin":
         coll,
         name=f"{app_name}.app",
         icon="assets/icon.icns" if os.path.exists("assets/icon.icns") else None,
-        bundle_identifier="com.platypus45.domestique",
+        bundle_identifier="com.ppc.cyclingcoach",
         info_plist={
             "CFBundleDisplayName": app_name,
             # Both keys MUST match VERSION — otherwise the About box and the
@@ -204,7 +204,7 @@ if sys.platform == "darwin":
             # Mojave/Catalina support becomes a hard requirement.
             "LSMinimumSystemVersion": "11.0",
             "NSHighResolutionCapable": True,
-            "NSHumanReadableCopyright": "(c) 2026 Domestique",
+            "NSHumanReadableCopyright": "(c) 2026 PPC — Programming Cycling Coach (fork of Domestique, Apache-2.0)",
             # v4.0.0-alpha: Bluetooth usage key removed along with the BLE
             # subsystem -- Domestique no longer scans or connects to any
             # trainer/HR device. Keeping the key would spuriously trigger

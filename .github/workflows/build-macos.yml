@@ -1,0 +1,45 @@
+name: Build macOS PPC.dmg
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the dmg to (default: v4.0.0)"
+        required: false
+        default: "v4.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt pyinstaller
+
+      - name: Build PPC.app + PPC.dmg
+        run: bash build_mac.sh
+
+      - name: Upload PPC.dmg to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          echo "Attaching PPC.dmg to release $TAG"
+          gh release upload "$TAG" "PPC.dmg" --repo "$GITHUB_REPOSITORY" --clobber
