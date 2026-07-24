@@ -4,7 +4,9 @@
 
 **Pianificatore di allenamento ciclistico adattivo, locale, che chiude il loop tra ciò che hai programmato e ciò che hai realmente fatto — con nutrizione, forza, mobilità e body-composition integrati.**
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v4.0.0-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-Domestique-orange)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v4.4.0-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-Domestique-orange)
+
+Latest: **[v4.4.0 — OAuth persistente, profili completi, motore runway-aware](https://github.com/quadrellif90-collab/ppc-cycling-coach/releases/tag/v4.4.0)**
 
 > ⚠️ **Fork italiano di Domestique** (Apache-2.0, `platypus45`). Questa è una versione derivata: stessa architettura di pianificazione adattiva, ma con motore nutrizione/integrazione riscritto, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento. Il credito all'autore originale è in [`NOTICE`](NOTICE).
 
