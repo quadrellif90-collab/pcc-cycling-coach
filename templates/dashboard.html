@@ -14,18 +14,21 @@
      through (settings-tab help was unreadable). Opaque elevated surface. */
   --card: #1a2332;
   --text: #e6edf3; --text2: #b8c8d8; --text3: #8a9bb0;
-  --accent: #4f9cf7; --accent2: #6366f1;
+  /* PPC palette — teal/cyan (primary) + amber (secondary). Homage to Domestique
+     kept via NOTICE; visual identity distinct. */
+  --accent: #14b8a6; --accent2: #f59e0b;
   --green: #22c55e; --yellow: #eab308; --orange: #f97316; --red: #ef4444; --purple: #a855f7;
-  --z1: #64748b; --z2: #3b82f6; --z3: #22c55e; --z4: #eab308; --z5: #f97316; --z6: #ef4444; --z7: #e2e8f0;
+  --z1: #64748b; --z2: #14b8a6; --z3: #22c55e; --z4: #eab308; --z5: #f97316; --z6: #ef4444; --z7: #e2e8f0;
   --radius: 10px;
 }
 [data-theme="light"] {
   --bg: #f1f5f9; --surface: #ffffff; --surface2: #f8fafc; --border: #e2e8f0;
   --card: #ffffff;  /* opaque — see dark-theme note */
   --text: #1e293b; --text2: #475569; --text3: #64748b;
+  --accent: #0d9488; --accent2: #d97706;
 }
   --green: #16a34a; --yellow: #ca8a04; --orange: #ea580c; --red: #dc2626; --purple: #9333ea;
-  --z1: #94a3b8; --z2: #3b82f6; --z3: #16a34a; --z4: #ca8a04; --z5: #ea580c; --z6: #dc2626; --z7: #475569;
+  --z1: #94a3b8; --z2: #0d9488; --z3: #16a34a; --z4: #ca8a04; --z5: #ea580c; --z6: #dc2626; --z7: #475569;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -1444,6 +1447,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div>
       <h1><img src="/static/icon.png" alt="" style="height:28px;vertical-align:middle;margin-right:6px;border-radius:6px;">PPC<span id="app-version" style="font-size:10px;font-weight:400;color:var(--text3);vertical-align:middle;margin-left:7px;"></span></h1>
       <div style="font-size:12px;color:var(--text2)" id="date-header"></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">fork di <a href="https://github.com/platypus45/domestique" target="_blank" rel="noopener" style="color:var(--accent2);text-decoration:none;">Domestique</a> · credit &amp; homage to platypus45</div>
       <div style="position:absolute;right:16px;top:12px;"></div>
     </div>
     <!-- Header sync chip — spinner + "Updating activities" next to the logo while

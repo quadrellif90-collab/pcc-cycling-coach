@@ -1,10 +1,11 @@
 PPC — Programming Cycling Coach
 Copyright 2024-2026 PPC
 
-This product includes software developed from Domestique (original Apache-2.0
-project, v3.5.2), a cycling training planner + workout library + post-ride
-viewer. The original Domestique codebase, build system, and much of the
-training science engine are reused under the Apache License 2.0.
+This product is a FORK of Domestique, an original Apache-2.0 project by
+platypus45 (https://github.com/platypus45/domestique, v3.5.2). This repository
+is published as a fork: https://github.com/quadrellif90-collab/ppc-cycling-coach
+All credit for the original codebase, build system, and much of the training
+science engine goes to the Domestique authors; reused under the Apache License 2.0.
 
 ----------------------------------------------------------------------------
 SCIENTIFIC ATTRIBUTIONS (training & nutrition models embedded in this app)

@@ -747,7 +747,7 @@ async def lifespan(app):
         except Exception as e:
             log.debug(f"db.stop_sync failed: {e}")
 
-app = FastAPI(title="Domestique", version=_VERSION, lifespan=lifespan)
+app = FastAPI(title="PPC — Programming Cycling Coach", version=_VERSION, lifespan=lifespan)
 
 
 # Global exception handler — catches unhandled errors and logs them
@@ -4374,6 +4374,21 @@ async def api_bia_import(request: Request):
         return resp
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": f"BIA import fallito: {e}"})
+
+
+@app.get("/api/sync-targets")
+def api_sync_targets():
+    """PPC — elenco delle app di destinazione dati (pluggable sync layer).
+
+    Ritorna tutte le destinazioni registrate in sync_targets.REGISTRY con
+    il loro stato di connessione, cosi' la UI puo' mostrare 'App collegate'
+    e il layer e' estensibile ad altre app oltre Intervals.icu.
+    """
+    try:
+        from sync_targets import list_targets
+        return {"ok": True, "targets": list_targets()}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.get("/api/bia-history")
@@ -9438,7 +9453,7 @@ def api_migrations_last_run_result():
 #   { current, latest, update_available, release_url, download_url,
 #     asset_name, platform, checked_at, cached, error, release_body }
 _UPDATE_CHECK_CACHE_TTL_S = 6 * 60 * 60  # 6 hours
-_GITHUB_RELEASES_LATEST_URL = "https://api.github.com/repos/platypus45/domestique/releases/latest"
+_GITHUB_RELEASES_LATEST_URL = "https://api.github.com/repos/quadrellif90-collab/ppc-cycling-coach/releases/latest"
 _RELEASE_BODY_MAX_CHARS = 8192
 _RELEASE_BODY_TRUNCATION_SUFFIX = "\n\n… (full release notes on GitHub)"
 
