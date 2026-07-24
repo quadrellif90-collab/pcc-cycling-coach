@@ -144,7 +144,7 @@ jobs:
         shell: cmd
         run: |
           call build_win.bat
-          dir dist\Domestique
+          dir dist\PPC
 
       # Watertight gate for the OAuth fix: prove the client_secret actually made
       # it into the frozen bundle (not just that we wrote .oauth.env pre-build).
@@ -152,7 +152,7 @@ jobs:
       - name: "Verify OAuth secret bundled into the EXE"
         shell: pwsh
         run: |
-          $f = Get-ChildItem -Path dist\Domestique -Recurse -Filter '.oauth.env' -ErrorAction SilentlyContinue | Select-Object -First 1
+          $f = Get-ChildItem -Path dist\PPC -Recurse -Filter '.oauth.env' -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $f) { Write-Error "::error::.oauth.env not bundled in the EXE — OAuth sign-in would fail"; exit 1 }
           if ((Get-Content $f.FullName -Raw) -notmatch 'ICU_OAUTH_CLIENT_SECRET=\S') {
             Write-Error "::error::bundled .oauth.env has an empty ICU_OAUTH_CLIENT_SECRET"; exit 1
@@ -170,7 +170,7 @@ jobs:
           $expected = (Get-Content -Path VERSION -Raw).Trim()
           Write-Host "Expected version from VERSION file: $expected"
 
-          $exePath = "dist\Domestique\Domestique.exe"
+          $exePath = "dist\PPC\PPC.exe"
 
           # --- Pre-flight: prove the EXE exists and show the build layout. -----
           # A native PyInstaller crash exits pre-Python and writes nothing, so
@@ -178,8 +178,8 @@ jobs:
           # bootloader that failed to unpack its dependencies.
           Write-Host "===== PRE-FLIGHT ====="
           Write-Host "EXE present (Test-Path '$exePath'): $(Test-Path $exePath)"
-          Write-Host "----- dist\Domestique\ (top level) -----"
-          Get-ChildItem "dist\Domestique\" -ErrorAction SilentlyContinue |
+          Write-Host "----- dist\PPC\ (top level) -----"
+          Get-ChildItem "dist\PPC\" -ErrorAction SilentlyContinue |
             Select-Object Name, Length | Format-Table -AutoSize | Out-String | Write-Host
           # Anchor the Event Log query: we only want entries logged from now on.
           $startTime = Get-Date
@@ -198,7 +198,7 @@ jobs:
           # $proc.ExitCode is cmd's code, not the app's. We rely on the
           # /api/version poll + exe_out.txt contents for the verdict.
           $proc = Start-Process -FilePath "cmd.exe" `
-            -ArgumentList '/c','"dist\Domestique\Domestique.exe" > exe_out.txt 2>&1' `
+            -ArgumentList '/c','"dist\PPC\PPC.exe" > exe_out.txt 2>&1' `
             -PassThru
 
           # Dump every diagnostic we can find into the CI log so a silent
@@ -348,19 +348,19 @@ jobs:
       - name: Package EXE as zip
         shell: pwsh
         run: |
-          Compress-Archive -Path dist\Domestique\* -DestinationPath Domestique-Windows.zip
+          Compress-Archive -Path dist\PPC\* -DestinationPath PPC-Windows.zip
 
       - name: Upload EXE artifact (build-only)
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: Domestique-Windows-EXE
-          path: Domestique-Windows.zip
+          name: PPC-Windows-EXE
+          path: PPC-Windows.zip
           retention-days: 7
 
       - name: Attach EXE to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: Domestique-Windows.zip
+          files: PPC-Windows.zip
           fail_on_unmatched_files: true
