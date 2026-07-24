@@ -31,4 +31,4 @@ echo.
 echo To create the installer, compile installer.nsi with Inno Setup:
 echo   iscc installer.nsi   ->   PPC-Setup-<ver>.exe  (silenzioso: PPC-Setup.exe /S)
 echo To run: dist\PPC\PPC.exe
-pause
+REM (no `pause` — would hang CI runners waiting for input)

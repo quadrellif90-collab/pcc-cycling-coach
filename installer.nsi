@@ -6,7 +6,11 @@
 !define APPNAME "PPC"
 !define APPNAMEFULL "PPC - Programming Cycling Coach"
 !define PUBLISHER "PPC"
-!define VERSION "4.0.0"
+; VERSION è passata dal CI come /DVERSION=X.Y.Z (iscc installer.nsi /DVERSION=4.4.0).
+; Default di sicurezza se compilato a mano senza /D.
+!ifndef VERSION
+  !define VERSION "4.0.0"
+!endif
 !define INSTDIR "$PROGRAMFILES64\PPC"
 
 Name "${APPNAMEFULL}"
