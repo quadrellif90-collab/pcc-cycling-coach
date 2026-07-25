@@ -167,6 +167,20 @@ jobs:
           # tessdata: copy the english + italian traineddata if present
           $td = Split-Path $tess | Join-Path -ChildPath "tessdata"
           if (Test-Path $td) { Copy-Item "$td\*" tesseract_bin\ -Recurse -Force }
+          # choco's tesseract ships only eng by default — fetch ita explicitly
+          # so Italian BIA / diet PDFs are OCR-readable (PPC is an IT project).
+          $ita = Join-Path tesseract_bin "tessdata\ita.traineddata"
+          if (-not (Test-Path $ita)) {
+            try {
+              Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/ita.traineddata" `
+                -OutFile $ita -ErrorAction Stop
+              Write-Host "Downloaded ita.traineddata"
+            } catch {
+              Write-Host "::warning::could not fetch ita.traineddata — OCR will be EN-only"
+            }
+          } else {
+            Write-Host "ita.traineddata already present"
+          }
           Write-Host "Tesseract prepared at tesseract_bin\tesseract.exe"
 
       - name: Build EXE
