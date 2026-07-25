@@ -748,7 +748,7 @@ async def lifespan(app):
         except Exception as e:
             log.debug(f"db.stop_sync failed: {e}")
 
-app = FastAPI(title="PPC — Programming Cycling Coach", version=_VERSION, lifespan=lifespan)
+app = FastAPI(title="VELARCO — Adaptive Cycling Intelligence", version=_VERSION, lifespan=lifespan)
 
 
 # Global exception handler — catches unhandled errors and logs them
@@ -10534,7 +10534,7 @@ async def api_self_update(request: Request):
     try:
         # scarica in temp
         td = tempfile.mkdtemp(prefix="ppc-update-")
-        fname = info.get("asset_name") or ("PPC-Setup.exe" if plat == "win32" else "PPC.dmg")
+        fname = info.get("asset_name") or ("VELARCO-Setup.exe" if plat == "win32" else "VELARCO.dmg")
         dest = os.path.join(td, fname)
         async with httpx.AsyncClient(timeout=300) as client:
             r = await client.get(dl, follow_redirects=True)
@@ -11375,6 +11375,7 @@ def api_weekly_plan(week_offset: int = Query(0)):
             "strength_note": getattr(s, "strength_note", ""),
             "mobility_note": getattr(s, "mobility_note", ""),
             "durability_note": getattr(s, "durability_note", ""),
+            "altitude_note": getattr(s, "altitude_note", ""),
         }
         # v4.1.1 FIX-PLANNER B: per-session zone_dist from the ACTUAL ZWO.
         meta = _lib_by_file.get(zwo_file) if zwo_file else None
@@ -13791,6 +13792,7 @@ async def api_plan_generate(request: Request):
                             "strength_note": getattr(s, "strength_note", ""),
                             "mobility_note": getattr(s, "mobility_note", ""),
                             "durability_note": getattr(s, "durability_note", ""),
+                            "altitude_note": getattr(s, "altitude_note", ""),
                         }
                         for s in w.sessions
                     ],

@@ -1,5 +1,30 @@
 # Changelog
 
+## v5.1.0 — Rebrand VELARCO + OCR IT/EN (2026-07-25)
+
+**Nuova identità.** Il progetto non è più "PPC — Programming Cycling Coach" (fork anonimo di Domestique): ora si chiama **VELARCO — Adaptive Cycling Intelligence**.
+- **Nome:** VELARCO = VELocità + ARCO di potenza. Evoca la *power-duration curve*, il cuore scientifico del pianificatore.
+- **Logo:** arco di potenza ascendente che diventa una ruota, gradiente teal→amber (palette PPC). File vettoriale `assets/velarco_logo.svg` + PNG/ICO per EXE/installer.
+- **Dove appare:** titolo finestra/EXE (`VELARCO.exe`), FastAPI title, dashboard header + riepilogo, installer NSIS (nome + scorciatoie + icona), `ppc.spec` (icona + bundle identifier `com.velarco.cycling`), README.
+- **I dati utente restano in `~/.domestique/`** (compatibilità preservata, nessuna migrazione).
+
+**OCR IT/EN completo.** Il build v5.0.0 bundlava Tesseract ma solo col modello EN; ora il CI scarica anche `ita.traineddata` (con retry) così i PDF italiani (BIA/ematochimica/dieta) vengono letti in italiano.
+
+**Affinamenti layer da ricerca WorldTour/Pro 2025-2026** (`docs/ricerca_worldtour_pro_2025-2026.md`):
+- **Fueling** → 90-120 g/h in gara (TdF2025: 120+ g/h; 2:1 glucosio:fructose); 60-90 g/h nelle long ride con gut-training.
+- **Heat** → blocco 14gg (era 21) + pre-cooling gara (ghiaccio/bevande fredde), su base meta-2024 (+6% fresco / +8% caldo).
+- **Strength** → diventa *sessioni reali* 2x/sett (base/build) / 1x (in-season), ≥48h da uscite chiave, VBT; inietta la seduta se la settimana non l'ha (meta-2025, 262 ciclisti: +efficienza, 0 su VO2max).
+- **Mobility** → inietta seduta reale se assente (hip-flexor/core/aero, Roadman 2025).
+- **DFA α1** → flag durabilità su sessioni ≥120min (soglia 0.75, HRV-in-sport 2025).
+- **Altitude** (NUOVO toggle) → blocco quota 21gg pre-evento (Giro top-5 / TdF2025), live-high 2000-2500m o ipossia normobarica.
+
+**Auto-aggiornamento ATTIVO.** Esisteva già `/api/self-update` (scarica l'installer e lo lancia silenzioso `/S` su Windows, apre il .dmg su mac, poi l'app si chiude per liberare l'EXE). Ora:
+- il banner di aggiornamento ha il bottone **"Aggiorna ora"** che lo chiama (prima c'era solo il link manuale "Download");
+- i nomi hardcoded `PPC-Setup.exe`/`PPC.dmg` corretti in `VELARCO-Setup.exe`/`VELARCO.dmg`.
+- Quindi: controllo automatico ogni 6h + installazione con un click, dati utente preservati.
+
+**Sotto il cofano.** Rebrand + layer + auto-update in `app.py`, `ppc.spec`, `installer.nsi`, `build_win.bat`, `training_planner.py` (layer + `altitude_note` su `PlannedSession`), `plan_options.py` (`enable_altitude`), `templates/dashboard.html` (toggle + bottone aggiorna). Test: `tests/test_plan_options_51.py` (altitude + iniezione strength/mobility + non-regressione). Build: installer NSIS `VELARCO-Setup-<ver>.exe` + DMG `VELARCO.app`.
+
 ## v5.0.0 — Selettore di accorgimenti + OCR per i PDF scansionati (2026-07-25)
 
 **Selettore di accorgimenti (cuore del 5.x).** Un solo motore `generate_plan`:

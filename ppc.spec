@@ -1,16 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec for PPC — Programming Cycling Coach.
+PyInstaller spec for VELARCO — Adaptive Cycling Intelligence.
 
 Build:
   macOS:   pyinstaller ppc.spec
   Windows: pyinstaller ppc.spec
 
-Output: dist/PPC.app (macOS) or dist/PPC/PPC.exe (Windows)
+Output: dist/VELARCO.app (macOS) or dist/VELARCO/VELARCO.exe (Windows)
 
 NOTE: the on-disk data directory stays ~/.domestique/ so existing user data
 and intervals.icu connections survive upgrades without migration.
-"""
+
 
 import sys
 import os
@@ -18,7 +18,7 @@ import importlib.util
 from pathlib import Path
 
 block_cipher = None
-app_name = "PPC"
+app_name = "VELARCO"
 
 # v4.4.0 BUILD-FIX: scipy 1.18 dropped the importable `scipy._lib.array_api_compat`
 # shim that earlier versions exposed, so a hard hidden-import of it makes
@@ -185,7 +185,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,  # no terminal window
-    icon="assets/icon.icns" if sys.platform == "darwin" else "assets/icon.ico",
+    icon="assets/velarco_logo.ico",
 )
 
 coll = COLLECT(
@@ -204,8 +204,8 @@ if sys.platform == "darwin":
     app = BUNDLE(
         coll,
         name=f"{app_name}.app",
-        icon="assets/icon.icns" if os.path.exists("assets/icon.icns") else None,
-        bundle_identifier="com.ppc.cyclingcoach",
+        icon="assets/velarco_logo.ico" if os.path.exists("assets/velarco_logo.ico") else None,
+        bundle_identifier="com.velarco.cycling",
         info_plist={
             "CFBundleDisplayName": app_name,
             # Both keys MUST match VERSION — otherwise the About box and the
@@ -218,7 +218,7 @@ if sys.platform == "darwin":
             # Mojave/Catalina support becomes a hard requirement.
             "LSMinimumSystemVersion": "11.0",
             "NSHighResolutionCapable": True,
-            "NSHumanReadableCopyright": "(c) 2026 PPC — Programming Cycling Coach (fork of Domestique, Apache-2.0)",
+            "NSHumanReadableCopyright": "(c) 2026 VELARCO — Adaptive Cycling Intelligence (fork of Domestique, Apache-2.0)",
             # v4.0.0-alpha: Bluetooth usage key removed along with the BLE
             # subsystem -- Domestique no longer scans or connects to any
             # trainer/HR device. Keeping the key would spuriously trigger

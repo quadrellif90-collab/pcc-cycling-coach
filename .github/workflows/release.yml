@@ -420,7 +420,7 @@ jobs:
           $repoRoot = "${{ github.workspace }}"
           & "$makensis" "/DVERSION=$env:PPC_VER" "/DOUTDIR=$repoRoot" installer.nsi
           if ($LASTEXITCODE -ne 0) { Write-Error "::error::makensis failed (exit $LASTEXITCODE)"; exit 1 }
-          $out = Join-Path $repoRoot "PPC-Setup-$env:PPC_VER.exe"
+          $out = Join-Path $repoRoot "VELARCO-Setup-$env:PPC_VER.exe"
           if (-not (Test-Path $out)) { Write-Error "::error::installer not produced at $out"; exit 1 }
           Write-Host "Built installer: $out ($([math]::Round((Get-Item $out).Length/1MB,1)) MB)"
 
@@ -428,13 +428,13 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: PPC-Windows-Installer
-          path: PPC-Setup-*.exe
+          name: VELARCO-Windows-Installer
+          path: VELARCO-Setup-*.exe
           retention-days: 7
 
       - name: Attach installer to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: PPC-Setup-*.exe
+          files: VELARCO-Setup-*.exe
           fail_on_unmatched_files: true

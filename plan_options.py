@@ -6,13 +6,15 @@ it never spawns a parallel planner. With ``mode="normal"`` (or every flag
 False) the plan is byte-for-byte the same as 4.4.0 (contract: non-
 regression test).
 
-Layers and what each enriches (see docs/PPC_5x_ROADMAP.md for sources):
+Layers and what each enriches (see docs/PPC_5x_ROADMAP.md and
+docs/ricerca_worldtour_pro_2025-2026.md for sources):
   enable_nutrition     -> per-session fueling note (Impey 2018 / IOC)
   enable_integrators   -> supplement note per block (IOC/ISSN)
-  enable_heat          -> heat/acclimation block before event (Rønnestad 2025)
-  enable_strength      -> periodised strength + VBT (Han 2025, Rønnestad 2014)
-  enable_mobility      -> hip-flexor / core / aero (Roadman 2025)
-  enable_dfa_durability-> DFA a1 durability flag (Van Hooren 2025)
+  enable_heat          -> heat/acclimation 14gg + pre-cooling (meta-2024)
+  enable_strength      -> periodised strength 2x/sett + VBT, real sessions (meta-2025)
+  enable_mobility      -> hip-flexor / core / aero, real sessions (Roadman 2025)
+  enable_dfa_durability-> DFA a1 durability flag (HRV-in-sport 2025)
+  enable_altitude     -> altitude block pre-event (Giro top-5 / TdF2025)
   enable_auto_replan   -> continuous re-planning (continuous_policy, already in app)
   enable_notifications -> notification layer (notifications.py; view, not plan)
 
@@ -34,6 +36,7 @@ class PlanOptions:
     enable_strength: bool = False
     enable_mobility: bool = False
     enable_dfa_durability: bool = False
+    enable_altitude: bool = False
     enable_auto_replan: bool = False
     enable_notifications: bool = False
 
@@ -46,6 +49,7 @@ class PlanOptions:
             self.enable_strength = False
             self.enable_mobility = False
             self.enable_dfa_durability = False
+            self.enable_altitude = False
             self.enable_auto_replan = False
             self.enable_notifications = False
 
@@ -58,7 +62,8 @@ class PlanOptions:
         return any(
             getattr(self, f"enable_{n}")
             for n in ("nutrition", "integrators", "heat", "strength",
-                      "mobility", "dfa_durability", "auto_replan", "notifications")
+                      "mobility", "dfa_durability", "altitude", "auto_replan",
+                      "notifications")
         )
 
     def to_dict(self) -> dict:
@@ -70,6 +75,7 @@ class PlanOptions:
             "enable_strength": self.enable_strength,
             "enable_mobility": self.enable_mobility,
             "enable_dfa_durability": self.enable_dfa_durability,
+            "enable_altitude": self.enable_altitude,
             "enable_auto_replan": self.enable_auto_replan,
             "enable_notifications": self.enable_notifications,
         }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PPC — Programming Cycling Coach</title>
+<title>VELARCO — Adaptive Cycling Intelligence</title>
 <link rel="icon" type="image/png" href="/static/favicon.png?v=3">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <style>
@@ -1445,7 +1445,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <header>
   <div style="display:flex;align-items:center;gap:14px;">
     <div>
-      <h1><img src="/static/icon.png" alt="" style="height:28px;vertical-align:middle;margin-right:6px;border-radius:6px;">PPC<span id="app-version" style="font-size:10px;font-weight:400;color:var(--text3);vertical-align:middle;margin-left:7px;"></span></h1>
+      <h1><img src="/static/velarco_logo.png" alt="VELARCO" style="height:28px;vertical-align:middle;margin-right:6px;border-radius:6px;">VELARCO<span id="app-version" style="font-size:10px;font-weight:400;color:var(--text3);vertical-align:middle;margin-left:7px;"></span></h1>
       <div style="font-size:12px;color:var(--text2)" id="date-header"></div>
       <div style="font-size:10px;color:var(--text3);margin-top:2px;">fork di <a href="https://github.com/platypus45/domestique" target="_blank" rel="noopener" style="color:var(--accent2);text-decoration:none;">Domestique</a> · credit &amp; homage to platypus45</div>
       <div style="position:absolute;right:16px;top:12px;"></div>
@@ -2321,7 +2321,7 @@ window.addEventListener('unhandledrejection', function(e) {
            normale (identical to 4.4.0). -->
       <div class=\"form-row\" style=\"margin-top:10px;\">
         <div style=\"flex:1 1 100%;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);\">
-          <div style=\"font-size:12px;font-weight:700;margin-bottom:2px;\">Accorgimenti del piano (PPC 5.x)</div>
+          <div style=\"font-size:12px;font-weight:700;margin-bottom:2px;\">Accorgimenti del piano (VELARCO 5.x)</div>
           <div style=\"font-size:11px;color:var(--text2);margin-bottom:8px;\">Attiva uno o più layer scientifici. Lasciali tutti spenti per il planner classico.</div>
           <div style=\"display:flex;flex-wrap:wrap;gap:10px 18px;\">
             <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-nutrition\"> Nutrizione / fueling</label>
@@ -2330,6 +2330,7 @@ window.addEventListener('unhandledrejection', function(e) {
             <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-strength\"> Forza periodizzata + VBT</label>
             <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-mobility\"> Mobilità (hip-flexor / core / aero)</label>
             <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-durability\"> Durability DFA a1</label>
+            <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-altitude\"> Altitude block (pre-evento)</label>
             <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-autoreplan\"> Ricalibro automatico</label>
             <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-notifications\"> Notifiche smart (email/toast)</label>
           </div>
@@ -2503,7 +2504,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="programme-summary-content" style="background:var(--surface);max-width:1200px;margin:24px auto;padding:24px;border-radius:12px;border:1px solid var(--border);color:var(--text);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div>
-          <div style="font-size:11px;color:var(--accent);letter-spacing:2px;font-weight:700;">PPC</div>
+          <div style="font-size:11px;color:var(--accent);letter-spacing:2px;font-weight:700;">VELARCO</div>
           <h2 style="margin:4px 0 0 0;">Riepilogo programma</h2>
           <div id="ps-window" style="font-size:13px;color:var(--text2);margin-top:4px;"></div>
         </div>
@@ -12530,6 +12531,7 @@ function _readPlanOptions() {
     enable_strength: _chk('po-strength'),
     enable_mobility: _chk('po-mobility'),
     enable_dfa_durability: _chk('po-durability'),
+    enable_altitude: _chk('po-altitude'),
     enable_auto_replan: _chk('po-autoreplan'),
     enable_notifications: _chk('po-notifications'),
   };
@@ -20546,17 +20548,14 @@ async function loadUpdateCheck(force) {
           'will all be preserved across this update.</div>' +
           '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
             // v1.8.11 — must include target="_blank" + rel="noopener noreferrer".
-            // pywebview's WKWebView ignores the HTML5 ``download`` attribute on
-            // cross-origin links AND silently blocks same-window navigation to
-            // github.com (the file would otherwise try to load inside the
-            // native window). target="_blank" routes the click through
-            // launcher.py's new-window handler which opens the URL in the
-            // user's default browser, where the GitHub release URL serves
-            // content-disposition: attachment and triggers a normal save.
             '<a href="' + safeDownload + '" download="' + safeAsset + '" ' +
               'target="_blank" rel="noopener noreferrer" ' +
               'style="display:inline-block;padding:6px 12px;border-radius:6px;background:#3b82f6;' +
               'border:1px solid #3b82f6;color:#fff;text-decoration:none;font-size:12px;">Download</a>' +
+            // VELARCO 5.1 — auto-update attivo: scarica + installa silenzioso.
+            '<button onclick="applySelfUpdate()" ' +
+              'style="display:inline-block;padding:6px 12px;border-radius:6px;background:#f5a623;' +
+              'border:1px solid #f5a623;color:#0e1b22;text-decoration:none;font-size:12px;cursor:pointer;font-weight:600;">Aggiorna ora</button>' +
           '</div>' +
           detailsBlock +
         '</div>' +
@@ -20575,6 +20574,28 @@ function dismissUpdateBanner(latest) {
   try { localStorage.setItem('update-banner-dismissed-' + latest, '1'); } catch (_) {}
   const el = document.getElementById('update-banner');
   if (el) el.style.display = 'none';
+}
+
+// VELARCO 5.1 — auto-update attivo. Chiama /api/self-update che scarica
+// l'installer platform-specifico e lo lancia silenzioso (/S su Windows,
+// open .dmg su mac); l'app poi si chiude per liberare l'EXE.
+async function applySelfUpdate() {
+  const btn = event && event.target;
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Aggiornamento…'; }
+    const r = await fetch('/api/self-update', { method: 'POST' });
+    const j = await r.json().catch(() => ({}));
+    if (j && j.ok) {
+      showToast('Aggiornamento avviato: l\'app si riavvierà con la nuova versione.', 5000);
+      setTimeout(() => { try { window.close(); } catch (_) {} }, 2500);
+    } else {
+      showToast('Auto-aggiornamento non riuscito: ' + (j.error || 'errore'), 5000);
+      if (btn) { btn.disabled = false; btn.textContent = 'Aggiorna ora'; }
+    }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Aggiorna ora'; }
+    showToast('Auto-aggiornamento non riuscito: ' + e.message, 5000);
+  }
 }
 
 // ═══ v4.4.0 IMPL-UI ════════════════════════════════════════════════════

@@ -3,10 +3,10 @@
 ; e NON vengono toccati da installazione/aggiornamento (così connessioni e piani
 ; sopravvivono senza migrazione).
 
-!define APPNAME "PPC"
-!define APPNAMEFULL "PPC - Programming Cycling Coach"
-!define PUBLISHER "PPC"
-; VERSION è passata dal CI come /DVERSION=X.Y.Z (iscc installer.nsi /DVERSION=4.4.0).
+!define APPNAME "VELARCO"
+!define APPNAMEFULL "VELARCO — Adaptive Cycling Intelligence"
+!define PUBLISHER "VELARCO"
+; VERSION è passata dal CI come /DVERSION=X.Y.Z
 ; Default di sicurezza se compilato a mano senza /D.
 !ifndef VERSION
   !define VERSION "4.0.0"
@@ -33,8 +33,8 @@ Section "Install"
 
   ; Scorciatoia nel menu Start
   CreateDirectory "$SMPROGRAMS\${APPNAME}"
-  CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAMEFULL}.lnk" "$INSTDIR\PPC.exe" "" "$INSTDIR\PPC.exe" 0
-  CreateShortCut "$DESKTOP\${APPNAMEFULL}.lnk" "$INSTDIR\PPC.exe" "" "$INSTDIR\PPC.exe" 0
+  CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAMEFULL}.lnk" "$INSTDIR\VELARCO.exe" "" "$INSTDIR\VELARCO.exe" 0
+  CreateShortCut "$DESKTOP\${APPNAMEFULL}.lnk" "$INSTDIR\VELARCO.exe" "" "$INSTDIR\VELARCO.exe" 0
 
   ; Disinstallatore
   WriteUninstaller "$INSTDIR\Uninstall.exe"

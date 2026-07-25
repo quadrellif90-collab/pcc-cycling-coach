@@ -1642,6 +1642,7 @@ class PlannedSession:
     hr_ceiling_pct: float | None = None              # 0.88 = "stay below 88% HR_max"
     is_double_threshold_pair: bool = False
     double_threshold_partner_id: str | None = None
+    am_or_pm: str | None = None                      # "am" or "pm"
     # ── PPC 5.x accorgimenti layers (populated only when the matching
     # PlanOptions flag is on; empty string = layer off / not applicable) ──
     integrator_note: str = ""
@@ -1649,7 +1650,8 @@ class PlannedSession:
     strength_note: str = ""
     mobility_note: str = ""
     durability_note: str = ""
-    am_or_pm: str | None = None                      # "am" or "pm"
+    altitude_note: str = ""
+
     # v2.2.14 (issue #7) — this day IS a race (A target event or a B/C event).
     # Set by _mark_race_days() AFTER taper passes: the day's training slot is
     # replaced by the race itself (no stray endurance ride on race day), and the
@@ -3417,7 +3419,8 @@ def _pick_session(
 
 
 def _nutrition_note(phase_name: str, session_type: str) -> str:
-    """Nutrition guidance per phase + session type (Impey 2018, Stellingwerff 2019)."""
+    """Nutrition guidance per phase + session type (Impey 2018, Stellingwerff 2019,
+    TdF2025 race-fueling 90-120 g/h)."""
     if session_type == "rest":
         return "High protein, lower carbohydrates (3g/kg)"
     if phase_name == "base":
@@ -3428,9 +3431,12 @@ def _nutrition_note(phase_name: str, session_type: str) -> str:
     if phase_name in ("build1", "build2", "continuous"):
         if session_type in ("vo2max", "threshold", "overunder", "sweetspot", "sprint"):
             return "Fuel the work: 6-7g/kg carbs, fueled before the session"
+        if session_type in ("long_z2", "endurance"):
+            return "Long ride: 60-90 g/h carbs (2:1 glucosio:fructose), gut-training progressivo"
         return "Moderate carbs (4-5g/kg)"
     if phase_name == "peak":
-        return "High carbs (6-8g/kg) — practice race nutrition"
+        return ("High carbs (6-8g/kg) — practice race nutrition 90-120 g/h "
+                "(TdF2025: 120+ g/h; 2:1 glucosio:fructose)")
     if phase_name == "taper":
         return "High carbs — glycogen loading"
     return ""
@@ -3469,51 +3475,114 @@ def _apply_integrators(weeks, opts):
 
 
 def _apply_heat(weeks, opts, goal):
-    """Heat/acclimation block in the 3 weeks before the event (Rønnestad 2025)."""
+    """Heat/acclimation block in the 14 days before the event (2024 meta-analysis:
+    +6% cool / +8% hot). Adds pre-cooling note for race day (ice = acclimation
+    equivalent, ResearchGate pre-cooling study)."""
     if not opts.enable_heat:
         return weeks
     target = getattr(goal, "target_date", None)
     if target is None:
         return weeks
-    heat_cut = target - timedelta(days=21)
+    heat_cut = target - timedelta(days=14)
     for w in weeks:
         wk = _monday_of(w)
         if heat_cut <= wk < target:
             for s in w.sessions:
                 if (s.session_type or "") in ("z2", "long_z2", "endurance"):
-                    s.heat_note = ("Heat block: 40-60min in heat suit / warm "
-                                   "room (Rønnestad 2025, +4.1% Hb-mass)")
+                    s.heat_note = ("Heat block 14gg: 40-60min in heat suit / warm "
+                                   "room (meta-2024 +6% cool/+8% hot). Gara: "
+                                   "pre-cooling ghiaccio/bevande fredde")
     return weeks
 
 
 def _apply_strength(weeks, opts):
-    """Strength periodisation note: 2x/week base -> 1x/week in-season (Rønnestad 2014)."""
+    """Strength periodisation (meta-2025, 262 cyclists: +efficiency, +TT, 0 on
+    VO2max). 2x/week base/build, 1x in-season; 48h from key rides; 1x/week
+    maintains. Injects real strength sessions if the week has none."""
     if not opts.enable_strength:
         return weeks
     for w in weeks:
         freq = 2 if w.phase in ("base", "build1") else 1
+        has_strength = any((s.session_type or "") == "strength" for s in w.sessions)
         for s in w.sessions:
             if (s.session_type or "") == "strength":
                 s.strength_note = (
                     f"Strength {freq}x/week, VBT stop at 20% velocity loss, "
-                    f"separate from endurance >=6h (Han 2025)")
+                    f">=48h da uscite chiave (meta-2025: +efficienza, 0 su VO2max)")
+        if not has_strength:
+            # inject strength on the first rest/recovery day available
+            anchor = next((s for s in w.sessions
+                           if (s.session_type or "") in ("rest", "recovery")), None)
+            if anchor is not None:
+                from dataclasses import replace
+                inj = _make_injected_session(anchor, "strength", 40,
+                    f"Strength {freq}x/week (iniettata): squat/hip-thrust 3-5x5, "
+                    f">=48h da uscite chiave; 1x/sett mantiene (meta-2025)")
+                w.sessions.append(inj)
     return weeks
 
 
 def _apply_mobility(weeks, opts):
-    """Hip-flexor / core / aero mobility note (Roadman 2025, 8-12wk adaptation)."""
+    """Hip-flexor / core / aero mobility (Roadman 2025, 8-12wk adaptation).
+    Injects a mobility session if the week has none."""
     if not opts.enable_mobility:
         return weeks
     for w in weeks:
+        has_mob = any((s.session_type or "") == "mobility" for s in w.sessions)
         for s in w.sessions:
             if (s.session_type or "") in ("rest", "z2", "recovery"):
                 s.mobility_note = ("Mobility: hip-flexor 30-45s x3-4, core plank "
                                    "30-60s x2-3, progressive aero exposure")
+        if not has_mob:
+            anchor = next((s for s in w.sessions
+                           if (s.session_type or "") in ("rest", "recovery")), None)
+            if anchor is not None:
+                inj = _make_injected_session(anchor, "mobility", 20,
+                    "Mobility iniettata: hip-flexor 30-45s x3-4, core plank "
+                    "30-60s x2-3, aero exposure progressiva (Roadman 2025)")
+                w.sessions.append(inj)
+    return weeks
+
+
+def _make_injected_session(anchor, session_type, duration_min, note):
+    """Build a minimal PlannedSession copy of anchor's day with a new type."""
+    return PlannedSession(
+        day=anchor.day,
+        day_name=anchor.day_name,
+        session_type=session_type,
+        duration_min=duration_min,
+        tss_estimate=0.0,
+        description=note,
+        matched=False,
+        strength_note=note if session_type == "strength" else "",
+        mobility_note=note if session_type == "mobility" else "",
+    )
+
+
+def _apply_altitude(weeks, opts, goal):
+    """Altitude block note pre-event (Giro top-5 / TdF2025 practice: combined
+    with HIT blocks). 2-3 week live-high or normobaric hypoxia before A-event."""
+    if not opts.enable_altitude:
+        return weeks
+    target = getattr(goal, "target_date", None)
+    if target is None:
+        return weeks
+    alt_cut = target - timedelta(days=21)
+    for w in weeks:
+        wk = _monday_of(w)
+        if alt_cut <= wk < target:
+            for s in w.sessions:
+                if (s.session_type or "") in ("z2", "long_z2", "endurance"):
+                    s.altitude_note = ("Altitude block: live-high 2000-2500m o "
+                                       "normobaric hypoxia 2-3gg/sett (Giro top-5 "
+                                       "2025, combinato con HIT)")
     return weeks
 
 
 def _apply_dfa_durability(weeks, opts):
-    """DFA a1 durability flag: long sessions flagged if DFA drops early (Van Hooren 2025)."""
+    """DFA a1 durability flag: long sessions flagged if DFA drops early (2025
+    HRV-in-sport review; threshold alpha1 <0.75 = high intensity / durability
+    attention)."""
     if not opts.enable_dfa_durability:
         return weeks
     for w in weeks:
@@ -3546,6 +3615,7 @@ def _apply_plan_options(weeks, opts, goal):
     weeks = _apply_strength(weeks, opts)
     weeks = _apply_mobility(weeks, opts)
     weeks = _apply_dfa_durability(weeks, opts)
+    weeks = _apply_altitude(weeks, opts, goal)
     return weeks
 
 
