@@ -10380,6 +10380,7 @@ def regenerate_from_today(
     activities: list[dict] | None = None,
     seed_salt: int = 0,
     athlete: dict | None = None,
+    plan_options: "plan_options.PlanOptions | None" = None,
 ) -> tuple[list, list[PlannedWeek], dict]:
     """Regenerate plan from today, preserving past weeks.
 
@@ -10392,6 +10393,9 @@ def regenerate_from_today(
     - Gundersen 2016: muscle memory = faster reconditioning for trained athletes
     """
     today = date.today()
+
+    # Resolve the accorgimenti options (mirrors generate_plan / recalculate).
+    opts = plan_options if isinstance(plan_options, PO.PlanOptions) else PO.DEFAULT_PLAN_OPTIONS
 
     # FC5d (v2.5.0, L3-6): route the regen through the same generator invariant
     # as generate_plan (F4b) — a stale PAST target used to rebuild a recovery
@@ -11534,6 +11538,7 @@ def extend_continuous_plan(
     athlete: dict | None = None,
     recent_weekly_tss: float | None = None,
     seed_salt: int = 0,
+    plan_options: "plan_options.PlanOptions | None" = None,
 ) -> tuple[list, list[PlannedWeek], dict]:
     """Weekly rolling EXTEND for a continuous goal: drop elapsed, append.
 
@@ -11557,6 +11562,9 @@ def extend_continuous_plan(
     appending placeholder junk; recalc_date stays stale so it retries.
     """
     today = date.today()
+
+    # Resolve the accorgimenti options (mirrors generate_plan / recalculate).
+    opts = plan_options if isinstance(plan_options, PO.PlanOptions) else PO.DEFAULT_PLAN_OPTIONS
     event_readiness = compute_event_readiness(goal, current_ctl)  # no_event
 
     def _no_change(reason: str, detail: str = "") -> tuple:
