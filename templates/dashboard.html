@@ -1370,6 +1370,11 @@ details > summary:hover::before { color: var(--accent); }
 .home-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:12px; align-items:start; }
 .home-grid > .card { grid-column:span 6; min-width:0; }
 @media (max-width:1100px){ .home-grid > .card { grid-column:span 12; } }
+/* PPC 5.x — strategy note chips inside plan session cells (day-by-day views) */
+.pg-strat-row { display:flex; flex-wrap:wrap; gap:2px; margin:2px 0 1px; }
+.pg-strat-chip { font-size:8px; line-height:1.2; padding:1px 4px; border-radius:3px;
+  background:var(--surface2); border:1px solid var(--border); color:var(--text2);
+  white-space:nowrap; cursor:help; }
 @media (max-width:780px){ .app-shell{flex-direction:column;} .sidebar-tabs{flex-direction:row;flex-wrap:wrap;width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);} }
 </style>
 
@@ -1467,7 +1472,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <div class="header-stats" id="header-stats"></div>
-    <button onclick="openImportFitPicker()" style="background:var(--accent);color:#fff;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Import a .fit ride from MyWhoosh / Tacx / Golden Cheetah">
+    <button onclick="openImportFitPicker()" style="background:var(--accent);color:#fff;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Importa una uscita .fit da MyWhoosh / Tacx / Golden Cheetah">
       &#x2b06; Import FIT
     </button>
     <input type="file" id="import-fit-input" accept=".fit,application/octet-stream" style="display:none;" onchange="handleImportFit(this)">
@@ -1971,7 +1976,7 @@ window.addEventListener('unhandledrejection', function(e) {
          (TSS + above-Z2 weighting), not a user-facing quality signal; it
          stays load-bearing internally (planner pool floors) only. -->
     <div class="form-row" style="align-items:flex-end;">
-      <div class="form-group" style="flex:1.3;min-width:170px;"><label>Type <span class="hint" title="Content-based primary type from the structure classifier (16 canonical classes). Matches the actual workout structure, not the filename." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span></label>
+      <div class="form-group" style="flex:1.3;min-width:170px;"><label>Type <span class="hint" title="Tipo primario basato sul contenuto dal classificatore di struttura (16 classi canoniche). Corrisponde alla struttura reale dell'uscita, non al nome file." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span></label>
         <select id="wk-content-class" onchange="loadWorkouts()" style="width:100%;">
           <option value="" selected>Tutti i tipi</option>
           <optgroup label="Aerobic">
@@ -2024,7 +2029,7 @@ window.addEventListener('unhandledrejection', function(e) {
            "/" focuses from anywhere on this tab; Esc clears. -->
       <div class="form-group" style="flex:1.3;min-width:140px;"><label>Cerca</label>
         <input type="text" id="wk-search" placeholder="threshold 3x16, ss 90min, 30/15…"
-               title="Understands durations (90min, 1h30, <60, 60-90), structures (3x16, 30/15), intensity (@105%) and shortcuts (ss, ou, vo2, ronnestad, micro, ladder). Press / to focus, Esc to clear."
+               title="Comprende durate (90min, 1h30, <60, 60-90), strutture (3x16, 30/15), intensità (@105%) e scorciatoie (ss, ou, vo2, ronnestad, micro, ladder). Premi / per focalizzare, Esc per pulire."
                oninput="onLibSearchInput()" onkeydown="onLibSearchKeydown(event)" style="width:100%;"></div>
       <div class="form-group"><label>Ordina</label>
         <!-- R2 (2026-07-07): Score sort options removed with the Score
@@ -2064,7 +2069,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="form-row" style="align-items:flex-end;margin-top:10px;">
         <div class="form-group"><label>
           <input type="checkbox" id="lib-outdoor" style="vertical-align:middle;"> Outdoor variant
-          <span class="hint" title="Wraps the downloaded .zwo with a flat transit warm-up to the climb and an easy spin home. These minutes are OFF-PLAN — added easy riding, NOT counted in your planned weekly TSS." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
+          <span class="hint" title="Avvolge lo .zwo scaricato con un riscaldamento piatto di transito verso la salita e un giro facile di rientro. Questi minuti sono FUORI PIANO — pedalata facile aggiunta, NON contano nel TSS settimanale pianificato." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
         </label></div>
         <div class="form-group"><label>Transito min</label>
           <input type="number" id="lib-outdoor-transit" value="10" min="0" max="120" style="width:72px;"></div>
@@ -2235,7 +2240,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <div style="font-size:12px;color:var(--text2);" id="gap-alert-detail"></div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button class="btn btn-primary" onclick="updatePlan()" style="font-size:11px;">Aggiorna piano</button><span class="info-icon" data-popover="planpop-update" tabindex="0" role="button" aria-label="What does Update plan do?" title="Auto-adjusts your plan to today's fitness.">i</span>
+        <button class="btn btn-primary" onclick="updatePlan()" style="font-size:11px;">Aggiorna piano</button><span class="info-icon" data-popover="planpop-update" tabindex="0" role="button" aria-label="What does Update plan do?" title="Adatta automaticamente il piano alla tua forma odierna.">i</span>
         <button class="btn" onclick="showMarkUnavailable()" style="font-size:11px;">Segna vacanza/infortunio</button>
         <button class="btn" onclick="$('plan-gap-alert').style.display='none'" style="font-size:11px;">Ignora</button>
       </div>
@@ -2303,7 +2308,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="form-row">
         <div class="form-group"><label>Modello di intensità</label>
           <select id="plan-distribution" onchange="refreshPlanPreview()"
-                  title="How hard sessions are spread across zones. Polarized (default): mostly easy + a little very-hard (needs volume). Pyramidal: more threshold than VO2. Threshold: sweet-spot / at-FTP focus. (For a fully custom split, pick Plan style → Template → Custom.)">
+                  title="Come distribuire l'intensità tra le zone. Polarizzato (predefinito): soprattutto facile + un po' di molto intenso (richiede volume). Piramidale: più soglia che VO2. Soglia: focus sweet-spot / a-FTP. (Per una divisione personalizzata, scegli Stile piano → Template → Custom.)">
             <option value="polarized" selected>Polarizzato (predefinito)</option>
             <option value="pyramidal">Piramidale</option>
             <option value="threshold">Soglia / Sweet-spot</option>
@@ -2314,7 +2319,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="form-row">
         <div class="form-group"><label>
           <input type="checkbox" id="plan-block-periodization" onchange="refreshPlanPreview()" style="vertical-align:middle;"> Block periodization
-          <span class="hint" title="Concentrate each build/peak phase on ONE quality per ~3-4 week block (VO2 block then threshold block toward your event) instead of mixing every hard type weekly. Evidence is strongest for trained cyclists with adequate volume; default OFF." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
+          <span class="hint" title="Concentra ogni fase di build/peak su UNA sola qualità per blocchi di ~3-4 settimane (blocco VO2 poi blocco soglia verso l'evento) invece di mescolare ogni tipo intenso ogni settimana. Le evidenze sono più forti per ciclisti allenati con volume adeguato; predefinito OFF." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
         </label></div>
       </div>
       <!-- PPC 5.x — Accorgimenti selector. Each toggle switches ON a layer that
@@ -2463,7 +2468,7 @@ window.addEventListener('unhandledrejection', function(e) {
              and "Rebuild from scratch"). After that the plan updates itself:
              automatically after each ride sync and on every plan-tab open
              (runPlanOpenSequence → /api/plan/update). -->
-        <button class="btn btn-primary" onclick="generatePlan()" id="btn-generate-plan" title="Create your plan — or rebuild it from your current settings + fitness. After that it updates itself automatically after each ride sync and whenever you open this tab.">Genera piano</button>
+        <button class="btn btn-primary" onclick="generatePlan()" id="btn-generate-plan" title="Crea il tuo piano — o ricostruiscilo dalle impostazioni e dalla forma attuali. Dopo, si aggiorna automaticamente dopo ogni sincronizzazione uscita e ogni volta che apri questa scheda.">Genera piano</button>
         <!-- v3.0.1 IP_ICU_PUSH: mirror the next 14 days onto the intervals.icu
              calendar (Garmin/MyWhoosh pull workouts from there). States set by
              icuPushRefreshButton(): hidden (not connected) / normal / spinner
@@ -2476,7 +2481,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <!-- v4.6.7 IMPL-SUM: summary modal trigger END -->
         <!-- IP-1: add a B/C race to the EXISTING plan → reschedules around it
              (taper in, recovery after) without a full regenerate. -->
-        <button class="btn" onclick="openAddRaceModal()" id="btn-add-race" title="Add a B/C race to your current plan — it reschedules around it (easy taper in, recovery after); your event date and plan length stay the same.">+ Add race</button>
+        <button class="btn" onclick="openAddRaceModal()" id="btn-add-race" title="Aggiungi una gara B/C al piano attuale — ripianifica intorno a essa (scarico in entrata, recupero dopo); data evento e lunghezza piano restano invariati.">+ Add race</button>
         <!-- v1.7.4 — Sync now exposed on the plan tab too. Same handler
              as the home-page button (syncNowAction posts to
              /api/rides/sync?force=1 → bypasses the 1h throttle). Without
@@ -2484,7 +2489,7 @@ window.addEventListener('unhandledrejection', function(e) {
              plan view was the home tab; users on the plan tab would
              reopen the app and see stale actuals because the boot
              auto-sync had throttled. -->
-        <button class="btn" id="syncNowBtnPlan" onclick="syncNowAction('syncNowBtnPlan')" style="font-size:11px;" title="Pull latest rides + wellness from intervals.icu now (bypasses 1h throttle)">Sync now &#x21bb;</button>
+        <button class="btn" id="syncNowBtnPlan" onclick="syncNowAction('syncNowBtnPlan')" style="font-size:11px;" title="Recupera le ultime uscite + dati wellness da intervals.icu ora (bypassa la soglia 1h)">Sync now &#x21bb;</button>
       </div>
       <!-- 3.3.3 (owner): mis-summing phase split — the reason Generate is
            disabled, mirrored HERE next to the button (the editor with the
@@ -2794,7 +2799,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </style>
   <div class="card" style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <h3 style="display:flex;align-items:center;">Calendario disponibilità<span class="info-icon" data-popover="planpop-availability" tabindex="0" role="button" aria-label="How does the Availability Calendar work?" title="Click to set hours; right-click to mark unavailable. Press UPDATE to apply.">i</span></h3>
+      <h3 style="display:flex;align-items:center;">Calendario disponibilità<span class="info-icon" data-popover="planpop-availability" tabindex="0" role="button" aria-label="How does the Availability Calendar work?" title="Clicca per impostare ore; tasto destro per segnare non disponibile. Premi AGGIORNA per applicare.">i</span></h3>
       <div style="display:flex;gap:6px;align-items:center;">
         <button class="btn" onclick="changeAvailMonth(-1)" style="padding:4px 8px;">&larr;</button>
         <span id="avail-month-label" style="font-size:13px;font-weight:600;min-width:120px;text-align:center;"></span>
@@ -2847,7 +2852,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <h3>Griglia piano</h3>
       <div class="cal-tab" id="cal-tab-overlay-g" data-view="overlay" onclick="calSwitchView('overlay')">Calendario</div>
       <div class="cal-tab active" id="cal-tab-grid-g" data-view="grid" onclick="calSwitchView('grid')">Griglia</div>
-      <button id="vol-unit-toggle" class="btn cal-jump-btn" style="margin-left:auto;" onclick="toggleVolUnit()" title="Show planned weekly volume in hours or minutes">Volume: ore</button>
+      <button id="vol-unit-toggle" class="btn cal-jump-btn" style="margin-left:auto;" onclick="toggleVolUnit()" title="Mostra il volume settimanale pianificato in ore o minuti">Volume: ore</button>
     </div>
     <!-- v4.2.0 IMPL-WEEKLY: plan progress header (item 8) + export button (item 10) -->
     <div id="pg-progress-header" class="pg-progress-header" style="display:none;">
@@ -2946,9 +2951,9 @@ window.addEventListener('unhandledrejection', function(e) {
       <summary style="cursor:pointer;font-size:12px;color:var(--text2);user-select:none;">Energy-system breakdown — beta</summary>
       <div style="margin-top:8px;">
         <div class="chart-legend" style="margin-bottom:6px;">
-          <span title="Your aerobic engine. Builds and recovers slowly over a 52-day window; long Z2 rides move it."><span class="dot" style="background:#3b82f6;"></span> CP fitness</span>
-          <span title="Glycolytic capacity above threshold. Recovers in days; built by VO2max and over-under intervals (5-day window)."><span class="dot" style="background:#f97316;"></span> W' fitness</span>
-          <span title="Sprint and PCr power. Recovers fastest (10-day window); driven by short all-out efforts under 20 s."><span class="dot" style="background:#ef4444;"></span> Pmax fitness</span>
+          <span title="Il tuo motore aerobico. Si costruisce e recupera lentamente in una finestra di 52 giorni; le lunghe Z2 lo spostano."><span class="dot" style="background:#3b82f6;"></span> CP fitness</span>
+          <span title="Capacità glicolitica sopra soglia. Recupera in giorni; costruita da VO2max e intervalli over-under (finestra 5 giorni)."><span class="dot" style="background:#f97316;"></span> W' fitness</span>
+          <span title="Potenza sprint e PCr. Recupera più velocemente (finestra 10 giorni); guidata da sforzi brevi al massimo sotto 20 s."><span class="dot" style="background:#ef4444;"></span> Pmax fitness</span>
         </div>
         <div id="energy-system-chart" style="min-height:180px;"></div>
         <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4;">
@@ -3010,7 +3015,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <h3 style="margin:0;">Power Curve</h3>
-        <span id="power-curve-help" style="cursor:help;font-size:12px;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;line-height:1;" title="Mean-max power per duration across selected window. An effort = an effort: indoor erg, paceline, structured workouts all count as recorded. The ONLY filter is a silent sensor-glitch drop on 1-s peaks where HR is below 50% of HR_max during that 1-s window — the wireless dropout reporting a phantom 1500W spike. (PATCH G16 + G9: position-based filters dropped; cached envelope has no offset data.)" aria-label="Help">?</span>
+        <span id="power-curve-help" style="cursor:help;font-size:12px;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;line-height:1;" title="Potenza media-massimale per durata nella finestra selezionata. Uno sforzo è uno sforzo: erg indoor, volata, workout strutturati contano tutti come registrati. L'UNICO filtro è un drop silenzioso del sensore sui picchi di 1-s dove HR è sotto il 50% di HR_max in quella finestra — il dropout wireless che riporta un picco fantasma di 1500W. (PATCH G16 + G9: filtri basati sulla posizione rimossi; l'envelope in cache non ha dati di offset.)" aria-label="Help">?</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <div class="power-curve-yaxis-toggle" role="group" aria-label="Y-axis units" style="display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;font-size:11px;">
@@ -3059,7 +3064,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="info-popover" id="frpop-what"><strong>Resistenza alla fatica</strong> — how much punch you keep after hard work. Measures how far your best 5s–5min power drops after 1,000/1,500/2,000 kJ of riding — the number that decides finales in long races. Computed from your own rides; rides without power data are excluded and noted. Higher = you fade less.</div>
   <div class="card fatigue-resistance" id="fatigue-resistance-panel" style="margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <h3 style="margin:0;font-size:15px;">Fatigue Resistance <span style="font-size:11px;font-weight:400;color:var(--text3);">— robustness index (beta)</span><span class="info-icon" data-popover="frpop-what" tabindex="0" role="button" aria-label="What is fatigue resistance?" title="What is fatigue resistance?">?</span></h3>
+        <h3 style="margin:0;font-size:15px;">Fatigue Resistance <span style="font-size:11px;font-weight:400;color:var(--text3);">— robustness index (beta)</span><span class="info-icon" data-popover="frpop-what" tabindex="0" role="button" aria-label="Cos'è la resistenza alla fatica?" title="Cos'è la resistenza alla fatica?">?</span></h3>
         <span id="fatigue-resistance-headline" style="font-size:11px;color:var(--text3);"></span>
         <button id="fatigue-resistance-refresh-btn" class="btn"
                 style="font-size:10px;padding:2px 6px;margin-left:auto;cursor:pointer;"
@@ -3263,7 +3268,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <div class="form-group"><label>Il tuo FTP su intervals.icu (eFTP)</label>
           <div style="display:flex;gap:8px;align-items:center;">
             <span id="set-eftp" style="font-size:18px;font-weight:700;">—</span>
-            <button class="btn btn-sm" onclick="acceptEftp()" title="Copy your real FTP from intervals.icu into the FTP field — you can still edit it by hand.">Copia da intervals.icu →</button>
+            <button class="btn btn-sm" onclick="acceptEftp()" title="Copia il tuo vero FTP da intervals.icu nel campo FTP — puoi comunque modificarlo a mano.">Copia da intervals.icu →</button>
           </div>
         </div>
       </div>
@@ -3288,7 +3293,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="form-row">
         <div class="form-group">
           <label>Workout targets
-            <span class="hint" title="Power: targets as watts/%FTP (power meter or smart trainer). Heart rate: no power meter — steady aerobic segments get a bpm range from your LTHR; short and very hard efforts are by feel (RPE), because heart rate lags ~30s and tops out. HR targets drift up on long efforts — hold the lower half of the range early." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
+            <span class="hint" title="Potenza: target in watt/%FTP (misuratore di potenza o smart trainer). Frequenza cardiaca: senza misuratore di potenza — i segmenti aerobici stabili ricevono un range bpm dal tuo LTHR; sforzi brevi e molto intensi sono a sensazione (RPE), perché la FC lagga ~30s e satura. I target FC salgono nei sforzi lunghi — mantieni la metà bassa del range all'inizio." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
           </label>
           <select id="set-target-mode">
             <option value="power">Potenza (misuratore)</option>
@@ -3303,7 +3308,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="form-row">
         <div class="form-group">
           <label>Match short intervals to my measured power
-            <span class="hint" title="When a workout's short hard efforts (≤2 min, above ~120%FTP) ask for more power than your own MEASURED max-power curve says you can do, lower them to your real ceiling. Off: never change a file. Prompt: ask before each download. On: cap silently. Only your MEASURED Pmax (from intervals.icu or typed in Setup) is used — never an estimate." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
+            <span class="hint" title="Quando i brevi sforzi intensi di una seduta (≤2 min, sopra ~120%FTP) chiedono più potenza di quanto dice la tua curva di max-power MISURATA, li abbassa al tuo vero soffitto. Off: non modifica mai un file. Prompt: chiedi prima di ogni download. On: taglia silenziosamente. Usa solo il tuo Pmax MISURATO (da intervals.icu o digitato in Setup) — mai una stima." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
           </label>
           <select id="set-cap-short">
             <option value="off">Off (non modificare file)</option>
@@ -3318,7 +3323,7 @@ window.addEventListener('unhandledrejection', function(e) {
            analysis zones below. Server-validated; Reset restores Coggan. -->
       <div id="hr-rows-editor" style="display:none;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px;">
         <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;">HR workout targets (bpm)
-          <span class="hint" title="The bpm ranges your workouts prescribe (charts, FIT files, session chips). Defaults follow the Coggan %LTHR table; tune them if you know your zones better. Analysis zones below are separate." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;">?</span>
+          <span class="hint" title="I range bpm che le tue uscite prescrivono (grafici, file FIT, chip seduta). I default seguono la tabella Coggan %LTHR; regolali se conosci meglio le tue zone. Le zone di analisi sotto sono separate." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;">?</span>
           <span id="hr-rows-custom-badge" style="display:none;margin-left:6px;font-size:9px;color:var(--accent);">personalizzato</span>
         </div>
         <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;font-size:11px;">
@@ -4519,10 +4524,10 @@ async function openWorkoutDetail(category, filename, meta, view) {
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
         ${hrCtx
           ? `<button class="btn btn-primary" onclick="downloadFIT('z2', ${Math.round(d.total_seconds/60)}, '${escJs((d.display_name || d.name || 'workout'))}', '${escJs(filename)}', 'hr')">Scarica FIT (target FC)</button>
-             <button class="btn" disabled style="opacity:0.4;cursor:not-allowed;" title="ZWO is a power-only format — it cannot encode heart-rate targets. Only FIT carries your bpm ranges.">ZWO — can't encode HR</button>`
+             <button class="btn" disabled style="opacity:0.4;cursor:not-allowed;" title="ZWO è un formato solo potenza — non può codificare target di frequenza cardiaca. Solo FIT porta i tuoi range bpm.">ZWO — can't encode HR</button>`
           : `<button class="btn btn-primary" onclick="downloadZwo('${escJs(category)}','${escJs(filename)}')">Apri file workout (.zwo)</button>
              ${d.hr_available ? `<button class="btn" onclick="downloadFIT('z2', ${Math.round(d.total_seconds/60)}, '${escJs((d.display_name || d.name || 'workout'))}', '${escJs(filename)}', 'power')">Scarica FIT</button>` : ''}`}
-        <button class="btn" onclick="calPushLibReveal(this)" title="Send this workout to your intervals.icu calendar">📅 Invia al calendario intervals.icu</button><span class="info-icon" data-popover="calpush-info" tabindex="0" role="button" aria-label="Why send to intervals.icu?" title="Cosa fa l'invio a intervals.icu">?</span>
+        <button class="btn" onclick="calPushLibReveal(this)" title="Invia questa seduta al calendario intervals.icu">📅 Invia al calendario intervals.icu</button><span class="info-icon" data-popover="calpush-info" tabindex="0" role="button" aria-label="Why send to intervals.icu?" title="Cosa fa l'invio a intervals.icu">?</span>
         <button class="btn" onclick="closeModal()">Chiudi</button>
       </div>
       <!-- calendar-push (2026-07-07): revealed by the button above; default
@@ -7228,7 +7233,7 @@ async function loadHome() {
       {v:s.rhr_today?s.rhr_today+'bpm':'—',l:'RHR',c:statusClass(s.rhr_status),t:'rhr',st:_rhrStale,sd:s.rhr_asof},
       {v:s.hrv_status??'—',l:'HRV status',c:statusClass(s.hrv_status),t:'hrv'},
       {v:s.sleep_score??'—',l:'Sleep score',c:_scoreCls(s.sleep_score),t:'sleep',st:_sleepStale,sd:s.sleep_asof},
-    ].map(m=>`<div class="metric" data-tip="${m.t}"><div class="mv ${m.c}"${m.st?' style="font-style:italic;" title="From an earlier day — today not synced yet"':''}>${m.v}${m.st&&m.sd?`<span style="display:block;font-size:8px;font-weight:500;font-style:italic;color:var(--text3);">${_dLbl(m.sd)}</span>`:''}</div><div class="ml">${m.l}</div></div>`).join('');
+    ].map(m=>`<div class="metric" data-tip="${m.t}"><div class="mv ${m.c}"${m.st?' style="font-style:italic;" title="Da un giorno precedente — oggi non ancora sincronizzato"':''}>${m.v}${m.st&&m.sd?`<span style="display:block;font-size:8px;font-weight:500;font-style:italic;color:var(--text3);">${_dLbl(m.sd)}</span>`:''}</div><div class="ml">${m.l}</div></div>`).join('');
 
     // Note under the tiles: stale → say which night you're looking at; no
     // data at all → point at connecting a source. Idempotent across renders.
@@ -8588,7 +8593,7 @@ function _renderDfaPerRide(d) {
     let rid = String(r.id || '');
     if (!rid.startsWith('icu_')) rid = 'icu_' + rid;
     const ridEnc = escJs(rid);
-    return `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="openActivityModal('${ridEnc}')" title="Open ride to see the α1 curve">
+    return `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="openActivityModal('${ridEnc}')" title="Apri l'uscita per vedere la curva α1">
       <td style="padding:6px 10px;white-space:nowrap;">${esc(r.date||'')}</td>
       <td style="padding:6px 10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.name||'Ride')}</td>
       <td style="padding:6px 10px;text-align:right;">${r.duration_min!=null?esc(String(r.duration_min)):'—'}</td>
@@ -9344,7 +9349,7 @@ async function openRideDetail(rideId) {
         <div style="font-size:24px;font-weight:900;">${fmtDur(s.duration_sec || 0)}</div><div style="font-size:10px;color:var(--text3);">DURATION</div></div>
       <div style="background:var(--surface2);padding:12px;border-radius:10px;text-align:center;">
         <div style="font-size:24px;font-weight:900;">${s.tss || '---'}</div><div style="font-size:10px;color:var(--text3);">TSS</div></div>
-      <div style="background:var(--surface2);padding:12px;border-radius:10px;text-align:center;" title="Weighted Power (equivalent to TrainingPeaks NP&reg;)">
+      <div style="background:var(--surface2);padding:12px;border-radius:10px;text-align:center;" title="Weighted Power (equivalente a TrainingPeaks NP&reg;)">
         <div style="font-size:24px;font-weight:900;">${wp || '---'}W</div><div style="font-size:10px;color:var(--text3);">WP</div></div>
       <div style="background:var(--surface2);padding:12px;border-radius:10px;text-align:center;">
         <div style="font-size:24px;font-weight:900;color:${dcColor(s.decoupling_color)}">${s.decoupling_pct != null ? s.decoupling_pct + '%' : '---'}</div><div style="font-size:10px;color:var(--text3);">DECOUPLING</div></div>
@@ -9370,7 +9375,7 @@ async function openRideDetail(rideId) {
         : 'Calibrate W\\u2032 & Pmax in Settings to enable mechanistic strain.';
     const _fmtVal = v => (v == null ? '—' : v);
     html += `<div class="two-lenses-card" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
-      <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1px solid var(--border);" title="Normalized Power weights spikes by the 4th-power (TrainingPeaks NP&reg;). Empirical &mdash; Coggan 2003.">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1px solid var(--border);" title="Normalized Power pondera i picchi alla 4a potenza (TrainingPeaks NP&reg;). Empirico &mdash; Coggan 2003.">
         <div style="font-size:10px;font-weight:700;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">COGGAN 2003 &mdash; EMPIRICAL</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
           <div style="text-align:center;"><div style="font-size:16px;font-weight:800;">${_fmtVal(_twoLensWp)}${_twoLensWp != null ? 'W' : ''}</div><div style="font-size:9px;color:var(--text3);">NP</div></div>
@@ -9403,19 +9408,19 @@ async function openRideDetail(rideId) {
         <div style="font-size:10px;color:var(--text3);">secondary lens · v1.0.6</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-        <div style="text-align:center;padding:8px;background:var(--surface);border-radius:8px;" title="Total stress this ride imposed across all three energy systems. Sum of Aerobe + Glycolytisch + PCr.">
+        <div style="text-align:center;padding:8px;background:var(--surface);border-radius:8px;" title="Stress totale imposto da questa uscita sui tre sistemi energetici. Somma di Aerobe + Glicolitico + PCr.">
           <div style="font-size:22px;font-weight:900;color:var(--text);">${_xssTotal}</div>
           <div style="font-size:9px;color:var(--text3);letter-spacing:0.4px;">TOTAL</div>
         </div>
-        <div style="text-align:center;padding:8px;background:var(--surface);border-radius:8px;" title="Your aerobic engine. Builds and recovers slowly over a 52-day window; long Z2 rides move it.">
+        <div style="text-align:center;padding:8px;background:var(--surface);border-radius:8px;" title="Il tuo motore aerobico. Si costruisce e recupera lentamente in una finestra di 52 giorni; le lunghe Z2 lo spostano.">
           <div style="font-size:18px;font-weight:800;color:#3b82f6;">${_xssCp}</div>
           <div style="font-size:9px;color:var(--text3);letter-spacing:0.4px;">AEROBE</div>
         </div>
-        <div style="text-align:center;padding:8px;background:var(--surface);border-radius:8px;" title="Glycolytic capacity above threshold. Recovers in days; built by VO2max and over-under intervals (5-day window).">
+        <div style="text-align:center;padding:8px;background:var(--surface);border-radius:8px;" title="Capacità glicolitica sopra soglia. Recupera in giorni; costruita da VO2max e intervalli over-under (finestra 5 giorni).">
           <div style="font-size:18px;font-weight:800;color:#f97316;">${_xssWp}</div>
           <div style="font-size:9px;color:var(--text3);letter-spacing:0.4px;">GLYCOLYTISCH</div>
         </div>
-        <div style="text-align:center;padding:8px;background:var(--surface);border-radius:8px;" title="Sprint and PCr power. Recovers fastest (10-day window); driven by short all-out efforts under 20 s.">
+        <div style="text-align:center;padding:8px;background:var(--surface);border-radius:8px;" title="Potenza sprint e PCr. Recupera più velocemente (finestra 10 giorni); guidata da sforzi brevi al massimo sotto 20 s.">
           <div style="font-size:18px;font-weight:800;color:#ef4444;">${_xssPm}</div>
           <div style="font-size:9px;color:var(--text3);letter-spacing:0.4px;">PCR</div>
         </div>
@@ -9557,7 +9562,7 @@ async function openRideDetail(rideId) {
         <div style="font-size:16px;font-weight:800;">${s.distance_km ? s.distance_km.toFixed(1) : '---'}km</div><div style="font-size:9px;color:var(--text3);">DISTANCE</div></div>
       <div style="background:var(--surface2);padding:8px;border-radius:8px;text-align:center;">
         <div style="font-size:16px;font-weight:800;">${elevTxt}</div><div style="font-size:9px;color:var(--text3);">ELEV GAIN</div></div>
-      <div style="background:var(--surface2);padding:8px;border-radius:8px;text-align:center;" title="Mechanical work done (kJ). Approx equals kcal for a human at ~24% efficiency.">
+      <div style="background:var(--surface2);padding:8px;border-radius:8px;text-align:center;" title="Lavoro meccanico svolto (kJ). Circa uguale a kcal per un umano a ~24% di efficienza.">
         <div style="font-size:16px;font-weight:800;">${s.calories || '---'}</div><div style="font-size:9px;color:var(--text3);">KJ / KCAL</div></div>
       <div style="background:var(--surface2);padding:8px;border-radius:8px;text-align:center;">
         <div style="font-size:16px;font-weight:800;">${s.avg_speed != null ? Number(s.avg_speed).toFixed(1) + 'km/h' : '---'}</div><div style="font-size:9px;color:var(--text3);">AVG SPEED</div></div>
@@ -9850,7 +9855,7 @@ async function openRideDetail(rideId) {
       html += `<div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
           <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.5px;">DFA α1 (HRV non-linearity)</div>
-          <div style="font-size:12px;color:var(--text2);" title="Average DFA α1 across the ride. VT1 ≈ 1.0, VT2 ≈ 0.75.">avg ${avgTxt}</div>
+          <div style="font-size:12px;color:var(--text2);" title="DFA α1 media sull'uscita. VT1 ≈ 1.0, VT2 ≈ 0.75.">avg ${avgTxt}</div>
         </div>
         <svg viewBox="0 0 ${W} ${H}" style="width:${W}px;height:${H}px;max-width:100%;" preserveAspectRatio="none">
           <line x1="0" y1="${yVT1}" x2="${W}" y2="${yVT1}" stroke="rgba(34,197,94,0.35)" stroke-width="1" stroke-dasharray="3,2"/>
@@ -9899,7 +9904,7 @@ async function openRideDetail(rideId) {
     const _activityId = ride.activity_id || '';
     const _isRaceChecked = ride.is_race === true ? 'checked' : '';
     const _raceCheckboxHtml = _activityId
-      ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;user-select:none;" title="Race-tagged rides anchor the per-athlete τ fit (PATCH G9 weight 1.0 vs 0.5 for eFTP step changes).">
+      ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;user-select:none;" title="Le uscite marcate gara ancorano il fit τ per atleta (PATCH G9 peso 1.0 vs 0.5 per variazioni eFTP).">
           <input type="checkbox" ${_isRaceChecked} onchange="setActivityRace('${escJs(_activityId)}', this.checked, this)" style="cursor:pointer;"/>
           <span>🏁 Mark as race</span>
           <span id="race-toggle-status-${escJs(_activityId)}" style="font-size:11px;color:var(--text3);"></span>
@@ -12742,7 +12747,7 @@ function _renderPlanPreviewPhases(phases, planWeeks, goal, eventDate, resp) {
     html += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
       <div id="phase-split-sum" style="font-size:11px;font-weight:700;color:${ok ? 'var(--text2)' : 'var(--red)'};">${sum} of ${ps.M} weeks distributed</div>
       <div style="display:inline-flex;gap:6px;align-items:center;">${_phaseSplitBadgeHtml()}
-        <button class="btn" style="padding:3px 10px;font-size:11px;font-weight:600;${ps.state === 'custom' ? 'border-color:var(--accent);color:var(--accent);' : ''}" onclick="phaseSplitReset()" ${ps.state === 'custom' ? '' : 'disabled'} title="Reset to the recommended base/build/peak/taper split">&#8635; Recommended split</button>
+        <button class="btn" style="padding:3px 10px;font-size:11px;font-weight:600;${ps.state === 'custom' ? 'border-color:var(--accent);color:var(--accent);' : ''}" onclick="phaseSplitReset()" ${ps.state === 'custom' ? '' : 'disabled'} title="Ripristina la suddivisione consigliata base/build/peak/taper">&#8635; Recommended split</button>
       </div>
     </div>`;
     if (typeof readBcRaces === 'function' && readBcRaces().length)
@@ -13758,10 +13763,29 @@ async function renderPlanJSON(plan) {
           ? `draggable="true" ondragstart="pgDragStart(event,'${dayStr}',${wi})" ondragend="pgDragEnd(event)"`
           : '';
 
+        // PPC 5.x — strategy notes (single source of truth: backend computes
+        // these per-session from enabled accorgimenti + athlete data). Surface
+        // them as compact day-by-day chips inside the session cell so the plan
+        // reads as computed guidance, not empty input cells.
+        const _stratNotes = [];
+        const _snPush = (label, txt, icon) => {
+          if (txt) _stratNotes.push(`<span class="pg-strat-chip" title="${esc(String(txt))}">${icon} ${esc(String(label))}</span>`);
+        };
+        _snPush('Nutri', s.nutrition_note, '🍎');
+        _snPush('Heat', s.heat_note, '🌡️');
+        _snPush('Integ', s.integration_note, '💊');
+        _snPush('Mob', s.mobility_note, '🤸');
+        _snPush('Force', s.strength_note, '🏋️');
+        _snPush('Dur', s.durability_note, '🛡️');
+        _snPush('Alt', s.altitude_note, '⛰️');
+        const stratHtml = _stratNotes.length
+          ? `<div class="pg-strat-row">${_stratNotes.join('')}</div>` : '';
+
         cal += `<div class="wc-day${todayCls}${stateExtraCls}" data-pg-day="${dayStr}" data-pg-week-idx="${wi}" data-pg-completed="${dayCompleted ? '1' : '0'}" data-pg-rest="0" data-cs="${cardState}" data-content-class="${esc(s.content_class || '')}" style="cursor:pointer;min-height:55px;padding:3px;position:relative;" ${dragAttrs} ondragover="pgDragOver(event)" ondragleave="pgDragLeave(event)" ondrop="pgDrop(event,'${dayStr}',${wi})" onclick="openOverviewDay(${wi},${d},'${dayStr}')">
           <div class="wc-type ${parts.cssCls} pg-card-title" title="${esc(parts.title)}">${esc(parts.title)}</div>
           ${parts.warn}
           <div class="pg-card-meta">${parts.metaText}</div>
+          ${stratHtml}
           ${miniSvg}
           ${actualOverlay}
           ${redrawBtn}
@@ -16350,7 +16374,7 @@ function editZones(kind) {
     <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-sm btn-primary" onclick="saveZones('${kind}')">Save zones</button>
       <button class="btn btn-sm" onclick="loadSettings()">Annulla</button>
-      <button class="btn btn-sm" onclick="resetZones('${kind}')" title="Restore the auto values from FTP/LTHR">Reset to auto</button>
+      <button class="btn btn-sm" onclick="resetZones('${kind}')" title="Ripristina i valori automatici da FTP/LTHR">Reset to auto</button>
     </div>`;
 }
 async function saveZones(kind) {
@@ -18080,7 +18104,7 @@ function _renderWeeklyRollup(s, EXPOSURE_META) {
       legendBits.push(`<span><span class="leg-dot" style="background:${meta.color};"></span>${BAND_SHORT[band]} ${Math.round(mP)}m planned / ${Math.round(mA)}m actual</span>`);
     }
     if (unclass > 0) {
-      legendBits.push(`<span title="Activities without HR or TRIMP signal — not counted in band breakdown."><span class="leg-dot" style="background:var(--text3);"></span>? ${unclass}m</span>`);
+      legendBits.push(`<span title="Attività senza segnale HR o TRIMP — non contate nella ripartizione bande."><span class="leg-dot" style="background:var(--text3);"></span>? ${unclass}m</span>`);
     }
 
     // Planned bar — dashed border outline + 70% opacity to read as a target.
@@ -18685,7 +18709,7 @@ function openTodaySessionDetail() {
     if (d.target_mode === 'hr') {
       html += `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="downloadFIT('${escJs(adj.session_type || 'z2')}', ${adj.duration_min || 60}, '${escJs(adj.zwo_file.replace(/\.zwo$/i, ''))}', '${escJs(adj.zwo_file)}', 'hr')">Scarica FIT (target FC)</button>
-        <button class="btn" disabled style="opacity:0.4;cursor:not-allowed;" title="ZWO is a power-only format — it cannot encode heart-rate targets. Only FIT carries your bpm ranges.">ZWO — can't encode HR</button></div>`;
+        <button class="btn" disabled style="opacity:0.4;cursor:not-allowed;" title="ZWO è un formato solo potenza — non può codificare target di frequenza cardiaca. Solo FIT porta i tuoi range bpm.">ZWO — can't encode HR</button></div>`;
     } else {
       html += `<div style="margin-top:12px;"><button class="btn btn-primary" onclick="downloadZwoFile('${escJs(adj.zwo_file)}')">Download ZWO Workout</button></div>`;
     }
@@ -19266,7 +19290,7 @@ async function openDayWorkout(sessionIdx) {
   // v3.4.5 — file-first TSS stat (slot budget demoted to a labeled secondary).
   html += dayModalTssStat(session);
   if (haveBreakdown) {
-    html += `<div class="metric" title="Warmup + main set + cooldown — the planner budgets the warmup inside the slot"><div class="mv" style="font-size:14px;">${wuMin}·${mainMin}·${cdMin}</div><div class="ml">Warm·Main·Cool</div></div>`;
+    html += `<div class="metric" title="Riscaldamento + parte principale + defaticamento — il planner budgetta il riscaldamento nella slot"><div class="mv" style="font-size:14px;">${wuMin}·${mainMin}·${cdMin}</div><div class="ml">Warm·Main·Cool</div></div>`;
   }
   // hr target_mode (red-team F3): chips come from the server-computed Coggan
   // rows (window._hrRows) so they match chart + FIT exactly; vo2max → RPE;
@@ -19314,7 +19338,7 @@ async function openDayWorkout(sessionIdx) {
   if (_hrLead) {
     // ZWO cannot encode heart rate — greyed out, not hidden, so the user
     // learns WHY it's unavailable rather than wondering where it went.
-    _zwoBtn = `<button class="btn" disabled style="opacity:0.4;cursor:not-allowed;" title="ZWO is a power-only format — it cannot encode heart-rate targets. Only FIT carries your bpm ranges.">ZWO — can't encode HR</button>`;
+    _zwoBtn = `<button class="btn" disabled style="opacity:0.4;cursor:not-allowed;" title="ZWO è un formato solo potenza — non può codificare target di frequenza cardiaca. Solo FIT porta i tuoi range bpm.">ZWO — can't encode HR</button>`;
   } else if (session.zwo_file) {
     // v1.0.3: route through downloadZwoFile() — WKWebView ignores <a download>.
     _zwoBtn = `<button class="btn btn-primary" onclick="downloadZwoFile('${escJs(session.zwo_file)}')">Scarica ZWO (Virtual Trainer)</button>`;
@@ -19327,7 +19351,7 @@ async function openDayWorkout(sessionIdx) {
   // matched ZWO (nothing to attach). name is display-only for the planner branch
   // (the endpoint rebuilds the title from the plan) — passed for symmetry.
   const _calBtn = session.zwo_file
-    ? `<button class="btn" onclick="calPushPlanner('${escJs(session.zwo_file)}','${escJs(session.day)}','${escJs(fitName)}', this)" title="Send this planned session to your intervals.icu calendar">📅 Invia al calendario intervals.icu</button><span class="info-icon" data-popover="calpush-info" tabindex="0" role="button" aria-label="Why send to intervals.icu?" title="Cosa fa l'invio a intervals.icu">?</span>`
+    ? `<button class="btn" onclick="calPushPlanner('${escJs(session.zwo_file)}','${escJs(session.day)}','${escJs(fitName)}', this)" title="Invia questa seduta pianificata al calendario intervals.icu">📅 Invia al calendario intervals.icu</button><span class="info-icon" data-popover="calpush-info" tabindex="0" role="button" aria-label="Why send to intervals.icu?" title="Cosa fa l'invio a intervals.icu">?</span>`
     : '';
   html += (_hrLead ? (_fitBtn + _zwoBtn) : (_zwoBtn + _fitBtn)) + _calBtn;
   html += '</div>';
@@ -19366,8 +19390,8 @@ async function openDayWorkout(sessionIdx) {
   html += `<div style="margin-top:12px;">
     <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Change this workout</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <button class="btn" onclick="rematchDaySession('${session.day}')" style="font-size:12px;">&#x21bb; Swap workout — same type, different session</button><span class="info-icon" data-popover="planpop-rematch" tabindex="0" role="button" aria-label="What does &quot;Swap workout&quot; do?" title="Swaps in another workout of the same type and duration.">i</span>
-      <button class="btn" onclick="swapTypeOpen('${session.day}')" style="font-size:12px;">&#x21c4; Change training type (VO2, tempo, &hellip;)</button><span class="info-icon" data-popover="planpop-swaptype" tabindex="0" role="button" aria-label="What does &quot;Change training type&quot; do?" title="Pick a different training type for this day.">i</span>
+      <button class="btn" onclick="rematchDaySession('${session.day}')" style="font-size:12px;">&#x21bb; Swap workout — same type, different session</button><span class="info-icon" data-popover="planpop-rematch" tabindex="0" role="button" aria-label="What does &quot;Swap workout&quot; do?" title="Sostituisce con un'altra seduta dello stesso tipo e durata.">i</span>
+      <button class="btn" onclick="swapTypeOpen('${session.day}')" style="font-size:12px;">&#x21c4; Change training type (VO2, tempo, &hellip;)</button><span class="info-icon" data-popover="planpop-swaptype" tabindex="0" role="button" aria-label="What does &quot;Change training type&quot; do?" title="Scegli un tipo di allenamento diverso per questo giorno.">i</span>
       ${_canEase ? `<button class="btn" onclick="applyReadinessTierDown();closeModal()" style="font-size:12px;">&#x2193; Make it easier today</button><span class="info-icon" data-popover="planpop-easier" tabindex="0" role="button" aria-label="What does &quot;Make it easier today&quot; do?" title="Drops today one intensity notch.">i</span>` : ''}
     </div>
   </div>`;
@@ -21044,7 +21068,7 @@ function renderActivityModal(p) {
     }
     if (extId) {
       const url = `https://intervals.icu/activities/${encodeURIComponent(extId)}`;
-      icuLinkHtml = `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="btn" style="font-size:11px;padding:4px 10px;text-decoration:none;color:var(--text);" title="Open this activity on intervals.icu">↗ intervals.icu</a>`;
+      icuLinkHtml = `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="btn" style="font-size:11px;padding:4px 10px;text-decoration:none;color:var(--text);" title="Apri questa attività su intervals.icu">↗ intervals.icu</a>`;
     }
   }
 
