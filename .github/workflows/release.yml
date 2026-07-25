@@ -361,16 +361,17 @@ jobs:
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
         with:
           file: installer.nsi
-          extra_args: "/DVERSION=${{ needs.read-version.outputs.version }} /DOUTDIR=${{ github.workspace }}"
+          extra_args: "/DVERSION=${{ needs.read-version.outputs.version }} /DOUTDIR=${{ runner.temp }}"
 
       - name: Verify installer built
         shell: pwsh
         env:
           PPC_VER: ${{ needs.read-version.outputs.version }}
         run: |
-          $out = Join-Path "${{ github.workspace }}" "PPC-Setup-$env:PPC_VER.exe"
-          if (-not (Test-Path $out)) { Write-Error "::error::installer not produced at $out"; exit 1 }
-          Write-Host "Built installer: $out ($([math]::Round((Get-Item $out).Length/1MB,1)) MB)"
+          $src = Join-Path "${{ runner.temp }}" "PPC-Setup-$env:PPC_VER.exe"
+          if (-not (Test-Path $src)) { Write-Error "::error::installer not produced at $src"; exit 1 }
+          Copy-Item $src -Destination "${{ github.workspace }}\PPC-Setup-$env:PPC_VER.exe"
+          Write-Host "Built installer: $src ($([math]::Round((Get-Item $src).Length/1MB,1)) MB)"
 
       - name: Upload installer artifact (build-only)
         if: github.event_name == 'workflow_dispatch'
