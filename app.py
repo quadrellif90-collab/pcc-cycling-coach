@@ -7647,8 +7647,12 @@ def api_surface_types():
 
 
 @app.get("/api/course/{region}/{filename}")
-def api_course_profile(region: str, filename: str):
-    """Return elevation profile data from a CRS file for charting.
+def _course_profile_dict(region: str, filename: str) -> dict | None:
+    """Return elevation profile data from a CRS file for charting, as a dict.
+
+    Extracted from the old api_course_profile endpoint so it can be reused by
+    other handlers (e.g. api_climb_zwo) without going through a JSONResponse.
+    Returns None when the course file is not found.
 
     v1.8.8 Bug 4 — cached routes.json from before the v1.8.6 ASCII rename
     may carry non-ASCII filenames (``pavé``, ``Mür``). On 404, retry with
@@ -7694,7 +7698,7 @@ def api_course_profile(region: str, filename: str):
             "course profile 404 region=%s filename=%r attempts=%s",
             region, filename, attempts,
         )
-        return JSONResponse({"error": "not found"}, 404)
+        return None
     points = []
     in_data = False
     with open(path, encoding="utf-8") as f:
@@ -7757,7 +7761,19 @@ def api_course_profile(region: str, filename: str):
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+def api_course_profile(region: str, filename: str):
+    """FastAPI endpoint: return elevation profile data from a CRS file.
+
+    Wraps :func:`_course_profile_dict` (which returns a dict or None) into a
+    JSONResponse, preserving the historical 404 contract for the dashboard.
+    """
+    data = _course_profile_dict(region, filename)
+    if data is None:
+        return JSONResponse({"error": "not found"}, 404)
+    return JSONResponse(data)
+
+
+
 # VIRTUAL ROUTES API
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -9310,10 +9326,10 @@ def download_zwo(category: str, filename: str, outdoor: int = Query(0),
 @app.get("/api/climb-zwo/{region}/{filename}")
 def api_climb_zwo(region: str, filename: str, warmup: int = Query(10)):
     """Generate a ZWO workout from a climb profile, optionally with warmup."""
-    # Get course profile
-    profile = api_course_profile(region, filename)
-    if isinstance(profile, dict) and profile.get("error"):
-        return JSONResponse({"error": profile["error"]}, 404)
+    # Get course profile (dict, not JSONResponse)
+    profile = _course_profile_dict(region, filename)
+    if profile is None:
+        return JSONResponse({"error": "course not found"}, 404)
     points = profile.get("points", [])
     if len(points) < 2:
         return JSONResponse({"error": "Not enough profile data"}, 400)

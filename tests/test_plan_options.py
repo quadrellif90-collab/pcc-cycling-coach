@@ -53,11 +53,18 @@ def _make_plan():
 
 # ── PlanOptions behaviour ────────────────────────────────────────────────────
 def test_normal_mode_forces_all_flags_off():
-    o = PO.PlanOptions(mode="normal", enable_nutrition=True, enable_heat=True)
+    # mode="normal" WITHOUT explicit flags -> everything off (non-regression
+    # guarantee: default PlanOptions() is byte-identical to 4.4.0).
+    o = PO.PlanOptions(mode="normal")
     assert o.is_normal
-    assert not o.enable_nutrition
-    assert not o.enable_heat
     assert not o.any_enabled
+    # B3 fix: mode="normal" WITH explicit flags -> flags are honoured
+    # (caller forgot to set mode="accorgimenti"); previously they were
+    # silently zeroed, producing empty plans from the API.
+    o2 = PO.PlanOptions(mode="normal", enable_nutrition=True, enable_heat=True)
+    assert o2.enable_nutrition is True
+    assert o2.enable_heat is True
+    assert o2.any_enabled
 
 
 def test_from_dict_roundtrip():

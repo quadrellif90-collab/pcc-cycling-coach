@@ -41,7 +41,16 @@ class PlanOptions:
     enable_notifications: bool = False
 
     def __post_init__(self):
-        if self.mode == "normal":
+        # B3 fix: if the caller passed any flag explicitly True, honour it even
+        # when mode was left at the "normal" default. Only force everything off
+        # when mode is literally "normal" AND no flag was turned on.
+        any_explicit = any(
+            getattr(self, f"enable_{n}")
+            for n in ("nutrition", "integrators", "heat", "strength",
+                      "mobility", "dfa_durability", "altitude", "auto_replan",
+                      "notifications")
+        )
+        if self.mode == "normal" and not any_explicit:
             # Hard rule: normal mode = no accorgimenti.
             self.enable_nutrition = False
             self.enable_integrators = False
@@ -52,6 +61,9 @@ class PlanOptions:
             self.enable_altitude = False
             self.enable_auto_replan = False
             self.enable_notifications = False
+        elif self.mode == "normal" and any_explicit:
+            # Caller set flags but forgot mode -> promote to accorgimenti.
+            self.mode = "accorgimenti"
 
     @property
     def is_normal(self) -> bool:
@@ -86,6 +98,17 @@ class PlanOptions:
             return cls()
         known = {f.name for f in cls.__dataclass_fields__.values()}
         kwargs = {k: v for k, v in (d or {}).items() if k in known}
+        # B3 fix: if any accorgimento flag is explicitly True but mode was not
+        # set to "accorgimenti", treat it as enabled. Otherwise a caller that
+        # sends {"enable_heat": true} without "mode" would have every flag
+        # silently zeroed by __post_init__ (mode defaults to "normal").
+        flags_on = [k for k in (
+            "enable_nutrition", "enable_integrators", "enable_heat",
+            "enable_strength", "enable_mobility", "enable_dfa_durability",
+            "enable_altitude", "enable_auto_replan", "enable_notifications",
+        ) if kwargs.get(k) is True]
+        if flags_on and kwargs.get("mode", "normal") == "normal":
+            kwargs["mode"] = "accorgimenti"
         return cls(**kwargs)
 
 
