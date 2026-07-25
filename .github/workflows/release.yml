@@ -357,21 +357,23 @@ jobs:
             }
           }
 
-      - name: Build Windows installer (Inno Setup)
-        uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
-        with:
-          file: installer.nsi
-          extra_args: "/DVERSION=${{ needs.read-version.outputs.version }} /DOUTDIR=${{ runner.temp }}"
-
-      - name: Verify installer built
+      - name: Build Windows installer (NSIS)
         shell: pwsh
         env:
           PPC_VER: ${{ needs.read-version.outputs.version }}
         run: |
-          $src = Join-Path "${{ runner.temp }}" "PPC-Setup-$env:PPC_VER.exe"
-          if (-not (Test-Path $src)) { Write-Error "::error::installer not produced at $src"; exit 1 }
-          Copy-Item $src -Destination "${{ github.workspace }}\PPC-Setup-$env:PPC_VER.exe"
-          Write-Host "Built installer: $src ($([math]::Round((Get-Item $src).Length/1MB,1)) MB)"
+          # installer.nsi è uno script NSIS (non Inno Setup) — serve makensis.
+          choco install nsis -y --no-progress 2>&1 | Out-Null
+          $makensis = "C:\Program Files (x86)\NSIS\makensis.exe"
+          if (-not (Test-Path $makensis)) { $makensis = "C:\Program Files\NSIS\makensis.exe" }
+          if (-not (Test-Path $makensis)) { Write-Error "::error::makensis not found after choco install"; exit 1 }
+          Write-Host "Using makensis: $makensis"
+          $repoRoot = "${{ github.workspace }}"
+          & "$makensis" '/DVERSION'="$env:PPC_VER" '/DOUTDIR'="$repoRoot" installer.nsi
+          if ($LASTEXITCODE -ne 0) { Write-Error "::error::makensis failed (exit $LASTEXITCODE)"; exit 1 }
+          $out = Join-Path $repoRoot "PPC-Setup-$env:PPC_VER.exe"
+          if (-not (Test-Path $out)) { Write-Error "::error::installer not produced at $out"; exit 1 }
+          Write-Host "Built installer: $out ($([math]::Round((Get-Item $out).Length/1MB,1)) MB)"
 
       - name: Upload installer artifact (build-only)
         if: github.event_name == 'workflow_dispatch'
