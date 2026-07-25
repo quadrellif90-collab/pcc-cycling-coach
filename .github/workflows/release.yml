@@ -369,7 +369,7 @@ jobs:
           if (-not (Test-Path $makensis)) { Write-Error "::error::makensis not found after choco install"; exit 1 }
           Write-Host "Using makensis: $makensis"
           $repoRoot = "${{ github.workspace }}"
-          & "$makensis" '/DVERSION'="$env:PPC_VER" '/DOUTDIR'="$repoRoot" installer.nsi
+          & "$makensis" "/DVERSION=$env:PPC_VER" "/DOUTDIR=$repoRoot" installer.nsi
           if ($LASTEXITCODE -ne 0) { Write-Error "::error::makensis failed (exit $LASTEXITCODE)"; exit 1 }
           $out = Join-Path $repoRoot "PPC-Setup-$env:PPC_VER.exe"
           if (-not (Test-Path $out)) { Write-Error "::error::installer not produced at $out"; exit 1 }
