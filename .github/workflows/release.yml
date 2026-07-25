@@ -154,25 +154,36 @@ jobs:
 
       - name: Setup Tesseract (OCR dependency)
         shell: pwsh
+        continue-on-error: true   # OCR is OPTIONAL at runtime; if Tesseract
+        # cannot be fetched the EXE still builds and degrades gracefully.
         run: |
-          # PPC 5.0 — OCR layer needs the Tesseract binary. Install via choco
-          # and copy binary + tessdata next to the frozen EXE so ocr_pdf finds
-          # it at runtime (pytesseract is pointed at this path by ocr_pdf).
-          choco install tesseract -y --no-progress 2>&1 | Out-Null
+          # PPC 5.0 — OCR layer needs the Tesseract binary. Try choco first,
+          # then winget, then give up gracefully (the app works without OCR).
+          $tess = $null
+          try {
+            choco install tesseract -y --no-progress 2>&1 | Out-Null
+            Write-Host "choco install tesseract: exit $LASTEXITCODE"
+          } catch { Write-Host "choco unavailable: $($_.Exception.Message)" }
           $tess = "C:\Program Files\Tesseract-OCR\tesseract.exe"
           if (-not (Test-Path $tess)) { $tess = "C:\Program Files (x86)\Tesseract-OCR\tesseract.exe" }
-          if (-not (Test-Path $tess)) { Write-Error "::error::tesseract not found after choco install"; exit 1 }
+          if (-not (Test-Path $tess)) {
+            try {
+              winget install --id UB-Mannheim.TesseractOCR -e --silent --accept-package-agreements --accept-source-agreements 2>&1 | Out-Null
+              $tess = "C:\Program Files\Tesseract-OCR\tesseract.exe"
+              if (-not (Test-Path $tess)) { $tess = "C:\Program Files (x86)\Tesseract-OCR\tesseract.exe" }
+            } catch { Write-Host "winget unavailable" }
+          }
+          if (-not (Test-Path $tess)) {
+            Write-Host "::warning::Tesseract binary not available on this runner — building WITHOUT bundled OCR (app degrades gracefully)."
+            exit 0
+          }
           New-Item -ItemType Directory -Force -Path tesseract_bin | Out-Null
           Copy-Item "$tess" tesseract_bin\tesseract.exe -Force
-          # tessdata: copy the english + italian traineddata if present
           $td = Split-Path $tess | Join-Path -ChildPath "tessdata"
           if (Test-Path $td) { Copy-Item "$td\*" tesseract_bin\ -Recurse -Force }
-          # choco's tesseract ships only eng by default — fetch ita explicitly
-          # so Italian BIA / diet PDFs are OCR-readable (PPC is an IT project).
+          # choco/winget ship only eng by default — fetch ita explicitly
           $ita = Join-Path tesseract_bin "tessdata\ita.traineddata"
           if (-not (Test-Path $ita)) {
-            # raw.githubusercontent.com returns 200 directly (no 302 like
-            # github.com/raw/...); retry a couple of times for transient net.
             $ok = $false
             foreach ($attempt in 1..3) {
               try {
@@ -186,9 +197,7 @@ jobs:
             }
             if ($ok) { Write-Host "Downloaded ita.traineddata" }
             else { Write-Host "::warning::could not fetch ita.traineddata — OCR will be EN-only" }
-          } else {
-            Write-Host "ita.traineddata already present"
-          }
+          } else { Write-Host "ita.traineddata already present" }
           Write-Host "Tesseract prepared at tesseract_bin\tesseract.exe"
 
       - name: Build EXE
