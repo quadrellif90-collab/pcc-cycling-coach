@@ -3181,17 +3181,25 @@ def _pick_session(
                 description=f"Step-back: lang Z2 ({dur}min), HR <156 bpm",
             )
         # Weekdays — rotate flavour across stepbacks.
+        if flavour == 0:
+            # Classic Issurin unload: recovery spin (no HIT).
+            dur = min(max_min, 60)
+            return PlannedSession(
+                day=date.today(), day_name="", session_type="recovery",
+                duration_min=dur, tss_estimate=dur / 60 * TSS_PER_HOUR["recovery"],
+                description=f"Step-back: recovery spin ({dur}min), HR <130 bpm",
+            )
         if flavour == 1:
-            # First weekday stepback gets easy tempo; rest remain recovery.
-            # hit_count==0 + day_in_week<=2 means it's the first training day.
-            if hit_count == 0 and day_in_week <= 2:
-                dur = min(max_min, 60)
-                return PlannedSession(
-                    day=date.today(), day_name="", session_type="tempo",
-                    duration_min=dur,
-                    tss_estimate=round(dur / 60 * TSS_PER_HOUR.get("tempo", 75) * 0.7),
-                    description=f"Step-back easy tempo ({dur}min), HR 146-156 bpm",
-                )
+            # Step-back weekday: easy Z2 only (no HIT — tempo counts as HIT
+            # in the deload contract). The first training day gets a slightly
+            # longer Z2; later days stay short recovery to keep the unload honest.
+            dur = min(max_min, 60 if (hit_count == 0 and day_in_week <= 2) else 45)
+            return PlannedSession(
+                day=date.today(), day_name="", session_type="z2",
+                duration_min=dur,
+                tss_estimate=round(dur / 60 * TSS_PER_HOUR.get("z2", 60)),
+                description=f"Step-back easy Z2 ({dur}min), HR 142-156 bpm",
+            )
         elif flavour == 2:
             dur = min(max_min, 75)
             return PlannedSession(
@@ -6117,11 +6125,16 @@ def sample_week_workouts(
         # actual zone profile (recovery only if filename prefix is recovery_).
         _hit_st = {"vo2max", "threshold", "overunder", "sweetspot", "sprint"}
         if not is_hit and sess.session_type in _hit_st:
-            z3 = float(pick.get("Z3%", 0) or 0)
-            if z3 >= 30:
-                sess.session_type = "tempo"
-            else:
+            # Step-back (deload) weeks must stay aerobic — never reclassify to
+            # tempo (counts as HIT in the deload contract). Keep z2.
+            if getattr(w, "is_stepback", False):
                 sess.session_type = "z2"
+            else:
+                z3 = float(pick.get("Z3%", 0) or 0)
+                if z3 >= 30:
+                    sess.session_type = "tempo"
+                else:
+                    sess.session_type = "z2"
         # Long-Z2 weekend reclassification — keep visual signal "long_z2" for
         # endurance ≥120min on Sat/Sun.
         if (
@@ -6349,9 +6362,15 @@ def sample_week_workouts(
                 # interval TSS on an easy-labeled session.
                 _hit_st_swap = {"vo2max", "threshold", "overunder", "sweetspot", "sprint"}
                 if new_sess.session_type in _hit_st_swap:
-                    new_sess.session_type = "tempo"
-                    new_sess.tss_estimate = round(
-                        new_sess.duration_min / 60 * TSS_PER_HOUR.get("tempo", 60), 1)
+                    # Step-back (deload) weeks stay aerobic — never label tempo.
+                    if getattr(w, "is_stepback", False):
+                        new_sess.session_type = "z2"
+                        new_sess.tss_estimate = round(
+                            new_sess.duration_min / 60 * TSS_PER_HOUR.get("z2", 60), 1)
+                    else:
+                        new_sess.session_type = "tempo"
+                        new_sess.tss_estimate = round(
+                            new_sess.duration_min / 60 * TSS_PER_HOUR.get("tempo", 60), 1)
                 new_sess.nutrition_note = _nutrition_note(phase.name, new_sess.session_type)
                 # Free the old pick's name from week_picked (the original slot
                 # contributed to seen_cc_dur_tuples; we keep that — fine).
@@ -7251,6 +7270,17 @@ def generate_plan(
         for w in weeks:
             for s in w.sessions:
                 s.nutrition_note = ""
+
+    # Step-back (deload) contract: no HIT/tempo in an unloading week. Any
+    # post-processing that re-labels a steady slot to tempo must not do so on
+    # a stepback week — force aerobic-only here as a final guarantee.
+    _sb_hit = {"vo2max", "threshold", "overunder", "sweetspot", "sprint", "tempo"}
+    for w in weeks:
+        if getattr(w, "is_stepback", False):
+            for s in w.sessions:
+                if s.session_type in _sb_hit:
+                    s.session_type = "z2"
+                    s.tss_estimate = round(s.duration_min / 60 * TSS_PER_HOUR.get("z2", 60))
 
     return phases, weeks
 

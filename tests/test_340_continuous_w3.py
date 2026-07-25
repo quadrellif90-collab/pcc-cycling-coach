@@ -202,6 +202,8 @@ def test_w_generate_body_wires_focus_for_continuous_only():
     src = _src()
     fn = (_extract_js_function(src, "_planTrainingMode")
           + _extract_js_function(src, "_planGoalValue")
+          + _extract_js_function(src, "_readPlanOptions")
+          + _extract_js_function(src, "_chk")
           + _extract_js_function(src, "generatePlan"))
     harness = """
 const els = {};
