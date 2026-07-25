@@ -1,4 +1,4 @@
-# Tech Debt — VELARCO (fork VELARCO)
+# Tech Debt — PPC (fork PPC)
 
 Audit del 2026-07-25 (deep-scan + verifica incrociata con un altro LLM).
 I bug **funzionali** (crash/valori sballati) sono stati fixati in `training_planner.py`,

@@ -1,17 +1,17 @@
-; VELARCO — Programming Cycling Coach installer (NSIS)
+; PPC — Programming Cycling Coach installer (NSIS)
 ; Installazione in Program Files; i dati utente restano in %USERPROFILE%\.domestique\
 ; e NON vengono toccati da installazione/aggiornamento (così connessioni e piani
 ; sopravvivono senza migrazione).
 
-!define APPNAME "VELARCO"
-!define APPNAMEFULL "VELARCO — Adaptive Cycling Intelligence"
-!define PUBLISHER "VELARCO"
+!define APPNAME "PPC"
+!define APPNAMEFULL "PPC — Adaptive Cycling Intelligence"
+!define PUBLISHER "PPC"
 ; VERSION è passata dal CI come /DVERSION=X.Y.Z
 ; Default di sicurezza se compilato a mano senza /D.
 !ifndef VERSION
   !define VERSION "4.0.0"
 !endif
-!define INSTDIR "$PROGRAMFILES64\VELARCO"
+!define INSTDIR "$PROGRAMFILES64\PPC"
 
 Name "${APPNAMEFULL}"
 ; OutFile assoluto per evitare ambiguità di cwd su CI (GitHub Actions).
@@ -19,29 +19,29 @@ Name "${APPNAMEFULL}"
 !ifndef OUTDIR
   !define OUTDIR "."
 !endif
-OutFile "${OUTDIR}\VELARCO-Setup-${VERSION}.exe"
+OutFile "${OUTDIR}\PPC-Setup-${VERSION}.exe"
 InstallDir "${INSTDIR}"
 RequestExecutionLevel admin
 
 ; I dati utente vivono fuori da INSTDIR -> non li includiamo e non li cancelliamo.
-InstallDirRegKey HKLM "Software\VELARCO" "InstallDir"
+InstallDirRegKey HKLM "Software\PPC" "InstallDir"
 
 Section "Install"
   SetOutPath "$INSTDIR"
   ; I file dell'app (EXE + dipendenze bundle da PyInstaller) vanno qui.
-  File /r "dist\VELARCO\*.*"
+  File /r "dist\PPC\*.*"
 
   ; Scorciatoia nel menu Start
   CreateDirectory "$SMPROGRAMS\${APPNAME}"
-  CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAMEFULL}.lnk" "$INSTDIR\VELARCO.exe" "" "$INSTDIR\VELARCO.exe" 0
-  CreateShortCut "$DESKTOP\${APPNAMEFULL}.lnk" "$INSTDIR\VELARCO.exe" "" "$INSTDIR\VELARCO.exe" 0
+  CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAMEFULL}.lnk" "$INSTDIR\PPC.exe" "" "$INSTDIR\PPC.exe" 0
+  CreateShortCut "$DESKTOP\${APPNAMEFULL}.lnk" "$INSTDIR\PPC.exe" "" "$INSTDIR\PPC.exe" 0
 
   ; Disinstallatore
   WriteUninstaller "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO" "DisplayName" "${APPNAMEFULL}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO" "UninstallString" "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO" "DisplayVersion" "${VERSION}"
-  WriteRegStr HKLM "Software\VELARCO" "InstallDir" "$INSTDIR"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PPC" "DisplayName" "${APPNAMEFULL}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PPC" "UninstallString" "$INSTDIR\Uninstall.exe"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PPC" "DisplayVersion" "${VERSION}"
+  WriteRegStr HKLM "Software\PPC" "InstallDir" "$INSTDIR"
 SectionEnd
 
 Section "Uninstall"
@@ -50,6 +50,6 @@ Section "Uninstall"
   Delete "$DESKTOP\${APPNAMEFULL}.lnk"
   RMDir "$SMPROGRAMS\${APPNAME}"
   RMDir /r "$INSTDIR"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO"
-  DeleteRegKey HKLM "Software\VELARCO"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PPC"
+  DeleteRegKey HKLM "Software\PPC"
 SectionEnd

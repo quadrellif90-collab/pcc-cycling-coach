@@ -76,8 +76,8 @@ def test_dashboard_severity_gate_replaces_score_range_gate():
 
 
 def test_dashboard_has_rest_button_label():
-    # severity=rest collapses to a single button labeled "Apply rest day".
-    assert "Apply rest day" in _DASH
+    # severity=rest collapses to a single button labeled "Applica giorno di riposo".
+    assert "Applica giorno di riposo" in _DASH
 
 
 def test_dashboard_has_auto_adjust_week_button_label():
@@ -118,8 +118,8 @@ def test_dashboard_auto_adjust_has_apply_and_cancel_buttons():
     # Modal must offer both an Apply button and a Cancel button.
     assert "auto-adjust-apply-btn" in _DASH
     assert "closeModal()" in _DASH
-    assert ">Cancel<" in _DASH
-    assert ">Apply<" in _DASH
+    assert ">Annulla<" in _DASH
+    assert ">Applica<" in _DASH
 
 
 def test_dashboard_auto_adjust_commit_helper_exists():

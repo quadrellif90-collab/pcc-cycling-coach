@@ -1,12 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec for VELARCO — Adaptive Cycling Intelligence.
+PyInstaller spec for PPC — Adaptive Cycling Intelligence.
 
 Build:
-  macOS:   pyinstaller velarco.spec
-  Windows: pyinstaller velarco.spec
+  macOS:   pyinstaller ppc.spec
+  Windows: pyinstaller ppc.spec
 
-Output: dist/VELARCO.app (macOS) or dist/VELARCO/VELARCO.exe (Windows)
+Output: dist/PPC.app (macOS) or dist/PPC/PPC.exe (Windows)
 
 NOTE: the on-disk data directory stays ~/.domestique/ so existing user data
 and intervals.icu connections survive upgrades without migration.
@@ -18,7 +18,7 @@ import importlib.util
 from pathlib import Path
 
 block_cipher = None
-app_name = "VELARCO"
+app_name = "PPC"
 
 # v4.4.0 BUILD-FIX: scipy 1.18 dropped the importable `scipy._lib.array_api_compat`
 # shim that earlier versions exposed, so a hard hidden-import of it makes
@@ -146,7 +146,7 @@ a = Analysis(
         "fit_tool.profile.messages.file_id_message",
         "fit_tool.profile.messages.workout_message",
         "fit_tool.profile.messages.workout_step_message",
-        # VELARCO 5.0 — OCR layer. pytesseract is the wrapper (tesseract binary is
+        # PPC 5.0 — OCR layer. pytesseract is the wrapper (tesseract binary is
         # optional at runtime); fitz (PyMuPDF) is the PDF rasterizer. Both are
         # imported lazily inside ocr_pdf, so PyInstaller won't see them.
         "pytesseract",
@@ -166,7 +166,7 @@ a = Analysis(
     runtime_hooks=[],
     # v1.0.7: numpy + scipy were previously excluded for a leaner DMG; both are
     # now required for τ-fitting and must NOT be excluded. matplotlib + pandas
-    # remain excluded — VELARCO never imports them. (~50 MB bundle hit, see
+    # remain excluded — PPC never imports them. (~50 MB bundle hit, see
     # MASTER_DECISIONS_v107_v110_v120_PATCH.md G2.)
     excludes=["matplotlib", "pandas"],  # keep tkinter for folder picker
     win_no_prefer_redirects=False,
@@ -188,7 +188,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,  # no terminal window
-    icon="assets/velarco_logo.ico",
+    icon="assets/ppc_logo.ico",
 )
 
 coll = COLLECT(
@@ -207,8 +207,8 @@ if sys.platform == "darwin":
     app = BUNDLE(
         coll,
         name=f"{app_name}.app",
-        icon="assets/velarco_logo.ico" if os.path.exists("assets/velarco_logo.ico") else None,
-        bundle_identifier="com.velarco.cycling",
+        icon="assets/ppc_logo.ico" if os.path.exists("assets/ppc_logo.ico") else None,
+        bundle_identifier="com.ppc.cycling",
         info_plist={
             "CFBundleDisplayName": app_name,
             # Both keys MUST match VERSION — otherwise the About box and the
@@ -221,9 +221,9 @@ if sys.platform == "darwin":
             # Mojave/Catalina support becomes a hard requirement.
             "LSMinimumSystemVersion": "11.0",
             "NSHighResolutionCapable": True,
-            "NSHumanReadableCopyright": "(c) 2026 VELARCO — Adaptive Cycling Intelligence (fork of VELARCO, Apache-2.0)",
+            "NSHumanReadableCopyright": "(c) 2026 PPC — Adaptive Cycling Intelligence (fork of PPC, Apache-2.0)",
             # v4.0.0-alpha: Bluetooth usage key removed along with the BLE
-            # subsystem -- VELARCO no longer scans or connects to any
+            # subsystem -- PPC no longer scans or connects to any
             # trainer/HR device. Keeping the key would spuriously trigger
             # the Apple TCC prompt on first launch.
             "LSUIElement": False,  # show in Dock

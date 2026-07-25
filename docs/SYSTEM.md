@@ -1,12 +1,12 @@
-# VELARCO (VELARCO) — System Documentation
+# PPC (PPC) — System Documentation
 
-*Evidence-based indoor cycling training platform — your training domestique. Product name: **VELARCO — Adaptive Cycling Intelligence**; the codebase retains the historical "VELARCO" name.*
+*Evidence-based indoor cycling training platform — your training domestique. Product name: **PPC — Adaptive Cycling Intelligence**; the codebase retains the historical "PPC" name.*
 
 ---
 
 ## Project Overview
 
-VELARCO (formerly ChickenCycling) is a local-first indoor cycling training platform. It combines a local Python backend with a vanilla JavaScript frontend (no npm, no build step) and a rich library of workouts, route profiles, and nutrition data.
+PPC (formerly ChickenCycling) is a local-first indoor cycling training platform. It combines a local Python backend with a vanilla JavaScript frontend (no npm, no build step) and a rich library of workouts, route profiles, and nutrition data.
 
 Key capabilities:
 

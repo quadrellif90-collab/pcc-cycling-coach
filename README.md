@@ -1,25 +1,25 @@
-![VELARCO](assets/velarco_logo.png)
+![PPC](assets/ppc_logo.png)
 
-# VELARCO — Adaptive Cycling Intelligence
+# PPC — Adaptive Cycling Intelligence
 
 **Pianificatore di allenamento ciclistico adattivo, locale, che chiude il loop tra ciò che hai programmato e ciò che hai realmente fatto — con nutrizione, forza, mobilità e body-composition integrati.**
 
-> **VELARCO** (VELocità + ARCO di potenza): il nome evoca la *power-duration curve*, il cuore scientifico del pianificatore — la curva che descrive quanto riesci a produrre per quanto tempo. Il logo unisce quell'arco ascendente a una ruota, con il gradiente teal→amber della palette.
+> **PPC** (VELocità + ARCO di potenza): il nome evoca la *power-duration curve*, il cuore scientifico del pianificatore — la curva che descrive quanto riesci a produrre per quanto tempo. Il logo unisce quell'arco ascendente a una ruota, con il gradiente teal→amber della palette.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.1.0-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-VELARCO-orange)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.1.0-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-PPC-orange)
 
-Latest: **[v5.1.0 — Rebrand VELARCO + OCR IT/EN](https://github.com/quadrellif90-collab/velarco-cycling-coach/releases/tag/v5.1.0)**
+Latest: **[v5.1.0 — Rebrand PPC + OCR IT/EN](https://github.com/quadrellif90-collab/ppc-cycling-coach/releases/tag/v5.1.0)**
 
-> ⚠️ **Fork italiano di VELARCO** (Apache-2.0, `platypus45`). Questa è una versione derivata: stessa architettura di pianificazione adattiva, ma con motore nutrizione/integrazione riscritto, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento. Il credito all'autore originale è in [`NOTICE`](NOTICE).
+> ⚠️ **Fork italiano di PPC** (Apache-2.0, `platypus45`). Questa è una versione derivata: stessa architettura di pianificazione adattiva, ma con motore nutrizione/integrazione riscritto, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento. Il credito all'autore originale è in [`NOTICE`](NOTICE).
 
 ---
 
 
 ### Sicurezza & OAuth (Intervals.icu)
 
-L'integrazione Intervals.icu usa il flusso **OAuth 2.0 installed-app** (public client, senza PKCE): il `client_id` è pubblico e il `client_secret` è bundlato nel eseguibile (`velarco.spec` include `.oauth.env`). Questo è il pattern standard per le app desktop installate presso un provider che non emette segreti per-utente; il secret non grantisce accesso a dati altrui e può essere revocato dal pannello Intervals.icu in qualsiasi momento. Il file `.oauth.env` è git-ignored (mai nel repository). Non è un segreto a elevata sensibilità (non è una password utente, non è una API key cloud privata).
+L'integrazione Intervals.icu usa il flusso **OAuth 2.0 installed-app** (public client, senza PKCE): il `client_id` è pubblico e il `client_secret` è bundlato nel eseguibile (`ppc.spec` include `.oauth.env`). Questo è il pattern standard per le app desktop installate presso un provider che non emette segreti per-utente; il secret non grantisce accesso a dati altrui e può essere revocato dal pannello Intervals.icu in qualsiasi momento. Il file `.oauth.env` è git-ignored (mai nel repository). Non è un segreto a elevata sensibilità (non è una password utente, non è una API key cloud privata).
 
-**Indice:** [TL;DR](#tldr) · [Perché esiste](#perché-esiste) · [Cosa è cambiato rispetto a VELARCO](#cosa-è-cambiato-rispetto-a-domestique) · [Avvio rapido](#avvio-rapido) · [Motore Nutrizione & Integrazione](#motore-nutrizione--integrazione) · [Forza & Mobilità](#forza--mobilità) · [Multi-disciplina](#multi-disciplina) · [Body Composition (BIA)](#body-composition-bia) · [Sync & Altri sport/app](#sync--altre-app) · [Planner adattivo](#planner-adattivo) · [Auto-aggiornamento](#auto-aggiornamento) · [Architettura](#architettura) · [La scienza](#la-scienza) · [Release](#release) · [Licenza](#licenza--attribuzione)
+**Indice:** [TL;DR](#tldr) · [Perché esiste](#perché-esiste) · [Cosa è cambiato rispetto a PPC](#cosa-è-cambiato-rispetto-a-domestique) · [Avvio rapido](#avvio-rapido) · [Motore Nutrizione & Integrazione](#motore-nutrizione--integrazione) · [Forza & Mobilità](#forza--mobilità) · [Multi-disciplina](#multi-disciplina) · [Body Composition (BIA)](#body-composition-bia) · [Sync & Altri sport/app](#sync--altre-app) · [Planner adattivo](#planner-adattivo) · [Auto-aggiornamento](#auto-aggiornamento) · [Architettura](#architettura) · [La scienza](#la-scienza) · [Release](#release) · [Licenza](#licenza--attribuzione)
 
 > Approfondimento: la logica completa del planner, le formule e la tabella delle referenze citate sono in [**docs/SCIENCE.md**](docs/SCIENCE.md).
 
@@ -27,9 +27,9 @@ L'integrazione Intervals.icu usa il flusso **OAuth 2.0 installed-app** (public c
 
 ## TL;DR
 
-VELARCO è un planner ciclistico **localhost-only** che:
+PPC è un planner ciclistico **localhost-only** che:
 
-- Include **4.200+ workout ZWO strutturati** e **622 route virtuali** (ereditati dalla libreria VELARCO);
+- Include **4.200+ workout ZWO strutturati** e **622 route virtuali** (ereditati dalla libreria PPC);
 - Importa i tuoi **FIT post-uscita** e **muta la prescrizione del giorno successivo** da ogni segnale che la pedalata ha esposto (TSS overshoot, breach di polarizzazione, DFA α1, decoupling aerobico, monotonia Foster, drift eFTP, composite Hooper, overload glicolitico);
 - Aggiunge un **motore nutrizione & integrazione** completo: TDEE (Mifflin-St Jeor), macro su base scientifica, compensazione al carico ("fuel for the work required"), dosi supplementi calcolate sul peso e race-fueling;
 - Inietta **forza e mobilità** direttamente nel piano (protocolli per fase);
@@ -49,17 +49,17 @@ La maggior parte delle app di allenamento cade in due modalità:
 - **Solo display**: widget HRV, curve di fitness Banister, anelli di polarizzazione — grafici bellissimi, zero feedback comportamentale.
 - **Solo calendario**: un piano fisso di 12 settimane che non sa cosa hai realmente fatto ieri.
 
-VELARCO (come VELARCO da cui deriva) è diverso: ogni segnale che tocca la dashboard ha anche un code-path che muta una sessione futura. Aggiunge, rispetto all'originale, un motore nutrizione/integrazione e forza/mobilità **integrati nel piano** invece di essere fogli di calcolo separati.
+PPC (come PPC da cui deriva) è diverso: ogni segnale che tocca la dashboard ha anche un code-path che muta una sessione futura. Aggiunge, rispetto all'originale, un motore nutrizione/integrazione e forza/mobilità **integrati nel piano** invece di essere fogli di calcolo separati.
 
 Sette guardrail scientifici (G1–G7) ereditati, ciascuno con citazione, più una fase di consolidamento di 1 settimana alla fine di ogni ciclo non-evento (Mujika 2010).
 
 ---
 
-## Cosa è cambiato rispetto a VELARCO
+## Cosa è cambiato rispetto a PPC
 
-VELARCO parte da VELARCO 3.5.2 e aggiunge/riscrive:
+PPC parte da PPC 3.5.2 e aggiunge/riscrive:
 
-| Area | VELARCO 3.5.2 | VELARCO 4.0.0 |
+| Area | PPC 3.5.2 | PPC 4.0.0 |
 |---|---|---|
 | **Lingua UI** | Inglese | Italiano (termini di dominio in EN: CTL, TSS, FTP, W/kg, VO2max, ZWO, FIT, rMSSD, DFA α1) |
 | **Motore nutrizione** | Note generiche per fase | Motore completo: `nutrition.py` (TDEE Mifflin-St Jeor, macro obiettivo, compensazione carico, `race_fueling`, `diet.py` pasti/grammi) |
@@ -70,10 +70,10 @@ VELARCO parte da VELARCO 3.5.2 e aggiunge/riscrive:
 | **Multi-disciplina** | Ciclismo centrale | Campo `disciplines` profilo (cycling/running/mtb/swim/strength/mobility) + cross-sport TSS |
 | **Auto-aggiornamento** | Banner "update disponibile" | **Install reale** da GitHub Releases (`/api/self-update`) |
 | **Palette / Dashboard** | Blu originale | Teal/amber, sidebar tab a sinistra, card ridimensionabili/riordinabili |
-| **Brand** | VELARCO | VELARCO — Programming Cycling Coach (omaggio in NOTICE + header) |
-| **Build** | `domestique.spec` | `velarco.spec`, installer NSIS `VELARCO-Setup.exe`, CI macOS `.dmg` |
+| **Brand** | PPC | PPC — Programming Cycling Coach (omaggio in NOTICE + header) |
+| **Build** | `domestique.spec` | `ppc.spec`, installer NSIS `PPC-Setup.exe`, CI macOS `.dmg` |
 
-**Non abbiamo rimosso** la logica di pianificazione adattiva di VELARCO (guardrail G1–G7, ricalibrazione FTP a metà ciclo, micro-intervalli 30/15 Rønnestad, 4×8 Seiler, polarizzazione, ACWR Gabbett). VELARCO la estende.
+**Non abbiamo rimosso** la logica di pianificazione adattiva di PPC (guardrail G1–G7, ricalibrazione FTP a metà ciclo, micro-intervalli 30/15 Rønnestad, 4×8 Seiler, polarizzazione, ACWR Gabbett). PPC la estende.
 
 ---
 
@@ -85,11 +85,11 @@ pip install -r requirements.txt
 python run_web.py                 # apre http://localhost:8080 nel browser
 
 # Build desktop (EXE Windows)
-pyinstaller velarco.spec --clean --noconfirm
-# → dist/VELARCO/VELARCO.exe  (poi: iscc installer.nsi → VELARCO-Setup-<ver>.exe silenzioso)
+pyinstaller ppc.spec --clean --noconfirm
+# → dist/PPC/PPC.exe  (poi: iscc installer.nsi → PPC-Setup-<ver>.exe silenzioso)
 
 # Build desktop (macOS .dmg) — richiede macOS
-bash build_mac.sh                # → dist/VELARCO.app + VELARCO.dmg
+bash build_mac.sh                # → dist/PPC.app + PPC.dmg
 ```
 
 Nessun `.exe` necessario per la modalità web: il backend FastAPI gira e l'interfaccia è HTML nel browser. I dati utente restano in `~/.domestique/` (intenzionalmente non rinominato, così piani e connessioni ICU sopravvivono agli aggiornamenti).
@@ -122,7 +122,7 @@ Endpoint:
 
 ## Multi-disciplina
 
-VELARCO non è solo ciclismo. Il profilo atleta accetta `disciplines` (`cycling`, `running`, `mtb`, `swim`, `strength`, `mobility`). Il planner tratta il TSS cross-sport in modo coerente: *"a hard run's TSS counts the same as a hard ride"* — una corsa dura carica quanto una salita dura, così il bilanciamento settimanale resta onesto anche per triathleti/MTB/Gravel.
+PPC non è solo ciclismo. Il profilo atleta accetta `disciplines` (`cycling`, `running`, `mtb`, `swim`, `strength`, `mobility`). Il planner tratta il TSS cross-sport in modo coerente: *"a hard run's TSS counts the same as a hard ride"* — una corsa dura carica quanto una salita dura, così il bilanciamento settimanale resta onesto anche per triathleti/MTB/Gravel.
 
 ---
 
@@ -148,7 +148,7 @@ Sync bidirezionale ICU: attività, calendario (push delle sessioni pianificate �
 
 ## Planner adattivo
 
-Ereditato e mantenuto da VELARCO, con le nostre estensioni sopra. Il planner legge ogni mattina HRV (vs baseline), forma e deficit di zona, e muta la prescrizione:
+Ereditato e mantenuto da PPC, con le nostre estensioni sopra. Il planner legge ogni mattina HRV (vs baseline), forma e deficit di zona, e muta la prescrizione:
 
 - **Soreness ≥ 6/7** sulla composite Hooper → la VO2max di oggi diventa recupero (Hooper & Mackinnon 1995; Cheung et al. 2003).
 - **TSS reale settimana scorsa > 1.5× pianificata** → budget TSS settimana prossima -15% (Gabbett 2016, ACWR 0.8–1.3).
@@ -165,8 +165,8 @@ Fasi: BASE / BUILD1 / BUILD2 / PEAK / TAPER (event prep) o CONSOLIDATION (cicli 
 
 L'app controlla `releases/latest` sul fork a ogni avvio (con cache 6h). Se c'è una versione più nuova:
 
-- **Windows**: scarica `VELARCO-Setup-<ver>.exe` e lancia l'installer NSIS silenzioso (`/S`) che rimpiazza l'EXE;
-- **macOS**: monta `VELARCO.dmg` (trascini VELARCO in Applicazioni).
+- **Windows**: scarica `PPC-Setup-<ver>.exe` e lancia l'installer NSIS silenzioso (`/S`) che rimpiazza l'EXE;
+- **macOS**: monta `PPC.dmg` (trascini PPC in Applicazioni).
 
 Endpoint: `POST /api/self-update` (verificato con test `tests/test_self_update.py`). Le release sono firmate... *nota*: il `.dmg` macOS non è notarizzato Apple — al primo avvio potrebbe servire "Apri" col tasto destro o `xattr -d`.
 
@@ -191,7 +191,7 @@ Dati in `~/.domestique/`; nessun cloud.
 
 ## La scienza
 
-Ogni regola del planner cita uno studio. Tabella completa e formule in [**docs/SCIENCE.md**](docs/SCIENCE.md). Riferimenti chiave usati da VELARCO:
+Ogni regola del planner cita uno studio. Tabella completa e formule in [**docs/SCIENCE.md**](docs/SCIENCE.md). Riferimenti chiave usati da PPC:
 
 - **Rønnestad 2014 / 2020** — micro-intervalli 30/15 (+12% FTP, +12% potenza a 40 min); block periodization (+8.8% VO2max, +22% soglia).
 - **Seiler** — 4×8 min (top FTP/VO2max builder).
@@ -210,10 +210,10 @@ Ogni regola del planner cita uno studio. Tabella completa e formule in [**docs/S
 
 | Piattaforma | Asset | Auto-update |
 |---|---|---|
-| Windows | `VELARCO-Setup-4.0.0.exe` (installer NSIS silenzioso) | `VELARCO-Setup*.exe /S` |
-| macOS | `VELARCO.dmg` (buildato da CI su runner macOS) | monta e trascina in Applicazioni |
+| Windows | `PPC-Setup-4.0.0.exe` (installer NSIS silenzioso) | `PPC-Setup*.exe /S` |
+| macOS | `PPC.dmg` (buildato da CI su runner macOS) | monta e trascina in Applicazioni |
 
-Vedi [**Releases**](https://github.com/quadrellif90-collab/velarco-cycling-coach/releases) sul fork.
+Vedi [**Releases**](https://github.com/quadrellif90-collab/ppc-cycling-coach/releases) sul fork.
 
 ---
 
@@ -221,7 +221,7 @@ Vedi [**Releases**](https://github.com/quadrellif90-collab/velarco-cycling-coach
 
 Apache-2.0 — vedi [`LICENSE`](LICENSE) e [`NOTICE`](NOTICE).
 
-VELARCO è un **fork di VELARCO** (`platypus45`, Apache-2.0). Tutto il merito per il codebase originale, il build system e buona parte del motore di scienza dell'allenamento va agli autori originali di VELARCO. VELARCO aggiunge: motore nutrizione/integrazione, forza/mobilità, BIA, sync estensibile, UI italiana, auto-update.
+PPC è un **fork di PPC** (`platypus45`, Apache-2.0). Tutto il merito per il codebase originale, il build system e buona parte del motore di scienza dell'allenamento va agli autori originali di PPC. PPC aggiunge: motore nutrizione/integrazione, forza/mobilità, BIA, sync estensibile, UI italiana, auto-update.
 
 Tacx, Wahoo, Garmin, Polar, MyWhoosh, Zwift, Golden Cheetah, Rouvy, Intervals.icu sono marchi dei rispettivi proprietari.
 
@@ -247,6 +247,6 @@ Tacx, Wahoo, Garmin, Polar, MyWhoosh, Zwift, Golden Cheetah, Rouvy, Intervals.ic
 
 ---
 
-*Costruito con ricerca PubMed, 4.200+ workout e profondo amore per il ciclismo — fork italiano di VELARCO.*
+*Costruito con ricerca PubMed, 4.200+ workout e profondo amore per il ciclismo — fork italiano di PPC.*
 
-Copyright (c) 2026 VELARCO contributors (fork of VELARCO, Apache-2.0).
+Copyright (c) 2026 PPC contributors (fork of PPC, Apache-2.0).

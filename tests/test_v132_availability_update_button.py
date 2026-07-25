@@ -44,8 +44,8 @@ def test_popover_renders_update_button_in_idle_state():
 
     # Idle label.
     idle_label = button_match.group(1).strip()
-    assert idle_label == "UP TO DATE", (
-        f"expected idle button label 'UP TO DATE', got {idle_label!r}"
+    assert idle_label == "AGGIORNATO", (
+        f"expected idle button label 'AGGIORNATO', got {idle_label!r}"
     )
 
     # No 'dirty' class baked into the markup — that class is added by JS
