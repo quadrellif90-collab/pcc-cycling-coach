@@ -171,13 +171,21 @@ jobs:
           # so Italian BIA / diet PDFs are OCR-readable (PPC is an IT project).
           $ita = Join-Path tesseract_bin "tessdata\ita.traineddata"
           if (-not (Test-Path $ita)) {
-            try {
-              Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/ita.traineddata" `
-                -OutFile $ita -ErrorAction Stop
-              Write-Host "Downloaded ita.traineddata"
-            } catch {
-              Write-Host "::warning::could not fetch ita.traineddata — OCR will be EN-only"
+            # raw.githubusercontent.com returns 200 directly (no 302 like
+            # github.com/raw/...); retry a couple of times for transient net.
+            $ok = $false
+            foreach ($attempt in 1..3) {
+              try {
+                curl.exe -fsSL --retry 2 -o "$ita" `
+                  "https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/ita.traineddata"
+                if (Test-Path $ita -and (Get-Item $ita).Length -gt 1MB) { $ok = $true; break }
+              } catch {
+                Write-Host "ita.traineddata attempt $attempt failed: $($_.Exception.Message)"
+                Start-Sleep -Seconds 5
+              }
             }
+            if ($ok) { Write-Host "Downloaded ita.traineddata" }
+            else { Write-Host "::warning::could not fetch ita.traineddata — OCR will be EN-only" }
           } else {
             Write-Host "ita.traineddata already present"
           }
