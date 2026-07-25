@@ -19,7 +19,7 @@ Name "${APPNAMEFULL}"
 !ifndef OUTDIR
   !define OUTDIR "."
 !endif
-OutFile "${OUTDIR}\PPC-Setup-${VERSION}.exe"
+OutFile "${OUTDIR}\VELARCO-Setup-${VERSION}.exe"
 InstallDir "${INSTDIR}"
 RequestExecutionLevel admin
 
