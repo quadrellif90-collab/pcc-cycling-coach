@@ -206,7 +206,7 @@ jobs:
         shell: cmd
         run: |
           call build_win.bat
-          dir dist\PPC
+          dir dist\VELARCO
 
       - name: Bundle Tesseract into the EXE folder
         shell: pwsh

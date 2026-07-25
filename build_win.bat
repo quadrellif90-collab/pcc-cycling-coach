@@ -23,12 +23,14 @@ if not exist assets mkdir assets
 REM 4. Build with PyInstaller (ppc.spec produces dist\VELARCO\VELARCO.exe)
 echo Building...
 pyinstaller ppc.spec --clean --noconfirm
+if errorlevel 1 (
+    echo PYINSTALLER FAILED
+    exit /b 1
+)
 
 echo.
 echo === Build complete ===
 echo Executable: dist\VELARCO\VELARCO.exe
-echo.
-echo To create the installer, compile installer.nsi with NSIS:
-echo   makensis installer.nsi   ->   VELARCO-Setup-<ver>.exe
 echo To run: dist\VELARCO\VELARCO.exe
 REM (no `pause` — would hang CI runners waiting for input)
+exit /b 0
