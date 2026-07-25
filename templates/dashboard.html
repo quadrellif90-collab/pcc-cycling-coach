@@ -14,7 +14,7 @@
      through (settings-tab help was unreadable). Opaque elevated surface. */
   --card: #1a2332;
   --text: #e6edf3; --text2: #b8c8d8; --text3: #8a9bb0;
-  /* PPC palette — teal/cyan (primary) + amber (secondary). Homage to Domestique
+  /* VELARCO palette — teal/cyan (primary) + amber (secondary). Homage to VELARCO
      kept via NOTICE; visual identity distinct. */
   --accent: #14b8a6; --accent2: #f59e0b;
   --green: #22c55e; --yellow: #eab308; --orange: #f97316; --red: #ef4444; --purple: #a855f7;
@@ -1354,7 +1354,7 @@ details > summary:hover::before { color: var(--accent); }
   pointer-events: none;
 }
 
-/* ═══ PPC — layout: sidebar tab a sinistra + card draggable/resizable ═══ */
+/* ═══ VELARCO — layout: sidebar tab a sinistra + card draggable/resizable ═══ */
 .app-shell { display:flex; align-items:flex-start; gap:0; }
 .sidebar-tabs { display:flex; flex-direction:column; gap:4px; padding:10px 8px;
   background:var(--surface); border-right:1px solid var(--border); min-width:150px;
@@ -1447,7 +1447,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div>
       <h1><img src="/static/velarco_logo.png" alt="VELARCO" style="height:28px;vertical-align:middle;margin-right:6px;border-radius:6px;">VELARCO<span id="app-version" style="font-size:10px;font-weight:400;color:var(--text3);vertical-align:middle;margin-left:7px;"></span></h1>
       <div style="font-size:12px;color:var(--text2)" id="date-header"></div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px;">fork di <a href="https://github.com/platypus45/domestique" target="_blank" rel="noopener" style="color:var(--accent2);text-decoration:none;">Domestique</a> · credit &amp; homage to platypus45</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">fork di <a href="https://github.com/platypus45/domestique" target="_blank" rel="noopener" style="color:var(--accent2);text-decoration:none;">VELARCO</a> · credit &amp; homage to platypus45</div>
       <div style="position:absolute;right:16px;top:12px;"></div>
     </div>
     <!-- Header sync chip — spinner + "Updating activities" next to the logo while
@@ -1660,7 +1660,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 
   <!-- BETA Fase 7b: Nutrizione & Integrazione -->
-  <!-- PPC: Nutrizione (compressa con <details>, decide da sola il carico) -->
+  <!-- VELARCO: Nutrizione (compressa con <details>, decide da sola il carico) -->
   <details class="card" style="margin-top:12px;" id="nutrition-card" open>
     <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
       🍎 Nutrizione <span id="nutri-summary-badge" style="font-size:10px;color:var(--text3);font-weight:400;"></span>
@@ -1677,7 +1677,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="nutrition-plan" style="font-size:12px;color:var(--text2);">Caricamento…</div>
   </details>
 
-  <!-- PPC: Integrazione (card separata, compressa) -->
+  <!-- VELARCO: Integrazione (card separata, compressa) -->
   <details class="card" style="margin-top:12px;" id="supplement-card" open>
     <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
       💊 Integrazione <span style="font-size:10px;color:var(--text3);font-weight:400;">(Gruppo A, dosi su peso)</span>
@@ -1718,7 +1718,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="my-calendar" style="font-size:11px;color:var(--text2);">Genera un piano per vedere l'aderenza…</div>
   </div>
 
-  <!-- PPC: Piano alimentare settimanale (creatore di diete) -->
+  <!-- VELARCO: Piano alimentare settimanale (creatore di diete) -->
   <details class="card" style="margin-top:12px;" id="diet-card">
     <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
       🍽️ Piano alimentare <span style="font-size:10px;color:var(--text3);font-weight:400;">(sorgente + import PDF)</span>
@@ -1726,7 +1726,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center;">
       <label style="font-size:11px;color:var(--text2);">Sorgente:</label>
       <select id="diet-source" style="font-size:11px;padding:3px 6px;" onchange="onDietSourceChange()">
-        <option value="app">App PPC</option>
+        <option value="app">App VELARCO</option>
         <option value="none">Nessuna</option>
         <option value="nutritionist">Nutrizionista (PDF)</option>
         <option value="macro">Solo macro</option>
@@ -2316,7 +2316,7 @@ window.addEventListener('unhandledrejection', function(e) {
           <span class="hint" title="Concentrate each build/peak phase on ONE quality per ~3-4 week block (VO2 block then threshold block toward your event) instead of mixing every hard type weekly. Evidence is strongest for trained cyclists with adequate volume; default OFF." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
         </label></div>
       </div>
-      <!-- PPC 5.x — Accorgimenti selector. Each toggle switches ON a layer that
+      <!-- VELARCO 5.x — Accorgimenti selector. Each toggle switches ON a layer that
            enriches the SAME plan (single source of truth). All off = planner
            normale (identical to 4.4.0). -->
       <div class=\"form-row\" style=\"margin-top:10px;\">
@@ -3129,7 +3129,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <div id="dfa-perride-host" style="display:none;"></div>
 </div>
 
-<!-- ═══ ALIMENTAZIONE (PPC — scheda dedicata) ═══════════════════════════ -->
+<!-- ═══ ALIMENTAZIONE (VELARCO — scheda dedicata) ═══════════════════════════ -->
 <div class="section" id="sec-nutrition">
   <!-- Sorgente dieta -->
   <div class="card" style="margin-bottom:12px;">
@@ -3137,7 +3137,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
       <label style="font-size:11px;color:var(--text2);">Sorgente:</label>
       <select id="nutri-source-tab" style="font-size:11px;padding:3px 6px;" onchange="onNutriSourceChange()">
-        <option value="app">App PPC (calcolata)</option>
+        <option value="app">App VELARCO (calcolata)</option>
         <option value="nutritionist">Nutrizionista (PDF)</option>
         <option value="none">Nessuna</option>
         <option value="macro">Solo macro</option>
@@ -3152,10 +3152,10 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="nutri-target" style="font-size:11px;color:var(--text2);"></div>
   </div>
 
-  <!-- Confronto macro dieta vs target PPC -->
+  <!-- Confronto macro dieta vs target VELARCO -->
   <div class="grid g2" id="nutri-compare" style="margin-bottom:12px;"></div>
 
-  <!-- Piano settimanale (App PPC o scelta alternative da PDF) -->
+  <!-- Piano settimanale (App VELARCO o scelta alternative da PDF) -->
   <div class="card">
     <h3 id="nutri-plan-title">Piano alimentare settimanale</h3>
     <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
@@ -3179,7 +3179,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 </div>
 
-<!-- ═══ COMPOSIZIONE CORPOREA / BIA (PPC) ══════════════════════════════ -->
+<!-- ═══ COMPOSIZIONE CORPOREA / BIA (VELARCO) ══════════════════════════════ -->
 <div class="section" id="sec-bia">
   <div class="card" style="margin-bottom:12px;">
     <h3>Composizione corporea (BIA)</h3>
@@ -3368,7 +3368,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <button class="btn btn-primary" id="icu-connect-btn" onclick="window.location='/oauth/icu/start'">Collega intervals.icu</button>
         <button class="btn btn-sm" id="icu-disconnect-btn" style="display:none;" onclick="icuDisconnect()">Disconnetti</button>
         <div id="icu-conn-error" style="display:none;font-size:12px;color:var(--red);margin-top:6px;"></div>
-        <div style="font-size:11px;color:var(--text3);margin-top:6px;">Accedi a intervals.icu e autorizza PPC — nessuna chiave da copiare.</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;">Accedi a intervals.icu e autorizza VELARCO — nessuna chiave da copiare.</div>
         <!-- v4.4: gestione profilo — Disconnetti (sopra), Reset dati, Elimina -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
           <button class="btn btn-sm" onclick="resetActiveProfile()" title="Svuota rides, piani, wellness e credenziali ICU ma mantiene il profilo">🧹 Reset profilo</button>
@@ -3400,9 +3400,9 @@ window.addEventListener('unhandledrejection', function(e) {
         <div id="icu-cal-sync-hint" style="font-size:11px;color:var(--text3);margin-top:4px;">
           Mirrors your next 14 days of planned workouts to your intervals.icu
           calendar after every plan change (Garmin &amp; MyWhoosh pull workouts
-          from there). Turning this off removes the workouts PPC pushed;
+          from there). Turning this off removes the workouts VELARCO pushed;
           anything else on your calendar is never touched — workouts you added
-          yourself stay put (even on the same day). Sync from one PPC
+          yourself stay put (even on the same day). Sync from one VELARCO
           install per athlete.
         </div>
       </div>
@@ -3755,15 +3755,15 @@ async function switchProfileFromBadge(id) {
 }
 document.addEventListener('click', () => { const dd=$('profile-dropdown'); if(dd) dd.classList.remove('open'); });
 
-// PPC — Theme switcher
+// VELARCO — Theme switcher
 function applyTheme(name) {
   document.documentElement.setAttribute('data-theme', name === 'dark' ? '' : name);
   if (name === 'dark') document.documentElement.removeAttribute('data-theme');
-  localStorage.setItem('ppc-theme', name);
+  localStorage.setItem('velarco-theme', name);
   const sel = $('theme-select'); if (sel) sel.value = name;
 }
 // Ripristina tema salvato all'avvio
-(function() { const t = localStorage.getItem('ppc-theme'); if (t && t !== 'dark') { document.documentElement.setAttribute('data-theme', t); } })();
+(function() { const t = localStorage.getItem('velarco-theme'); if (t && t !== 'dark') { document.documentElement.setAttribute('data-theme', t); } })();
 loadProfileBadge();
 // Pre-load FTP for workout library mini SVGs (don't wait for Settings tab).
 // _targetMode too — red-team F6: it was only set on the Settings tab, so every
@@ -7421,7 +7421,7 @@ async function loadTidHeatmap() {
   loadDiet();
 }
 
-// PPC — Nutrizione (piano completo individualizzato, senza select carico)
+// VELARCO — Nutrizione (piano completo individualizzato, senza select carico)
 async function loadNutrition() {
   const host = document.getElementById('nutrition-plan');
   if (!host) return;
@@ -7456,7 +7456,7 @@ async function loadNutrition() {
   } catch (e) { /* non bloccare */ }
 }
 
-// PPC — Nutrizione AUTO: l'app decide il carico da piano + ICU
+// VELARCO — Nutrizione AUTO: l'app decide il carico da piano + ICU
 async function loadNutritionAuto() {
   const host = document.getElementById('nutrition-plan');
   if (!host) return;
@@ -7490,7 +7490,7 @@ async function loadNutritionAuto() {
   } catch (e) { host.textContent = 'Auto non disponibile'; }
 }
 
-// PPC — Piano alimentare settimanale (creatore di diete)
+// VELARCO — Piano alimentare settimanale (creatore di diete)
 async function loadDiet() {
   const host = document.getElementById('diet-weekly');
   if (!host) return;
@@ -7546,7 +7546,7 @@ async function loadDiet() {
   } catch (e) { host.textContent = 'Piano alimentare non disponibile'; }
 }
 
-// PPC — mostra/nasconde opzioni in base alla sorgente dieta
+// VELARCO — mostra/nasconde opzioni in base alla sorgente dieta
 function onDietSourceChange() {
   const source = ($('diet-source') && $('diet-source').value) || 'app';
   const showGoal = (source === 'app' || source === 'macro' || source === 'micro' || source === 'extra');
@@ -7558,7 +7558,7 @@ function onDietSourceChange() {
   loadDiet();
 }
 
-// PPC — import PDF dieta del nutrizionista (testo estratto via backend)
+// VELARCO — import PDF dieta del nutrizionista (testo estratto via backend)
 async function importDietPDF() {
   const inp = document.getElementById('diet-pdf');
   const host = document.getElementById('diet-weekly');
@@ -7576,7 +7576,7 @@ async function importDietPDF() {
   } catch (e) { host.textContent = 'Errore import PDF'; }
 }
 
-// ═══ SCHEDA ALIMENTAZIONE (PPC) ════════════════════════════════════════════
+// ═══ SCHEDA ALIMENTAZIONE (VELARCO) ════════════════════════════════════════════
 function onNutriSourceChange() {
   const src = ($('nutri-source-tab') || {}).value || 'app';
   const showGoal = (src === 'app' || src === 'macro' || src === 'micro' || src === 'extra');
@@ -7612,7 +7612,7 @@ async function loadNutriPlan() {
       }
       host.innerHTML = html; return;
     }
-    // App PPC completa con grammi
+    // App VELARCO completa con grammi
     let html = `<div style="font-size:10px;color:var(--text3);margin-bottom:6px;">${esc(j.calorie_source)} · ${j.bodyweight_kg} kg</div>`;
     for (const d of (j.days||[])) {
       html += `<div style="background:var(--surface2);border-radius:6px;padding:6px 8px;margin-bottom:6px;"><div style="font-weight:600;">${esc(d.day)} <span style="color:var(--text3);font-size:10px;">· ${esc(d.day_type)}</span> <span style="color:var(--accent);font-size:10px;">${d.total_kcal} kcal</span></div>`;
@@ -7668,36 +7668,36 @@ function renderNutriPdf(host, j) {
 function toggleAlt(el) { el.style.textDecoration = el.style.textDecoration ? '' : 'line-through'; }
 
 async function renderNutriCompare() {
-  // Confronto macro dieta vs target PPC
+  // Confronto macro dieta vs target VELARCO
   const box = document.getElementById('nutri-compare');
   if (!box) return;
   const goal = ($('nutri-goal-tab') || {}).value || 'maintain';
   try {
-    const [ppc, full] = await Promise.all([
+    const [velarco, full] = await Promise.all([
       fetch(`/api/nutrition-full?goal_type=${goal}`).then(r=>r.json()),
       fetch(`/api/diet-weekly?goal_type=${goal}`).then(r=>r.json()),
     ]);
-    const ppcK = ppc.target_kcal, dietK = (window.__nutriPdf && window.__nutriPdf.summary) ? Math.round(window.__nutriPdf.summary.reduce((a,b)=>a+b.kcal,0)/window.__nutriPdf.summary.length) : 0;
+    const velarcoK = velarco.target_kcal, dietK = (window.__nutriPdf && window.__nutriPdf.summary) ? Math.round(window.__nutriPdf.summary.reduce((a,b)=>a+b.kcal,0)/window.__nutriPdf.summary.length) : 0;
     box.innerHTML = `
-      <div class="card"><h3>Target PPC</h3>
-        <div style="font-size:12px;">🔥 <b>${ppcK}</b> kcal · C ${ppc.macros.carb_g}g · P ${ppc.macros.protein_g}g · G ${ppc.macros.fat_g}g</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:4px;">Carico richiesto (GSSI SSE 231): range carb ${ppc.load_compensation.carb_g_per_kg_range[0]}-${ppc.load_compensation.carb_g_per_kg_range[1]} g/kg</div>
+      <div class="card"><h3>Target VELARCO</h3>
+        <div style="font-size:12px;">🔥 <b>${velarcoK}</b> kcal · C ${velarco.macros.carb_g}g · P ${velarco.macros.protein_g}g · G ${velarco.macros.fat_g}g</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px;">Carico richiesto (GSSI SSE 231): range carb ${velarco.load_compensation.carb_g_per_kg_range[0]}-${velarco.load_compensation.carb_g_per_kg_range[1]} g/kg</div>
       </div>
       <div class="card"><h3>Dieta nutrizionista</h3>
         <div style="font-size:12px;">🔥 <b>${dietK}</b> kcal/giorno (media)</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:4px;">Confronta con il target: ${dietK>ppcK?'+':''}${dietK-ppcK} kcal/giorno</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px;">Confronta con il target: ${dietK>velarcoK?'+':''}${dietK-velarcoK} kcal/giorno</div>
         <div style="font-size:10px;color:var(--text3);margin-top:4px;">Integrazione Gruppo A (Jeukendrup/UCI 2026) sempre applicabile sopra i pasti.</div>
       </div>`;
     // supplementi
     const sup = document.getElementById('nutri-supplements');
     if (sup) {
-      const s = (ppc.supplements||[]).map(x=>`<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);"><span>${esc(x.name)} <b style="color:var(--green);">${esc(x.evidence)}</b></span><span style="color:var(--accent);font-weight:700;">${esc(x.dose||'')}</span></div>`).join('');
-      sup.innerHTML = `<div style="font-size:10px;color:var(--text3);">Dosi su ${ppc.bodyweight_kg} kg</div>` + (s||'<i>nessuno</i>');
+      const s = (velarco.supplements||[]).map(x=>`<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);"><span>${esc(x.name)} <b style="color:var(--green);">${esc(x.evidence)}</b></span><span style="color:var(--accent);font-weight:700;">${esc(x.dose||'')}</span></div>`).join('');
+      sup.innerHTML = `<div style="font-size:10px;color:var(--text3);">Dosi su ${velarco.bodyweight_kg} kg</div>` + (s||'<i>nessuno</i>');
     }
   } catch (e) { box.innerHTML = ''; }
 }
 
-// ═══ SCHEDA COMPOSIZIONE CORPOREA / BIA (PPC) ════════════════════════════
+// ═══ SCHEDA COMPOSIZIONE CORPOREA / BIA (VELARCO) ════════════════════════════
 async function importBIA() {
   const inp = document.getElementById('bia-pdf');
   const msg = document.getElementById('bia-import-msg');
@@ -7922,7 +7922,7 @@ async function loadStrength() {
   const mobEl = document.getElementById('mobility-routine');
   if (!sumEl || !weeksEl) return;
   try {
-    // PPC: legge 1RM dal profilo per mostrare i carichi in kg reali
+    // VELARCO: legge 1RM dal profilo per mostrare i carichi in kg reali
     let oneRm = 0;
     try { const p = await (await fetch('/api/profile')).json(); oneRm = (p.profile && p.profile.one_rm_kg) || 0; } catch (_) {}
     const [sp, mp] = await Promise.all([
@@ -12521,7 +12521,7 @@ function _phaseSplitPayload() {
   const same = keys.every(k => (ps.rec[k] || 0) === (ps.values[k] || 0));
   return same ? undefined : { ...ps.values };
 }
-// PPC 5.x — accorgimenti selector. Reads the toggle panel; if every toggle is
+// VELARCO 5.x — accorgimenti selector. Reads the toggle panel; if every toggle is
 // off, returns {mode:"normal"} so the plan is byte-identical to 4.4.0.
 function _readPlanOptions() {
   const flags = {
@@ -13305,7 +13305,7 @@ async function generatePlan(opts) {
     // v3.2.0 phase-split editor — sent ONLY when custom AND ≠ recommendation
     // (A3); undefined otherwise so the payload stays byte-identical.
     phase_weeks: _phaseSplitPayload(),
-    // PPC 5.x — accorgimenti selector. Read the toggle panel; when nothing is
+    // VELARCO 5.x — accorgimenti selector. Read the toggle panel; when nothing is
     // enabled this sends mode:"normal" (byte-identical to 4.4.0 plan).
     plan_options: _readPlanOptions(),
   };
@@ -16194,7 +16194,7 @@ async function copyLogs() {
   try {
     const d = await (await fetch('/api/logs?lines=500')).json();
     const v = await (await fetch('/api/version')).json();
-    const text = `PPC v${v.version} | ${v.platform} | Python ${v.python}\n${'='.repeat(60)}\n${(d.lines||[]).join('\n')}`;
+    const text = `VELARCO v${v.version} | ${v.platform} | Python ${v.python}\n${'='.repeat(60)}\n${(d.lines||[]).join('\n')}`;
     await navigator.clipboard.writeText(text);
     alert('Logs copied to clipboard! Paste them in a bug report.');
   } catch(e) { alert('Failed: ' + e.message); }
@@ -16203,7 +16203,7 @@ async function copyLogs() {
 async function viewVersion() {
   try {
     const v = await (await fetch('/api/version')).json();
-    showToast(`PPC v${v.version} · Python ${v.python} · ${v.platform}${v.frozen ? ' · packaged' : ''}`, 6000);
+    showToast(`VELARCO v${v.version} · Python ${v.python} · ${v.platform}${v.frozen ? ' · packaged' : ''}`, 6000);
   } catch(e) { showToast('Version check failed: ' + e.message, 4000); }
 }
 
@@ -16222,7 +16222,7 @@ async function loadSettings() {
   $('set-lthr').value = d.lthr;
   $('set-maxhr').value = d.max_hr;
   $('set-eftp').textContent = d.eftp ? d.eftp + 'W' : 'N/A';
-  // PPC: campi estesi (età/sesso/altezza/1RM) da /api/profile
+  // VELARCO: campi estesi (età/sesso/altezza/1RM) da /api/profile
   try {
     const p = await (await fetch('/api/profile')).json();
     const a = p.profile || {};
@@ -16725,7 +16725,7 @@ async function saveSettings() {
     lthr: parseInt($('set-lthr').value),
     max_hr: parseInt($('set-maxhr').value),
   };
-  // PPC: campi estesi da inviare a /api/profile (età/sesso/altezza/1RM)
+  // VELARCO: campi estesi da inviare a /api/profile (età/sesso/altezza/1RM)
   const ext = {
     age: parseInt($('set-age').value),
     sex: $('set-sex').value,
@@ -16733,7 +16733,7 @@ async function saveSettings() {
     one_rm_kg: parseFloat($('set-onerm').value),
   };
   for (const k in ext) { if (Number.isFinite(ext[k]) || (k === 'sex' && ext[k])) body[k] = ext[k]; }
-  // PPC — discipline multidisciplinari
+  // VELARCO — discipline multidisciplinari
   const discs = Array.from(document.querySelectorAll('.disc-cb')).filter(c => c.checked).map(c => c.value);
   body.disciplines = discs;
 
@@ -16775,7 +16775,7 @@ async function saveSettings() {
       }
       throw new Error(`${res.status}: ${msg}`);
     }
-    // PPC: invia i campi estesi (età/sesso/altezza/1RM) a /api/profile
+    // VELARCO: invia i campi estesi (età/sesso/altezza/1RM) a /api/profile
     // (con sync bidirezionale intervals.icu). Non bloccante sul successo settings.
     try {
       const profBody = {};
@@ -16786,7 +16786,7 @@ async function saveSettings() {
         const pr = await fetch('/api/profile', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(profBody)});
         if (pr.ok) {
           const pj = await pr.json();
-          if (pj.icu_sync) console.log('[PPC] profilo:', pj.icu_sync);
+          if (pj.icu_sync) console.log('[VELARCO] profilo:', pj.icu_sync);
         }
       }
     } catch (_) {}
@@ -20019,7 +20019,7 @@ async function downloadGeneratedZwo(type, durationMin, name) {
   let ftp = 250;
   try { const s = await (await fetch('/api/settings')).json(); ftp = s.ftp || 250; } catch(e) {}
   const blocks = buildPowerBlocks(type, durationMin, ftp);
-  let xml = `<?xml version="1.0" encoding="utf-8"?>\n<workout_file>\n  <author>PPC Library</author>\n  <name>${esc(name)}</name>\n  <sportType>bike</sportType>\n  <workout>\n`;
+  let xml = `<?xml version="1.0" encoding="utf-8"?>\n<workout_file>\n  <author>VELARCO Library</author>\n  <name>${esc(name)}</name>\n  <sportType>bike</sportType>\n  <workout>\n`;
   for (const b of blocks) {
     if (b.pctLow !== b.pctHigh) {
       const tag = b.name === 'Warmup' ? 'Warmup' : 'Cooldown';
@@ -20439,7 +20439,7 @@ function dismissSyncBanner() {
 // Sample API response shape for visual QA / mocking:
 // { current: "1.8.6", latest: "1.8.7", update_available: true,
 //   release_url: "https://github.com/...", download_url: "https://...",
-//   asset_name: "PPC.dmg",
+//   asset_name: "VELARCO.dmg",
 //   release_body: "## What's new\n- bullet 1\n- bullet 2\n\nSee https://example.com" }
 
 // Minimal markdown renderer for release notes. NO external libraries
@@ -21544,9 +21544,9 @@ function initHintTooltips() {
 }
 document.addEventListener('DOMContentLoaded', initHintTooltips);
 
-// ═══ PPC — Card drag (riordina) + resize (resize:both CSS nativo) + persist per profilo ═══
+// ═══ VELARCO — Card drag (riordina) + resize (resize:both CSS nativo) + persist per profilo ═══
 (function(){
-  const PROFILE_KEY = () => 'ppc-layout:' + (window.__ACTIVE_PROFILE_ID || 'default');
+  const PROFILE_KEY = () => 'velarco-layout:' + (window.__ACTIVE_PROFILE_ID || 'default');
   const home = document.getElementById('sec-home');
   if (!home) return;
   const cards = home.querySelectorAll('.card[data-card]');

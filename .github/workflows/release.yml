@@ -25,10 +25,10 @@ jobs:
   # CI builds the DMG without the Apple notarization secrets
   # (.notarize.env / Developer ID Application cert in keychain), so
   # build_dmg.sh falls back to ad-hoc signing. That produces a
-  # Domestique.dmg that Gatekeeper rejects with "Domestique is damaged"
-  # the moment a user downloads it. Worse, the bare-name Domestique.dmg
+  # VELARCO.dmg that Gatekeeper rejects with "VELARCO is damaged"
+  # the moment a user downloads it. Worse, the bare-name VELARCO.dmg
   # asset that CI uploaded sorted ahead of the manually-notarized
-  # Domestique-v$VER.dmg in _select_platform_asset, so the update banner
+  # VELARCO-v$VER.dmg in _select_platform_asset, so the update banner
   # served Mac users the broken one.
   #
   # macOS ships are produced manually via the [[domestique-release]] skill
@@ -62,11 +62,11 @@ jobs:
       #   APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD
       # Without signing, end users must right-click → Open to bypass Gatekeeper.
       # Sketch for later:
-      #   codesign --deep --options runtime --sign "$APPLE_DEV_ID" dist/Domestique.app
-      #   xcrun notarytool submit dist_dmg/Domestique.dmg \
+      #   codesign --deep --options runtime --sign "$APPLE_DEV_ID" dist/VELARCO.app
+      #   xcrun notarytool submit dist_dmg/VELARCO.dmg \
       #     --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
       #     --password "$APPLE_APP_PASSWORD" --wait
-      #   xcrun stapler staple dist_dmg/Domestique.dmg
+      #   xcrun stapler staple dist_dmg/VELARCO.dmg
 
       - name: Build DMG
         run: |
@@ -76,8 +76,8 @@ jobs:
           mkdir -p "$DESTDIR"
           ./build_dmg.sh || { cat /tmp/dmg_build.log 2>/dev/null || true; exit 1; }
           # Fallback: some build_dmg.sh variants hardcode ~/Desktop
-          if [ ! -f "$DESTDIR/Domestique.dmg" ] && [ -f "$HOME/Desktop/Domestique.dmg" ]; then
-            cp "$HOME/Desktop/Domestique.dmg" "$DESTDIR/Domestique.dmg"
+          if [ ! -f "$DESTDIR/VELARCO.dmg" ] && [ -f "$HOME/Desktop/VELARCO.dmg" ]; then
+            cp "$HOME/Desktop/VELARCO.dmg" "$DESTDIR/VELARCO.dmg"
           fi
           ls -la "$DESTDIR"
 
@@ -85,15 +85,15 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: Domestique-macOS-DMG
-          path: dist_dmg/Domestique.dmg
+          name: VELARCO-macOS-DMG
+          path: dist_dmg/VELARCO.dmg
           retention-days: 7
 
       - name: Attach DMG to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist_dmg/Domestique.dmg
+          files: dist_dmg/VELARCO.dmg
           fail_on_unmatched_files: true
 
   # Reads the VERSION file once and shares it with downstream jobs (installer name).
@@ -150,14 +150,14 @@ jobs:
       # (EV or OV). Without signing, SmartScreen shows the "Unknown publisher"
       # warning — end users must click "More info → Run anyway".
       #   signtool sign /tr http://timestamp.digicert.com /td sha256 \
-      #     /fd sha256 /a dist\Domestique\Domestique.exe
+      #     /fd sha256 /a dist\VELARCO\VELARCO.exe
 
       - name: Setup Tesseract (OCR dependency)
         shell: pwsh
         continue-on-error: true   # OCR is OPTIONAL at runtime; if Tesseract
         # cannot be fetched the EXE still builds and degrades gracefully.
         run: |
-          # PPC 5.0 — OCR layer needs the Tesseract binary. We vendor it in the
+          # VELARCO 5.0 — OCR layer needs the Tesseract binary. We vendor it in the
           # repo (vendor/tesseract) so the build never depends on network/choco.
           # Fallback to choco/winget only if the vendored copy is missing.
           if (Test-Path "vendor\tesseract\tesseract.exe") {
@@ -352,7 +352,7 @@ jobs:
             try {
               Write-Host "=== Windows Application Event Log (errors + relevant since start) ==="
               Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=$startTime} -ErrorAction SilentlyContinue |
-                Where-Object { $_.LevelDisplayName -eq 'Error' -or $_.Message -match 'Domestique|\.NET|Faulting|clr|0xc0000' } |
+                Where-Object { $_.LevelDisplayName -eq 'Error' -or $_.Message -match 'VELARCO|\.NET|Faulting|clr|0xc0000' } |
                 Select-Object -First 15 |
                 Format-List TimeCreated, ProviderName, Id, Message | Out-String | Write-Host
             } catch { Write-Host "[event-log (by-message) collector failed] $($_.Exception.Message)" }
@@ -410,7 +410,7 @@ jobs:
             Write-Host "Smoke-test passed: EXE serves version $served"
           } finally {
             # $proc is the cmd.exe wrapper; the EXE is its child. Kill the whole
-            # tree (/T) so Domestique.exe doesn't outlive the wrapper.
+            # tree (/T) so VELARCO.exe doesn't outlive the wrapper.
             if ($proc -and -not $proc.HasExited) {
               taskkill /PID $proc.Id /T /F 2>$null
               Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
@@ -420,7 +420,7 @@ jobs:
       - name: Build Windows installer (NSIS)
         shell: pwsh
         env:
-          PPC_VER: ${{ needs.read-version.outputs.version }}
+          VELARCO_VER: ${{ needs.read-version.outputs.version }}
         run: |
           # installer.nsi è uno script NSIS (non Inno Setup) — serve makensis.
           choco install nsis -y --no-progress 2>&1 | Out-Null
@@ -429,9 +429,9 @@ jobs:
           if (-not (Test-Path $makensis)) { Write-Error "::error::makensis not found after choco install"; exit 1 }
           Write-Host "Using makensis: $makensis"
           $repoRoot = "${{ github.workspace }}"
-          & "$makensis" "/DVERSION=$env:PPC_VER" "/DOUTDIR=$repoRoot" installer.nsi
+          & "$makensis" "/DVERSION=$env:VELARCO_VER" "/DOUTDIR=$repoRoot" installer.nsi
           if ($LASTEXITCODE -ne 0) { Write-Error "::error::makensis failed (exit $LASTEXITCODE)"; exit 1 }
-          $out = Join-Path $repoRoot "VELARCO-Setup-$env:PPC_VER.exe"
+          $out = Join-Path $repoRoot "VELARCO-Setup-$env:VELARCO_VER.exe"
           if (-not (Test-Path $out)) { Write-Error "::error::installer not produced at $out"; exit 1 }
           Write-Host "Built installer: $out ($([math]::Round((Get-Item $out).Length/1MB,1)) MB)"
 

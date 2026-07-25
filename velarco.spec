@@ -3,8 +3,8 @@
 PyInstaller spec for VELARCO — Adaptive Cycling Intelligence.
 
 Build:
-  macOS:   pyinstaller ppc.spec
-  Windows: pyinstaller ppc.spec
+  macOS:   pyinstaller velarco.spec
+  Windows: pyinstaller velarco.spec
 
 Output: dist/VELARCO.app (macOS) or dist/VELARCO/VELARCO.exe (Windows)
 
@@ -146,7 +146,7 @@ a = Analysis(
         "fit_tool.profile.messages.file_id_message",
         "fit_tool.profile.messages.workout_message",
         "fit_tool.profile.messages.workout_step_message",
-        # PPC 5.0 — OCR layer. pytesseract is the wrapper (tesseract binary is
+        # VELARCO 5.0 — OCR layer. pytesseract is the wrapper (tesseract binary is
         # optional at runtime); fitz (PyMuPDF) is the PDF rasterizer. Both are
         # imported lazily inside ocr_pdf, so PyInstaller won't see them.
         "pytesseract",
@@ -166,7 +166,7 @@ a = Analysis(
     runtime_hooks=[],
     # v1.0.7: numpy + scipy were previously excluded for a leaner DMG; both are
     # now required for τ-fitting and must NOT be excluded. matplotlib + pandas
-    # remain excluded — Domestique never imports them. (~50 MB bundle hit, see
+    # remain excluded — VELARCO never imports them. (~50 MB bundle hit, see
     # MASTER_DECISIONS_v107_v110_v120_PATCH.md G2.)
     excludes=["matplotlib", "pandas"],  # keep tkinter for folder picker
     win_no_prefer_redirects=False,
@@ -221,9 +221,9 @@ if sys.platform == "darwin":
             # Mojave/Catalina support becomes a hard requirement.
             "LSMinimumSystemVersion": "11.0",
             "NSHighResolutionCapable": True,
-            "NSHumanReadableCopyright": "(c) 2026 VELARCO — Adaptive Cycling Intelligence (fork of Domestique, Apache-2.0)",
+            "NSHumanReadableCopyright": "(c) 2026 VELARCO — Adaptive Cycling Intelligence (fork of VELARCO, Apache-2.0)",
             # v4.0.0-alpha: Bluetooth usage key removed along with the BLE
-            # subsystem -- Domestique no longer scans or connects to any
+            # subsystem -- VELARCO no longer scans or connects to any
             # trainer/HR device. Keeping the key would spuriously trigger
             # the Apple TCC prompt on first launch.
             "LSUIElement": False,  # show in Dock

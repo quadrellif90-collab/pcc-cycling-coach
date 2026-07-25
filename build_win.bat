@@ -20,9 +20,9 @@ pip install -r requirements.txt pyinstaller
 REM 3. Create assets dir if missing
 if not exist assets mkdir assets
 
-REM 4. Build with PyInstaller (ppc.spec produces dist\VELARCO\VELARCO.exe)
+REM 4. Build with PyInstaller (velarco.spec produces dist\VELARCO\VELARCO.exe)
 echo Building...
-pyinstaller ppc.spec --clean --noconfirm
+pyinstaller velarco.spec --clean --noconfirm
 if errorlevel 1 (
     echo PYINSTALLER FAILED
     exit /b 1

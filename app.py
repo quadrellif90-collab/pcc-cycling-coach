@@ -1,5 +1,5 @@
 """
-Domestique Dashboard v2 — local web interface.
+VELARCO Dashboard v2 — local web interface.
 
 Run: python3 app.py
 Open: http://localhost:8080
@@ -55,7 +55,7 @@ log_ride_import = log_config.get_logger("domestique.ride_import")
 # appends an entry to the in-process ring buffer that
 # ``/api/diag/recent-errors`` reads.
 import error_codes
-import plan_options as PO          # PPC 5.x — PlanOptions selector (leaf, stdlib)
+import plan_options as PO          # VELARCO 5.x — PlanOptions selector (leaf, stdlib)
 _DIAG_RING_MAX = 256
 _DIAG_RING: collections.deque = collections.deque(maxlen=_DIAG_RING_MAX)
 _DIAG_RING_LOCK = threading.Lock()
@@ -557,7 +557,7 @@ except OSError:
 # v4.0.0-alpha pivot: the app is a planner + workout library + post-ride
 # viewer. No live trainer connection, no BLE, no WebSocket. All data flows
 # through plain HTTP; the heavy lifting happens in the user's preferred
-# indoor app (Tacx / MyWhoosh / Golden Cheetah), and Domestique imports
+# indoor app (Tacx / MyWhoosh / Golden Cheetah), and VELARCO imports
 # the resulting FIT afterward via POST /api/ride/import.
 APP_VERSION = _VERSION
 
@@ -3870,7 +3870,7 @@ def api_mobility_plan(days: int = Query(7)):
 
 @app.post("/api/plan/inject-strength")
 async def api_inject_strength(request: Request):
-    """PPC — Inietta sessioni forza + mobilità nel piano settimanale.
+    """VELARCO — Inietta sessioni forza + mobilità nel piano settimanale.
 
     Legge current_plan.json, aggiunge sedute strength (2×/sett base, 1× peak)
     e mobility (quotidiana 15min) nei giorni non-rest. Salva il piano modificato.
@@ -3986,7 +3986,7 @@ async def api_inject_strength(request: Request):
 
 @app.post("/api/plan/inject-multidiscipline")
 async def api_inject_multidiscipline(request: Request):
-    """PPC — inietta forza/mobilità + discipline aggiuntive (running/MTB) nel piano.
+    """VELARCO — inietta forza/mobilità + discipline aggiuntive (running/MTB) nel piano.
 
     Legge `disciplines` dal profilo atleta: se include 'strength'/'mobility'
     inietta quelle sedute (come api_inject_strength); se include 'running' o
@@ -4124,7 +4124,7 @@ def api_nutrition(day_type: str = Query("moderate"), bodyweight_kg: float = Quer
 def api_nutrition_full(goal_type: str = Query("maintain"),
                        planned_tss_today: float = Query(0.0),
                        prev_day_tss: float = Query(0.0)):
-    """PPC — piano nutrizionale COMPLETO e individualizzato.
+    """VELARCO — piano nutrizionale COMPLETO e individualizzato.
 
     Legge peso/età/sesso/altezza dal profilo atleta (cadendo a default se
     assenti) e calcola TDEE, obiettivo (cut/maintain/gain), macro e
@@ -4154,7 +4154,7 @@ def api_race_fueling(duration_h: float = Query(2.0), bodyweight_kg: float = Quer
 
 @app.get("/api/nutrition-auto")
 def api_nutrition_auto(goal_type: str = Query("maintain")):
-    """PPC — nutrizione AUTO: decide da solo il carico in base a piano + ICU.
+    """VELARCO — nutrizione AUTO: decide da solo il carico in base a piano + ICU.
 
     Calcola il TSS previsto OGGI (dal piano), il TSS previsto + ESEGUITO
     ieri (piano vs attività reale da intervals.icu), e adegua i carbohydrate
@@ -4260,7 +4260,7 @@ def api_nutrition_auto(goal_type: str = Query("maintain")):
 def api_diet(day_type: str = Query("moderate"),
              goal_type: str = Query("maintain"),
              custom_calories: float = Query(None)):
-    """PPC — piano pasti giornaliero personalizzato (creatore di diete).
+    """VELARCO — piano pasti giornaliero personalizzato (creatore di diete).
 
     Restituisce pasti specifici, timing, cosa mangiare/cosa evitare.
     custom_calories: se >0, override del nutrizionista (altrimenti calcolato)."""
@@ -4284,7 +4284,7 @@ def api_diet(day_type: str = Query("moderate"),
 @app.get("/api/diet-weekly")
 def api_diet_weekly(goal_type: str = Query("maintain"),
                     custom_calories: float = Query(None)):
-    """PPC — piano alimentare SETTIMANALE (7 giorni) con variazione pasti."""
+    """VELARCO — piano alimentare SETTIMANALE (7 giorni) con variazione pasti."""
     from diet import build_weekly_diet
     from profile_manager import ProfileManager
     pm = ProfileManager.get()
@@ -4299,12 +4299,12 @@ def api_diet_weekly(goal_type: str = Query("maintain"),
 
 @app.post("/api/diet-pdf-import")
 async def api_diet_pdf_import(request: Request):
-    """PPC — importa il PDF della dieta redatta dal nutrizionista.
+    """VELARCO — importa il PDF della dieta redatta dal nutrizionista.
 
     Estrae il testo via PyPDF2 e lo PARSA in struttura giorni/pasti/alimenti
     con grammi e macro reali (diet_parser). L'atleta vede la dieta del
     professionista, sceglie le alternative, e confronta i macro con il
-    target PPC. I macro extra da sforzo restano calcolabili sopra i pasti.
+    target VELARCO. I macro extra da sforzo restano calcolabili sopra i pasti.
     """
     try:
         body = await request.body()
@@ -4369,7 +4369,7 @@ def _icu_wellness_auth():
 
 @app.post("/api/bia-import")
 async def api_bia_import(request: Request):
-    """PPC — importa un report BIA (PDF testuale, PDF scansionato o JSON).
+    """VELARCO — importa un report BIA (PDF testuale, PDF scansionato o JSON).
 
     - PDF testuale: estrazione automatica dei campi.
     - PDF scansionato: ritorna scanned=True + campi vuoti (il backend non ha OCR);
@@ -4441,7 +4441,7 @@ async def api_bia_import(request: Request):
 
 @app.get("/api/sync-targets")
 def api_sync_targets():
-    """PPC — elenco delle app di destinazione dati (pluggable sync layer).
+    """VELARCO — elenco delle app di destinazione dati (pluggable sync layer).
 
     Ritorna tutte le destinazioni registrate in sync_targets.REGISTRY con
     il loro stato di connessione, cosi' la UI puo' mostrare 'App collegate'
@@ -4456,14 +4456,14 @@ def api_sync_targets():
 
 @app.get("/api/bia-history")
 def api_bia_history():
-    """PPC — storico misurazioni BIA del profilo attivo."""
+    """VELARCO — storico misurazioni BIA del profilo attivo."""
     hist = _bia_load_history()
     return {"ok": True, "history": hist, "count": len(hist)}
 
 
 @app.post("/api/bia-sync-icu")
 async def api_bia_sync_icu(request: Request):
-    """PPC — sincronizza le misurazioni BIA su Intervals.icu (/wellness).
+    """VELARCO — sincronizza le misurazioni BIA su Intervals.icu (/wellness).
 
     Invia peso, bodyFat%, hydration%, muscleMass, bmi, boneMass, protein,
     visceralFat, metabolicAge per ogni misurazione dello storico.
@@ -4544,7 +4544,7 @@ def api_export_plan_html(athlete: str = Query("Atleta"), goal: str = Query(""),
 @app.get("/api/my-calendar")
 def api_my_calendar():
     """BETA Fase 7e (DIY) — il mio calendario: aderenza personale pianificato
-    vs eseguito. Legge il piano di Domestique (tss_target) e le attività reali
+    vs eseguito. Legge il piano di VELARCO (tss_target) e le attività reali
     del profilo self da intervals.icu (se le credenziali ci sono)."""
     from my_progress import compute_my_adherence, fetch_actual_tss_by_week, load_plan_weeks
     from profile_manager import ProfileManager
@@ -4608,7 +4608,7 @@ def api_my_push_plan():
         if not ev_date:
             continue
         title = f"Sett. piano — {wk.get('phase','ciclismo')}"
-        desc = f"TSS target {round(wk.get('tss_target',0))} · piano Domestique (ciclismo+forza+mobilità+nutrizione)"
+        desc = f"TSS target {round(wk.get('tss_target',0))} · piano VELARCO (ciclismo+forza+mobilità+nutrizione)"
         payload = {"date": ev_date, "title": title, "description": desc, "type": "workout"}
         try:
             r = httpx.post(
@@ -7069,7 +7069,7 @@ def api_workouts(
 
 @app.post("/api/workouts/import")
 def api_workout_import(request: Request):
-    """PPC — importa un file ZWO personalizzato nella libreria locale.
+    """VELARCO — importa un file ZWO personalizzato nella libreria locale.
 
     Accetta: { filename: str, content: str (XML ZWO) }
     Salva nella cartella workouts/ e lo rende disponibile nella libreria.
@@ -9106,7 +9106,7 @@ def _build_climb_zwo(points: list[dict], course_name: str, warmup_min: int = 10)
 
     return f"""<?xml version='1.0' encoding='utf-8'?>
 <workout_file>
-  <author>Domestique</author>
+  <author>VELARCO</author>
   <name>{xml_escape(course_name)}</name>
   <description>{xml_escape(desc)}</description>
   <sportType>bike</sportType>
@@ -9384,7 +9384,7 @@ def api_climb_zwo(region: str, filename: str, warmup: int = Query(10)):
 
     zwo_xml = f"""<?xml version='1.0' encoding='utf-8'?>
 <workout_file>
-  <author>Domestique</author>
+  <author>VELARCO</author>
   <name>{xml_escape(course_name)}</name>
   <description>{xml_escape(desc)}</description>
   <sportType>bike</sportType>
@@ -9532,7 +9532,7 @@ def api_migrations_last_run_result():
 #   { current, latest, update_available, release_url, download_url,
 #     asset_name, platform, checked_at, cached, error, release_body }
 _UPDATE_CHECK_CACHE_TTL_S = 6 * 60 * 60  # 6 hours
-_GITHUB_RELEASES_LATEST_URL = "https://api.github.com/repos/quadrellif90-collab/ppc-cycling-coach/releases/latest"
+_GITHUB_RELEASES_LATEST_URL = "https://api.github.com/repos/quadrellif90-collab/velarco-cycling-coach/releases/latest"
 _RELEASE_BODY_MAX_CHARS = 8192
 _RELEASE_BODY_TRUNCATION_SUFFIX = "\n\n… (full release notes on GitHub)"
 
@@ -9546,8 +9546,8 @@ def _select_platform_asset(assets, plat):
     """Pick (download_url, asset_name) from a GitHub release `assets` list
     based on `plat` (sys.platform string).
 
-    macOS (`darwin`) → `.dmg`, prefer plain `Domestique.dmg` over decorated
-    variants like `Domestique-1.0.3.dmg` so the canonical asset wins.
+    macOS (`darwin`) → `.dmg`, prefer plain `VELARCO.dmg` over decorated
+    variants like `VELARCO-1.0.3.dmg` so the canonical asset wins.
     Windows (`win32`) → prefer `.exe`, fall back to `.zip`.
     Anything else (Linux, BSD) → no asset; banner falls back to release_url.
     """
@@ -9564,13 +9564,13 @@ def _select_platform_asset(assets, plat):
         dmgs = [a for a in assets if _name(a).lower().endswith(".dmg")]
         if not dmgs:
             return None, None
-        canonical = [a for a in dmgs if _name(a) in ("PPC.dmg", "ppc.dmg")]
+        canonical = [a for a in dmgs if _name(a) in ("VELARCO.dmg", "velarco.dmg")]
         chosen = canonical[0] if canonical else dmgs[0]
         return _url(chosen) or None, _name(chosen) or None
 
     if plat == "win32":
         exes = [a for a in assets if _name(a).lower().endswith(".exe")]
-        preferred = [a for a in exes if _name(a).lower().startswith("ppc-setup")]
+        preferred = [a for a in exes if _name(a).lower().startswith("velarco-setup")]
         if preferred:
             return _url(preferred[0]) or None, _name(preferred[0]) or None
         if exes:
@@ -10489,7 +10489,7 @@ def api_update_check(force: int = Query(0)):
             "current": _VERSION,
             "latest": tag,
             "update_available": bool(update_available),
-            "release_url": rel.get("html_url") or ("https://github.com/quadrellif90-collab/ppc-cycling-coach/releases/tag/v" + tag),
+            "release_url": rel.get("html_url") or ("https://github.com/quadrellif90-collab/velarco-cycling-coach/releases/tag/v" + tag),
             "download_url": download_url,
             "asset_name": asset_name,
             "platform": plat,
@@ -10527,13 +10527,13 @@ def api_update_check(force: int = Query(0)):
 
 @app.post("/api/self-update")
 async def api_self_update(request: Request):
-    """PPC — auto-aggiornamento reale tramite GitHub Releases.
+    """VELARCO — auto-aggiornamento reale tramite GitHub Releases.
 
     Scarica l'asset platform-specifico della release 'latest' del fork e lo
     installa:
-      - Windows: esegue l'installer NSIS silenzioso (PPC-Setup.exe /S) che
+      - Windows: esegue l'installer NSIS silenzioso (VELARCO-Setup.exe /S) che
         sostituisce l'EXE; poi termina l'app per lasciare libero il file.
-      - macOS: monta PPC.dmg e copia l'app in /Applications (cp -R), poi
+      - macOS: monta VELARCO.dmg e copia l'app in /Applications (cp -R), poi
         riavvia. Se non ha permessi, apre il .dmg per l'installazione manuale.
     Ritorna prima di completare l'install perche' l'app deve liberare i file.
     """
@@ -10549,7 +10549,7 @@ async def api_self_update(request: Request):
     plat = sys.platform
     try:
         # scarica in temp
-        td = tempfile.mkdtemp(prefix="ppc-update-")
+        td = tempfile.mkdtemp(prefix="velarco-update-")
         fname = info.get("asset_name") or ("VELARCO-Setup.exe" if plat == "win32" else "VELARCO.dmg")
         dest = os.path.join(td, fname)
         async with httpx.AsyncClient(timeout=300) as client:
@@ -10566,7 +10566,7 @@ async def api_self_update(request: Request):
             # monta e copia l'app
             subprocess.Popen(["open", dest])
             return {"ok": True, "launched": True, "mode": "macos-dmg",
-                    "msg": "DMG aperta: trascina PPC in Applicazioni per aggiornare."}
+                    "msg": "DMG aperta: trascina VELARCO in Applicazioni per aggiornare."}
         else:
             # fallback: apri il link della release
             import webbrowser
@@ -11384,7 +11384,7 @@ def api_weekly_plan(week_offset: int = Query(0)):
             # issue #7 — race day flag + meta (name/km/climb/type/priority).
             "is_race": stored.get("is_race", getattr(s, "is_race", False)),
             "race": stored.get("race") or getattr(s, "race", None),
-            # PPC 5.x — accorgimenti layer notes (empty string when layer off).
+            # VELARCO 5.x — accorgimenti layer notes (empty string when layer off).
             "nutrition_note": getattr(s, "nutrition_note", ""),
             "integrator_note": getattr(s, "integrator_note", ""),
             "heat_note": getattr(s, "heat_note", ""),
@@ -13546,7 +13546,7 @@ async def api_plan_generate(request: Request):
         entry_mode = (_entry_mode_raw
                       if _entry_mode_raw in ("declared", "recognized") else None)
 
-        # PPC 5.x — accorgimenti selector. The UI sends a "plan_options" object
+        # VELARCO 5.x — accorgimenti selector. The UI sends a "plan_options" object
         # (see plan_options.PlanOptions). Missing/empty => normal planner.
         plan_options = PO.PlanOptions.from_dict(body.get("plan_options"))
 
@@ -13801,7 +13801,7 @@ async def api_plan_generate(request: Request):
                             "is_race": bool(getattr(s, "is_race", False)),
                             "race": getattr(s, "race", None),
                             "is_opener": bool(getattr(s, "is_opener", False)),
-                            # PPC 5.x — accorgimenti layer notes (empty when off).
+                            # VELARCO 5.x — accorgimenti layer notes (empty when off).
                             "nutrition_note": getattr(s, "nutrition_note", ""),
                             "integrator_note": getattr(s, "integrator_note", ""),
                             "heat_note": getattr(s, "heat_note", ""),
@@ -15395,7 +15395,7 @@ def _build_fit_workout(name: str, blocks: list[dict], ftp: int,
     file_id = FileIdMessage()
     file_id.type = FileType.WORKOUT
     # DEVELOPMENT (255) is the honest, spec-correct manufacturer id for an
-    # unregistered third-party app like Domestique. Using a real brand's id
+    # unregistered third-party app like VELARCO. Using a real brand's id
     # (garmin/zwift/peaksware) would be spoofing. If it turns out an importer
     # truly rejects development-stamped workouts, the correct fix is to register
     # a manufacturer id with Garmin FIT — not to impersonate another product.
@@ -15606,7 +15606,7 @@ def _build_fit_workout_from_zwo(name: str, zwo_path: Path, ftp: int,
     file_id = FileIdMessage()
     file_id.type = FileType.WORKOUT
     # DEVELOPMENT (255) is the honest, spec-correct manufacturer id for an
-    # unregistered third-party app like Domestique. Using a real brand's id
+    # unregistered third-party app like VELARCO. Using a real brand's id
     # (garmin/zwift/peaksware) would be spoofing. If it turns out an importer
     # truly rejects development-stamped workouts, the correct fix is to register
     # a manufacturer id with Garmin FIT — not to impersonate another product.
@@ -15762,7 +15762,7 @@ def _is_cycling_sport(sport) -> bool:
     Cycling sport_type values (Strava/ICU): Ride, VirtualRide, GravelRide,
     MountainBikeRide, EBikeRide, Handcycle, Velomobile, … — anything with
     ride/bike/cycl. Empty/unknown sport is treated as cycling (local FIT rides
-    often carry no sport tag, and Domestique is a cycling app). A clearly
+    often carry no sport tag, and VELARCO is a cycling app). A clearly
     non-cycling activity (RockClimbing, Run, Swim, …) returns False so it is
     NOT matched to a cycling session — it never pollutes the plan.
     """
@@ -19097,7 +19097,7 @@ def api_gc_status():
 # ═══════════════════════════════════════════════════════════════════════════════
 #
 # The live ride runtime was removed in the trainer-rip pivot. Rides are now
-# recorded outside Domestique (Tacx / MyWhoosh / Golden Cheetah / any FIT
+# recorded outside VELARCO (Tacx / MyWhoosh / Golden Cheetah / any FIT
 # producer) and imported afterwards via POST /api/ride/import.
 #
 # Storage layout:
@@ -20696,7 +20696,7 @@ def api_rides(limit: int = Query(0)):
 
 # v1.8.3 BUG-E — interval label override for misclassified RECOVERY rows.
 # ICU's auto-detection labels long flat segments "RECOVERY" regardless of
-# actual power. Domestique used to display the label verbatim, so the user
+# actual power. VELARCO used to display the label verbatim, so the user
 # saw "RECOVERY" rows in the 23 INTERVALS table for segments averaging
 # 189-297W (Z3-Z5+ on a 248W FTP). We now compute the zone from avg power
 # and override the displayed name when ICU's label disagrees.
@@ -21937,7 +21937,7 @@ _DIAG_HEALTH_CACHE_TTL = 60.0
 
 
 def _diag_local_only(request: Request) -> bool:
-    """True iff the request is from localhost. Domestique listens only on
+    """True iff the request is from localhost. VELARCO listens only on
     127.0.0.1, so any non-local client is suspicious. Returns True when
     ``request.client`` is None or the host is the FastAPI TestClient
     sentinel, so tests pass without special-casing.
@@ -22145,9 +22145,9 @@ if __name__ == "__main__":
     # across workers.
     _UVICORN_WORKERS = 1
     assert _UVICORN_WORKERS == 1, (
-        "Domestique requires single-worker uvicorn — see launcher.py / README "
+        "VELARCO requires single-worker uvicorn — see launcher.py / README "
         "for the reason (per-process caches, DB sync thread)."
     )
-    print("Domestique Dashboard - http://localhost:8080")
+    print("VELARCO Dashboard - http://localhost:8080")
     uvicorn.run(app, host="127.0.0.1", port=8080, log_level="warning",
                 workers=_UVICORN_WORKERS)

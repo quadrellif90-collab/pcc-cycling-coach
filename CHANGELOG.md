@@ -2,10 +2,10 @@
 
 ## v5.1.0 — Rebrand VELARCO + OCR IT/EN (2026-07-25)
 
-**Nuova identità.** Il progetto non è più "PPC — Programming Cycling Coach" (fork anonimo di Domestique): ora si chiama **VELARCO — Adaptive Cycling Intelligence**.
+**Nuova identità.** Il progetto non è più "VELARCO — Programming Cycling Coach" (fork anonimo di VELARCO): ora si chiama **VELARCO — Adaptive Cycling Intelligence**.
 - **Nome:** VELARCO = VELocità + ARCO di potenza. Evoca la *power-duration curve*, il cuore scientifico del pianificatore.
-- **Logo:** arco di potenza ascendente che diventa una ruota, gradiente teal→amber (palette PPC). File vettoriale `assets/velarco_logo.svg` + PNG/ICO per EXE/installer.
-- **Dove appare:** titolo finestra/EXE (`VELARCO.exe`), FastAPI title, dashboard header + riepilogo, installer NSIS (nome + scorciatoie + icona), `ppc.spec` (icona + bundle identifier `com.velarco.cycling`), README.
+- **Logo:** arco di potenza ascendente che diventa una ruota, gradiente teal→amber (palette VELARCO). File vettoriale `assets/velarco_logo.svg` + PNG/ICO per EXE/installer.
+- **Dove appare:** titolo finestra/EXE (`VELARCO.exe`), FastAPI title, dashboard header + riepilogo, installer NSIS (nome + scorciatoie + icona), `velarco.spec` (icona + bundle identifier `com.velarco.cycling`), README.
 - **I dati utente restano in `~/.domestique/`** (compatibilità preservata, nessuna migrazione).
 
 **OCR IT/EN completo.** Il build v5.0.0 bundlava Tesseract ma solo col modello EN; ora il CI scarica anche `ita.traineddata` (con retry) così i PDF italiani (BIA/ematochimica/dieta) vengono letti in italiano.
@@ -20,10 +20,10 @@
 
 **Auto-aggiornamento ATTIVO.** Esisteva già `/api/self-update` (scarica l'installer e lo lancia silenzioso `/S` su Windows, apre il .dmg su mac, poi l'app si chiude per liberare l'EXE). Ora:
 - il banner di aggiornamento ha il bottone **"Aggiorna ora"** che lo chiama (prima c'era solo il link manuale "Download");
-- i nomi hardcoded `PPC-Setup.exe`/`PPC.dmg` corretti in `VELARCO-Setup.exe`/`VELARCO.dmg`.
+- i nomi hardcoded `VELARCO-Setup.exe`/`VELARCO.dmg` corretti in `VELARCO-Setup.exe`/`VELARCO.dmg`.
 - Quindi: controllo automatico ogni 6h + installazione con un click, dati utente preservati.
 
-**Sotto il cofano.** Rebrand + layer + auto-update in `app.py`, `ppc.spec`, `installer.nsi`, `build_win.bat`, `training_planner.py` (layer + `altitude_note` su `PlannedSession`), `plan_options.py` (`enable_altitude`), `templates/dashboard.html` (toggle + bottone aggiorna). Test: `tests/test_plan_options_51.py` (altitude + iniezione strength/mobility + non-regressione). Build: installer NSIS `VELARCO-Setup-<ver>.exe` + DMG `VELARCO.app`.
+**Sotto il cofano.** Rebrand + layer + auto-update in `app.py`, `velarco.spec`, `installer.nsi`, `build_win.bat`, `training_planner.py` (layer + `altitude_note` su `PlannedSession`), `plan_options.py` (`enable_altitude`), `templates/dashboard.html` (toggle + bottone aggiorna). Test: `tests/test_plan_options_51.py` (altitude + iniezione strength/mobility + non-regressione). Build: installer NSIS `VELARCO-Setup-<ver>.exe` + DMG `VELARCO.app`.
 
 ## v5.0.0 — Selettore di accorgimenti + OCR per i PDF scansionati (2026-07-25)
 
@@ -31,7 +31,7 @@
 l'utente sceglie se usare il **pianificatore normale** o attivare uno o più
 **accorgimenti scientifici**, ciascuno un layer che arricchisce lo stesso piano
 (non motori separati — single source of truth). Toggle nel pannello "Accorgimenti
-del piano (PPC 5.x)":
+del piano (VELARCO 5.x)":
 - **Nutrizione / fueling** — note per fase/sessione (Impey 2018, IOC).
 - **Integrazione** — creatina / beta-alanina / caffeina per fase (IOC/ISSN 2023).
 - **Strategia heat** — blocco acclimatazione 3 settimane pre-evento (Rønnestad 2025, +4.1% Hb-mass).
@@ -54,7 +54,7 @@ del piano (PPC 5.x)":
 - `training_planner.generate_plan(plan_options=...)` normalizza e applica i layer.
 - Endpoint `/api/plan/generate` legge `plan_options` dal body; serializzazione JSON
   delle sessioni include i 6 campi nota.
-- Build: `pytesseract` + `PyMuPDF` in requirements; hidden imports in ppc.spec.
+- Build: `pytesseract` + `PyMuPDF` in requirements; hidden imports in velarco.spec.
 - Test: 35 nuovi test (selettore + OCR + API end-to-end) tutti verdi.
 
 ## v4.4.0 — Login one-click che resta, profili che si cancellano, e un motore che ragiona sul tempo che hai (2026-07-24)
@@ -96,7 +96,7 @@ del piano (PPC 5.x)":
 - **A workout that emptied the tank is fixed.** One anaerobic session ended each half with two back-to-back 2-minute efforts at 120% — a 4-minute wall nobody intended, left behind when an old safety pass flattened a rising finisher into two identical blocks. Now a single 2-minute effort per half. Three other workouts had the same scar and were repaired too.
 - **Workout names tell the truth.** A file claiming 76 minutes was 67. Three more were labelled recovery or endurance while holding efforts up to 150% — including a "recovery spin" that ends with a minute at 118%.
 - **Session details show the real workout's load,** not the planner's estimate for that slot. The plan's target appears as a footnote only when the two genuinely disagree.
-- Under the hood: Domestique can now compare a prescribed workout against the power you actually delivered, rep by rep — groundwork for judging whether a session was really completed, not just whether the total looked right.
+- Under the hood: VELARCO can now compare a prescribed workout against the power you actually delivered, rep by rep — groundwork for judging whether a session was really completed, not just whether the total looked right.
 
 ## v3.4.4 — Pick your window, and a plan grid that tells you things (2026-07-20)
 
@@ -494,12 +494,12 @@ plus a wave of honest fixes land across the board.
   week or a longer peak than the default gives you — previously the split was
   fixed and could jump around by a week as your event date shifted.
 - **Mid-plan entry — "I've been training already."** When you build or rebuild a
-  plan you can now tell Domestique you didn't start today, two ways:
+  plan you can now tell VELARCO you didn't start today, two ways:
   - **I know my start date** — pick the day your block actually began. The plan
     is laid out over the full runway from that date, the weeks you've already
     done are marked complete, and you drop in at the week you're really on — no
     repeating a base phase you already rode.
-  - **Place me from my rides** — Domestique reads your recent training and
+  - **Place me from my rides** — VELARCO reads your recent training and
     proposes which week you're on, so a rebuild lands you where your fitness
     actually is instead of at week one.
 
@@ -542,7 +542,7 @@ plus a wave of honest fixes land across the board.
     fade, reading low.
   Pick a card and that session's workout swaps to it. There's no global setting
   to hunt for — you choose in the moment, for that test.
-- **Your FTP is read from the effort itself.** When you finish a test, Domestique
+- **Your FTP is read from the effort itself.** When you finish a test, VELARCO
   works the number out from your actual ride. The ramp takes your best *sustained*
   minute on the ramp, so a stray sprint in your warm-up or spin-down can no longer
   inflate the result; the 20-minute test trims a finish-line kick before
@@ -551,7 +551,7 @@ plus a wave of honest fixes land across the board.
 
 ### Train to your own numbers
 - **Short intervals capped to your measured power (opt-in).** If you have a
-  measured peak-power number, Domestique can hold a workout's short, very-hard
+  measured peak-power number, VELARCO can hold a workout's short, very-hard
   efforts to what you can actually produce — you approve it per workout, or leave
   it off entirely. It's grounded in critical-power sports science and uses your
   real measured numbers, not a model's estimate. (We read the research first and
@@ -611,10 +611,10 @@ plus a wave of honest fixes land across the board.
   the window rolls forward on its own.
 - Training by heart rate? Your workouts are pushed with heart-rate targets.
   Power-based plans push the original workout files unchanged.
-- Safe by design: Domestique only ever touches the calendar entries it created
+- Safe by design: VELARCO only ever touches the calendar entries it created
   — your races, notes, and anything you added yourself stay put, even on the
-  same day. Turning sync off (or disconnecting) removes Domestique's entries
-  and nothing else. One Domestique install per athlete.
+  same day. Turning sync off (or disconnecting) removes VELARCO's entries
+  and nothing else. One VELARCO install per athlete.
 - Existing intervals.icu connections are read-only: the button will ask for a
   one-click reconnect to grant calendar permission the first time.
 
@@ -999,7 +999,7 @@ A **Plan style** selector (default unchanged):
   a spinner while your history indexes from intervals.icu (was a bare “Loading…”).
 - **FTP-rise prompt** — a prominent top banner appears only when your FTP actually
   looks **higher** than set, with one click to raise it + update zones.
-- **Logs no longer balloon** — Domestique now keeps a single small capped log
+- **Logs no longer balloon** — VELARCO now keeps a single small capped log
   (~3 MB) and auto-cleans the old per-launch logs (some installs had grown to
   multiple GB).
 - Fixed a **“readiness NaN”** flash on the plan-open checklist for new accounts.
@@ -1293,7 +1293,7 @@ data/scoring inconsistencies are gone.
 
 ### The plan stays correct when it auto-adjusts
 
-Domestique re-optimizes your plan after you miss a session or sync new rides. Two
+VELARCO re-optimizes your plan after you miss a session or sync new rides. Two
 fixes make those automatic adjustments trustworthy:
 
 - **Your event is never forgotten.** When the plan rebuilt or rebalanced itself it
@@ -1511,7 +1511,7 @@ plus workout names that finally tell the truth about the file.
   Added the backend + `pythonnet` (Windows-only) to the build, made launch failures
   visible (logged + a message box), and hardened the browser fallback.
 - **Polarization label now matches intervals.icu.** A ride could read "Unique" in
-  Domestique while intervals.icu called it "Polarized" — the classifier evaluated an
+  VELARCO while intervals.icu called it "Polarized" — the classifier evaluated an
   *additive* polarization index while the card displayed the *multiplicative* Treff
   index. Both now use one Treff-PI source of truth, so a polarized ride is labelled
   polarized (every documented reference distribution keeps its label).
@@ -1735,7 +1735,7 @@ intensity classes (anaerobic, neuromuscular) stay intentionally thin at 75–90
 min — sustained 90-min anaerobic isn't physiological; the polarized VO2 blocks
 are how long sessions stay hard-but-sound.
 
-All workouts are `<author>Domestique Library</author>`, content-derived generic
+All workouts are `<author>VELARCO Library</author>`, content-derived generic
 names, round durations + round power %, deduped against the existing library.
 match_zwo no-ghost invariant + DFA suites green.
 
@@ -2372,7 +2372,7 @@ All 11 pass. Pytest baseline gains net +17 (5 new tests + 6 previously flaky now
 
 ### CI hygiene
 
-`.github/workflows/release.yml`: macOS DMG job disabled via `if: false`. CI was uploading an ad-hoc-signed `Domestique.dmg` that beat the manually-notarized `Domestique-v$VER.dmg` in `_select_platform_asset` ordering, so the in-app update banner served Mac users the unsigned/Gatekeeper-rejected DMG. Manual ship via `domestique-release` skill is now the canonical Mac release path. Windows EXE job stays on.
+`.github/workflows/release.yml`: macOS DMG job disabled via `if: false`. CI was uploading an ad-hoc-signed `VELARCO.dmg` that beat the manually-notarized `VELARCO-v$VER.dmg` in `_select_platform_asset` ordering, so the in-app update banner served Mac users the unsigned/Gatekeeper-rejected DMG. Manual ship via `domestique-release` skill is now the canonical Mac release path. Windows EXE job stays on.
 
 Also cleaned the polluted asset out of v1.8.6 + v1.8.7 GitHub releases.
 
@@ -2398,7 +2398,7 @@ The dashboard update-available banner already polled GitHub Releases every 6 hou
 
 | | v1.8.6 | v1.8.7 |
 |---|---|---|
-| Banner header | "Domestique v1.8.7 available" | "Update available — v1.8.6 → v1.8.7" |
+| Banner header | "VELARCO v1.8.7 available" | "Update available — v1.8.6 → v1.8.7" |
 | "What's new" button | Opens release page in browser | Expands inline with rendered notes |
 | Reading release notes | Browser tab away from app | Inline, scrollable panel inside banner |
 | External release link | The button itself | "View on GitHub →" inside expanded panel |
@@ -2435,14 +2435,14 @@ Identical to v1.8.5 — download DMG → drag → double-click, zero Gatekeeper 
 
 ## v1.8.5 — Apple notarized DMG (zero Gatekeeper prompts on download) (2026-05-20)
 
-Maintainer enrolled in Apple Developer Program (team `VB8TF5LQ8P`). v1.8.5 is the first Domestique release codesigned with `Developer ID Application: Martijn Haring (VB8TF5LQ8P)` AND notarized through Apple's malware scan AND stapled offline.
+Maintainer enrolled in Apple Developer Program (team `VB8TF5LQ8P`). v1.8.5 is the first VELARCO release codesigned with `Developer ID Application: Martijn Haring (VB8TF5LQ8P)` AND notarized through Apple's malware scan AND stapled offline.
 
 ### What changes for users
 
 | | Pre-v1.8.5 | v1.8.5+ |
 |---|---|---|
 | Download DMG | "Apple could not verify..." → System Settings bypass | Opens cleanly, zero prompts |
-| Drag .app to Applications | "Domestique is damaged" → `xattr` Terminal fix | Launches on double-click |
+| Drag .app to Applications | "VELARCO is damaged" → `xattr` Terminal fix | Launches on double-click |
 | Terminal commands needed | yes (`xattr -dr com.apple.quarantine ...`) | none |
 | Cask install | already worked (brew strips quarantine) | unchanged |
 
@@ -2471,25 +2471,25 @@ New Claude Code skill at `~/.claude/skills/mac-app-notarize/SKILL.md` captures t
 
 ### Release artifact
 
-Notarized DMG at `~/Desktop/Domestique.dmg` → `spctl --assess` reports `source=Notarized Developer ID`. Both the .app and the DMG carry stapled tickets (offline-validatable).
+Notarized DMG at `~/Desktop/VELARCO.dmg` → `spctl --assess` reports `source=Notarized Developer ID`. Both the .app and the DMG carry stapled tickets (offline-validatable).
 
 ## v1.8.4 — Ad-hoc codesigned DMG (no more "damaged" dialog) (2026-05-19)
 
-User reported: downloaded DMG from GitHub releases triggered macOS Gatekeeper's "Domestique is damaged and can't be opened. You should move it to the Bin." dialog — the misleading message panics most users into deleting the app. Locally-built DMG worked fine (no browser-quarantine flag attached).
+User reported: downloaded DMG from GitHub releases triggered macOS Gatekeeper's "VELARCO is damaged and can't be opened. You should move it to the Bin." dialog — the misleading message panics most users into deleting the app. Locally-built DMG worked fine (no browser-quarantine flag attached).
 
 Pre-v1.8.4 the `.app` bundle was completely unsigned. macOS treats unsigned + quarantined bundles as "damaged" rather than offering the right-click → Open bypass.
 
 Fix: `build_dmg.sh` now ad-hoc codesigns the bundle and the DMG itself:
 
 ```bash
-codesign --force --deep --options runtime --sign - dist/Domestique.app
-codesign --force --sign - ~/Desktop/Domestique.dmg
+codesign --force --deep --options runtime --sign - dist/VELARCO.app
+codesign --force --sign - ~/Desktop/VELARCO.dmg
 ```
 
 `-` (dash) = ad-hoc identity. `--deep` signs nested frameworks (~150 dylibs in the PyInstaller bundle). `--options runtime` enables the hardened runtime so future Apple-Developer-ID notarization (if we ever add it) needs no re-architecture.
 
 What changes for users:
-- First launch shows the milder **"Domestique cannot be opened because it is from an unidentified developer"** dialog instead of the alarming "damaged" message.
+- First launch shows the milder **"VELARCO cannot be opened because it is from an unidentified developer"** dialog instead of the alarming "damaged" message.
 - Right-click → Open works reliably to bypass it; macOS remembers the choice.
 - `xattr -dr com.apple.quarantine` Terminal fallback still documented for the rare cases where right-click → Open doesn't surface.
 
@@ -2501,7 +2501,7 @@ No notarization yet — that costs $99/yr Apple Developer ID. README updated.
 
 ### BUG-A: Classifier — UNIQUE should be PYRAMIDAL
 
-ICU's FastFitness.Tips classified the user's ride (z1z2=58.3, z3z4=27.6, z5+=14.1, PI=1.47) as **Pyramidaal**; Domestique returned `unique` because the v1.8.0 strict rule required `z3z4 >= 35`. Added moderate-pyramid branch BEFORE the unique fallback: `z3z4 >= 20 AND z3z4 > z5+ AND 40 <= z1z2 < 70 → pyramidal`. Catches the textbook pyramid shape (Z1+Z2 base, mid Z3+Z4, small Z5+ peak) the strict rule misses. Existing v1.8.0 cases preserved — strict rule still catches the Treff reference ride (15/49.2/35.8). 5 new tests in `test_v183_classifier_moderate_pyramid.py`.
+ICU's FastFitness.Tips classified the user's ride (z1z2=58.3, z3z4=27.6, z5+=14.1, PI=1.47) as **Pyramidaal**; VELARCO returned `unique` because the v1.8.0 strict rule required `z3z4 >= 35`. Added moderate-pyramid branch BEFORE the unique fallback: `z3z4 >= 20 AND z3z4 > z5+ AND 40 <= z1z2 < 70 → pyramidal`. Catches the textbook pyramid shape (Z1+Z2 base, mid Z3+Z4, small Z5+ peak) the strict rule misses. Existing v1.8.0 cases preserved — strict rule still catches the Treff reference ride (15/49.2/35.8). 5 new tests in `test_v183_classifier_moderate_pyramid.py`.
 
 ### BUG-B: HRV-toast false positive
 
@@ -2529,7 +2529,7 @@ Frontend renders specific toast per branch. 5 new tests in `test_v183_apply_tier
 
 ### BUG-E: Interval labels show RECOVERY for Z3 power
 
-23 INTERVALS table showed rows labeled "RECOVERY" with Avg Power 189-297W (76-120% FTP — Z3 / Z4 / Z5+). ICU's auto-detection labels long flat segments "RECOVERY" regardless of power; Domestique displayed verbatim. Added `_display_interval_name(row, ftp)` helper that overrides ICU's name with `Z<n> <watts>W` when ICU says "RECOVERY" but computed zone-from-power is Z2 or above. Structured ICU names (`"302s@243w91rpm"`) and genuine Z1 segments preserved. 5 new tests in `test_v183_interval_label_override.py`.
+23 INTERVALS table showed rows labeled "RECOVERY" with Avg Power 189-297W (76-120% FTP — Z3 / Z4 / Z5+). ICU's auto-detection labels long flat segments "RECOVERY" regardless of power; VELARCO displayed verbatim. Added `_display_interval_name(row, ftp)` helper that overrides ICU's name with `Z<n> <watts>W` when ICU says "RECOVERY" but computed zone-from-power is Z2 or above. Structured ICU names (`"302s@243w91rpm"`) and genuine Z1 segments preserved. 5 new tests in `test_v183_interval_label_override.py`.
 
 ### Tests
 
@@ -3615,7 +3615,7 @@ Closes the README's "DFA α1 is computed post-ride if your FIT has them" gap tha
 
 ### HRV-recording auto-prompt (educational toast)
 
-- After every ICU sync, when a ride lands with `dfa_alpha1_status == 'no_rr_data'`, Domestique surfaces a one-time-per-version toast.
+- After every ICU sync, when a ride lands with `dfa_alpha1_status == 'no_rr_data'`, VELARCO surfaces a one-time-per-version toast.
 - Auto-detect of the rider's Garmin device from FIT `file_id.garmin_product` — 21 device IDs mapped (Edge 530/830/1030/1030 Plus/1040, Fēnix 6/7/8, Epix 2, Forerunner 255/265/745/945/955/965).
 - `[Show me how]` opens a modal with the device-by-device path table — the rider's row is **pre-highlighted in green**, others dimmed at 50 % opacity.
 - `[Dismiss]` (per-version) and `[Don't show again]` (permanent) flags persisted in profile.
@@ -3711,7 +3711,7 @@ User-locked constraint: "We should still weight TSS based training, as that is t
 
 ### Honest caveats baked into the docs
 
-- The Kontro paper itself states: "no published data exist to support the energy-system specific model parameters." The τ defaults (52/10, 5/5, 10/4) are a single-athlete illustrative example from supplementary Fig S2, not population-validated. Domestique exposes them as profile-level overrides and documents this in dashboard tooltip copy.
+- The Kontro paper itself states: "no published data exist to support the energy-system specific model parameters." The τ defaults (52/10, 5/5, 10/4) are a single-athlete illustrative example from supplementary Fig S2, not population-validated. VELARCO exposes them as profile-level overrides and documents this in dashboard tooltip copy.
 - TSS-based Banister τ=42/7 in CTL/ATL is folkloric (per literature: 21-60 d range across athletes; Hellard 2017). v1.0.7 will fit per-athlete.
 
 ### Out of scope (deferred)
@@ -3834,7 +3834,7 @@ v1.0.4 rebuilds the classifier, regenerates the JSON, and rewires the planner + 
 
 - **Update-check banner** on the home page — `GET /api/update/check` polls the GitHub Releases API (cached 6h at `~/.domestique/update_check_cache.json`), filters assets by `sys.platform` (`.dmg` for macOS, `.zip`/`.exe` for Windows). The banner displays the EXACT copy stating which rider data is preserved across the update — rides, training plan, FTP history, wellness logs, profile. `[What's new]` and `[Download]` buttons link LIVE to `release_url` / `download_url` pulled from the API response (never hardcoded). Per-version dismissal via `localStorage["update-banner-dismissed-<version>"]` — resurfaces on the next release.
 - **First-boot-after-upgrade migration toast** — startup version-aware self-check compares `~/.domestique/last_run_version.txt` to `VERSION`. On first boot at a new version: runs additive schema migrations (zero columns added in v1.0.2 — framework only for future use), writes the new version stamp, surfaces a 5s toast naming the from/to versions and "all rider data preserved". Idempotent — same-version reboots don't re-fire the toast (per-from/to-pair `localStorage` flag).
-- **Upgrade docs** — new `docs/upgrading.md` (≤400 words) + new `## Updating Domestique` README section. Per-data-type preservation table guarantees rider state lives in `~/.domestique/` outside the app bundle, so DMG / EXE replacement never touches profiles, rides, plans, FTP history, wellness logs, or ICU credentials.
+- **Upgrade docs** — new `docs/upgrading.md` (≤400 words) + new `## Updating VELARCO` README section. Per-data-type preservation table guarantees rider state lives in `~/.domestique/` outside the app bundle, so DMG / EXE replacement never touches profiles, rides, plans, FTP history, wellness logs, or ICU credentials.
 
 ### Endpoints (v1.0.2)
 - `GET /api/update/check` — returns `{current, latest, update_available, release_url, download_url, asset_name, platform, checked_at, cached, error}`. 6h TTL disk cache.
@@ -3853,7 +3853,7 @@ v1.0.4 rebuilds the classifier, regenerates the JSON, and rewires the planner + 
 
 ## v1.0.0 — First open-source release (2026-05-04)
 
-Domestique reaches public availability. The codebase has been in private development since 2026 — the iteration history is preserved below as "pre-release development log" so users can see the path from concept to v1.0.
+VELARCO reaches public availability. The codebase has been in private development since 2026 — the iteration history is preserved below as "pre-release development log" so users can see the path from concept to v1.0.
 
 **Headline features at v1.0:**
 - **Adaptive training planner** — periodised Base / Build / Peak / Taper, daily-adapt, reforecast, regenerate. 3,054 ZWO workouts in the bundled library, 622 virtual routes (CRS + GPX export).
@@ -4059,7 +4059,7 @@ Pre-v4.6.6 the planner *detected* TSS/intensity/soreness signals in three indepe
 ### MAJOR — Library structural overhaul
 - 2966 of 3054 ZWO files (97%) renamed + descriptions regenerated to match actual segment structure (was 77.8% mismatch). 995 files reclassified to correct content_class. Examples: `recovery_spin_15min` containing 8 sprints @ 165% FTP → renamed Neuromuscular. `threshold_4x10min` at 113% FTP → renamed VO2max. `sweet_spot_2x20min` actually 3x15min → renamed accordingly.
 - 864 files fixed where descriptions showed "0min @ X% FTP" (Duration<60s segments now display in seconds, e.g. "30s @ 110% FTP", or fold into adjacent blocks).
-- All ZWO files now have `<author>Domestique Library</author>`.
+- All ZWO files now have `<author>VELARCO Library</author>`.
 - Audit log at `workouts/.overhaul_manifest.json`.
 - workouts/.content_classification.json regenerated from rewritten files.
 
@@ -4100,7 +4100,7 @@ Pre-v4.6.6 the planner *detected* TSS/intensity/soreness signals in three indepe
 ## v4.5.4 — Cloudflare UA fix + interval variety + non-diagonal renders (2026-05-03)
 
 ### FIXED — root cause of multi-version ICU sync saga
-- **ICU sync was silently 403'd by Cloudflare** for the default Python-urllib User-Agent. Affected all `urllib.request.urlopen` calls to intervals.icu since at least v4.4.0. Symptom: "Connect Intervals.icu in Settings" toast even after pasting valid creds. Now sends `User-Agent: Domestique/4.5.4 (https://github.com/platypus45/domestique)` on every request → all calls succeed.
+- **ICU sync was silently 403'd by Cloudflare** for the default Python-urllib User-Agent. Affected all `urllib.request.urlopen` calls to intervals.icu since at least v4.4.0. Symptom: "Connect Intervals.icu in Settings" toast even after pasting valid creds. Now sends `User-Agent: VELARCO/4.5.4 (https://github.com/platypus45/domestique)` on every request → all calls succeed.
 
 ### NEW — planner interval variety
 - **WORKOUT_MIX_PREFERENCE rebalanced** — endurance/tempo dominance dropped, sweet_spot/threshold/vo2max/vo2_short/over_under/anaerobic/sprints raised. Base phase late weeks now include threshold + occasional vo2_short. Build phases more aggressively VO2 + over-under.
@@ -4130,7 +4130,7 @@ Pre-v4.6.6 the planner *detected* TSS/intensity/soreness signals in three indepe
 ## v4.5.2 — Hot-reload ICU creds + 30-min throttle reset on save (2026-05-02)
 
 ### FIXED
-- **Settings save now hot-reloads ICU credentials in-memory.** Previously, pasting new ICU creds in Settings wrote `~/.domestique/profiles/<id>/.env` correctly but the running uvicorn process kept using the creds loaded at startup, so sync continued to fail with `ICUAuthError` until the user restarted Domestique. Root cause: `training.fetch_recent_activities` / `fetch_recent_wellness` were leaving stale module-level `config.ICU_ATHLETE_ID` / `config.ICU_API_KEY` attributes after their explicit-override path, shadowing the dynamic `__getattr__` proxy that resolves from `ProfileManager._env`. Two fixes: (1) `del config.ICU_*` in those `finally` blocks instead of restoring the previous value, so `__getattr__` resumes; (2) `setup_save` defensively `delattr`s any stale shadow attribute after `pm.save_env`.
+- **Settings save now hot-reloads ICU credentials in-memory.** Previously, pasting new ICU creds in Settings wrote `~/.domestique/profiles/<id>/.env` correctly but the running uvicorn process kept using the creds loaded at startup, so sync continued to fail with `ICUAuthError` until the user restarted VELARCO. Root cause: `training.fetch_recent_activities` / `fetch_recent_wellness` were leaving stale module-level `config.ICU_ATHLETE_ID` / `config.ICU_API_KEY` attributes after their explicit-override path, shadowing the dynamic `__getattr__` proxy that resolves from `ProfileManager._env`. Two fixes: (1) `del config.ICU_*` in those `finally` blocks instead of restoring the previous value, so `__getattr__` resumes; (2) `setup_save` defensively `delattr`s any stale shadow attribute after `pm.save_env`.
 - **Sync throttle resets when creds change.** The `.last_sync_at` rides + wellness markers are zeroed out on every credential change, so the next `/api/rides/sync` runs immediately — previously the 1h throttle would still say "Already synced — try again in N min" even after the user just pasted fresh keys.
 - **`db._auth_disabled` resets on creds change.** If the background sync had been disabled by 5 consecutive 401s on the OLD bad key, saving fresh creds clears the flag so the loop resumes without restart.
 
@@ -4320,7 +4320,7 @@ Pre-v4.6.6 the planner *detected* TSS/intensity/soreness signals in three indepe
 ## v4.0.0-alpha — Trainer subsystem removed; library grows (2026-04-24)
 
 ### BREAKING
-- Trainer hardware support removed entirely. Domestique is now a planner + workout library + post-ride viewer. Ride on Tacx app / MyWhoosh / Golden Cheetah / Zwift, import FIT after.
+- Trainer hardware support removed entirely. VELARCO is now a planner + workout library + post-ride viewer. Ride on Tacx app / MyWhoosh / Golden Cheetah / Zwift, import FIT after.
 - No more live ride view. No BLE, FTMS, ERG, SIM, FE-C, gate logic, WebSocket.
 - Profile schema v3 → v4: `paired_devices`, `trainer_effect`, `bike_weight_kg` removed (auto-stripped by migration)
 - Dependencies: `bleak`, `pycycling` removed.
@@ -4334,7 +4334,7 @@ Pre-v4.6.6 the planner *detected* TSS/intensity/soreness signals in three indepe
 - Existing plural-name endpoints retained: /api/rides, /api/profiles, /api/workouts, /api/weekly-plan (not renamed to singular despite earlier aspirational naming in MASTER §6).
 - Ride history list on dashboard with click-to-open post-ride report
 - Import FIT button on dashboard header
-- 1253 new workouts in library: original procedurally-generated structures (pyramids, short VO2/threshold/sweet-spot, over-unders with varied ratios, neuromuscular sprints, and broad category coverage) + 24 GitHub MIT/Unlicense imports (macgrrl, michaelahlers). Total library: 1797 → 3050. All new files authored `<author>Domestique Library</author>`.
+- 1253 new workouts in library: original procedurally-generated structures (pyramids, short VO2/threshold/sweet-spot, over-unders with varied ratios, neuromuscular sprints, and broad category coverage) + 24 GitHub MIT/Unlicense imports (macgrrl, michaelahlers). Total library: 1797 → 3050. All new files authored `<author>VELARCO Library</author>`.
 - docs/cycling_apps.md — comparison of free cycling apps accepting ZWO/FIT
 - docs/workout_sources.md — library source docs + legal stance
 
@@ -4377,7 +4377,7 @@ Generator `generate_ftp_workouts.py` produces 3 variants × 7 categories × 2 du
 1017 pass, 1 skipped, 11 deselected, 3 pre-existing `test_plan_api.py` rematch failures (unrelated, predate fix35).
 
 ### Ship
-DMG rebuilt to `~/Desktop/Domestique.dmg`. `/Applications/Domestique.app` not touched.
+DMG rebuilt to `~/Desktop/VELARCO.dmg`. `/Applications/VELARCO.app` not touched.
 
 ## [3.6.0-fix32-hr-hold-and-line-chart] — 2026-04-20
 
@@ -4427,7 +4427,7 @@ Full suite: 984 pass, 1 skipped, 11 deselected, 3 pre-existing `test_plan_api.py
 - 15+ new: sim-flow deletion, ERG auto-resume, autopause timer freeze/resume, ride-chart smoothing.
 
 ### Ship
-DMG rebuilt to `~/Desktop/Domestique.dmg`. `/Applications/Domestique.app` not touched.
+DMG rebuilt to `~/Desktop/VELARCO.dmg`. `/Applications/VELARCO.app` not touched.
 
 <!-- Superseded detail on autopause timer kept below as deep-dive reference -->
 
@@ -4500,7 +4500,7 @@ Unit tests used clean int inputs and never surfaced the bug. Fix: coerce `power`
 - New tests: 10+ across first-pedal paths (None/NaN coercion, rising-edge vs lite-tick corruption), gate-robustness (phantom-spike reject, hysteresis, distance fallback, trailing-mean smoothing), debug-snapshot shape, log rotation, log-level endpoint.
 
 ### Ship
-DMG rebuilt to `~/Desktop/Domestique.dmg`. `/Applications/Domestique.app` not touched.
+DMG rebuilt to `~/Desktop/VELARCO.dmg`. `/Applications/VELARCO.app` not touched.
 
 ## [3.6.0-fix29] — 2026-04-20
 
@@ -4522,7 +4522,7 @@ DMG rebuilt to `~/Desktop/Domestique.dmg`. `/Applications/Domestique.app` not to
 - 6 diagnostic agents ran before Wave 2 — reports at `/tmp/armed_diag_*.md` + `/tmp/spatial_diag_*.md`.
 
 ### Ship constraint
-DMG rebuilt to `~/Desktop/Domestique.dmg` only. `/Applications/Domestique.app` not touched.
+DMG rebuilt to `~/Desktop/VELARCO.dmg` only. `/Applications/VELARCO.app` not touched.
 
 ## [3.6.0-fix28] — 2026-04-20
 
@@ -4569,7 +4569,7 @@ Removed 584 vendor-brand references from code, docs, templates, comments. Design
 - 16 parallel physics-audit agents produced 16 reports at `/tmp/phys_audit_NN.md` (kept for reference).
 
 ### Ship constraint
-DMG rebuilt to `~/Desktop/Domestique.dmg` only. **`/Applications/Domestique.app` not touched** — user installs the DMG themselves after the next ride.
+DMG rebuilt to `~/Desktop/VELARCO.dmg` only. **`/Applications/VELARCO.app` not touched** — user installs the DMG themselves after the next ride.
 
 ---
 
@@ -4629,7 +4629,7 @@ Frontend graph + hero-power tile previously updated at 1 Hz (session heavy tick)
 - 3 pre-existing `test_plan_api` rematch-classifier failures flagged as fix26 IMPL-ADAPT regression (unrelated to fix27 — will address separately).
 
 ### Ship constraint
-- DMG rebuilt to `~/Desktop/Domestique.dmg`. `/Applications/Domestique.app` NOT touched (user still testing on the bike).
+- DMG rebuilt to `~/Desktop/VELARCO.dmg`. `/Applications/VELARCO.app` NOT touched (user still testing on the bike).
 - Sandbox-blocked SSH → user must `git push origin clean-main` from their own terminal.
 
 ## [3.6.0-fix26] — 2026-04-19
@@ -4715,7 +4715,7 @@ Frontend graph + hero-power tile previously updated at 1 Hz (session heavy tick)
 - New tests across trainer_connection, training_live, training_planner, plan_api, profiles, sleep_inhibit, training (ICU).
 
 ### Ship constraint
-- DMG rebuilt to `~/Desktop/Domestique.dmg` only. **Installed app at `/Applications/Domestique.app` was NOT touched** — user was testing on the bike during the wave; they install the new DMG themselves after the ride.
+- DMG rebuilt to `~/Desktop/VELARCO.dmg` only. **Installed app at `/Applications/VELARCO.app` was NOT touched** — user was testing on the bike during the wave; they install the new DMG themselves after the ride.
 
 ## [3.6.0-fix25] — 2026-04-19
 
@@ -5001,7 +5001,7 @@ User-visible behavior deltas vs v3.5.1 — read before upgrading:
 - `NOTICE` adds html2canvas + 5 runtime deps; nutrition count corrected to 284.
 - `README.md` — workout 1,753 / route 622 counts corrected; SECURITY section; "Installing the unsigned DMG" workaround note.
 - `SYSTEM.md` — data-dir and removed-Strava copy cleaned.
-- `SCIENCE_REVIEW.md` title now "Domestique".
+- `SCIENCE_REVIEW.md` title now "VELARCO".
 - `CHANGELOG.md` — 3.5.0 / 3.5.1 date order fixed.
 - `DOMESTIQUE_LOG_MAX_BYTES` / `DOMESTIQUE_LOG_BACKUP_COUNT` env vars (with deprecated `CC_LOG_*` fallback).
 - `launcher.py` signal handler flips uvicorn `should_exit` for graceful shutdown.
@@ -5050,7 +5050,7 @@ Removed Strava UX (configuration friction); added Save-to-Desktop on RIDE REPORT
 ## [3.4.0] - 2026-04-18
 
 ### Added
-- **Strava OAuth relay (Cloudflare Worker)** — true reference-parity UX: end-users no longer need to paste a Strava `client_secret`. A tiny single-file Worker (`relay/strava-oauth-worker.js`) holds the secret server-side and exposes `POST /token-exchange`, `POST /token-refresh`, and `GET /health`. CORS is locked to Domestique's `localhost:8080` / `127.0.0.1:8080` origins; input shape (code/refresh_token) is validated at the edge; per-(colo,IP) token-bucket rate limit; logs contain only timestamps + status codes (never the secret, never any token).
+- **Strava OAuth relay (Cloudflare Worker)** — true reference-parity UX: end-users no longer need to paste a Strava `client_secret`. A tiny single-file Worker (`relay/strava-oauth-worker.js`) holds the secret server-side and exposes `POST /token-exchange`, `POST /token-refresh`, and `GET /health`. CORS is locked to VELARCO's `localhost:8080` / `127.0.0.1:8080` origins; input shape (code/refresh_token) is validated at the edge; per-(colo,IP) token-bucket rate limit; logs contain only timestamps + status codes (never the secret, never any token).
 - **`STRAVA_RELAY_URL` config** in `surge_config.py` — sourced from `DOMESTIQUE_STRAVA_RELAY_URL` env var. When set, `is_relay_configured()` returns True and `is_strava_configured()` returns True without needing a local secret.
 - **`relay/wrangler.toml` + `relay/README.md`** — 5-minute one-time deploy guide (cloudflare.com → Workers → paste code → set `STRAVA_CLIENT_ID` + `STRAVA_CLIENT_SECRET` env vars → deploy → copy URL).
 
@@ -5121,11 +5121,11 @@ Removed Strava UX (configuration friction); added Save-to-Desktop on RIDE REPORT
 ## [2.0.0] — 2026-04-17
 
 ### Renamed
-- **ChickenCycling → Domestique.** New tagline: **"Your training domestique."**
+- **ChickenCycling → VELARCO.** New tagline: **"Your training domestique."**
 - macOS bundle id: `com.chickencycling.app` → `com.platypus45.domestique`
-- DMG output: `ChickenCycling.dmg` → `Domestique.dmg`
+- DMG output: `ChickenCycling.dmg` → `VELARCO.dmg`
 - PyInstaller spec: `chickencycling.spec` → `domestique.spec`
-- Window title, tray-icon title, and printed banners now read "Domestique"
+- Window title, tray-icon title, and printed banners now read "VELARCO"
 
 ### Added
 - **RIDE REPORT** — one-screen end-ride flow: cadence, MMP (mean-max power) curve, and aerobic decoupling all on a single review surface before save/discard.
@@ -5136,9 +5136,9 @@ Removed Strava UX (configuration friction); added Save-to-Desktop on RIDE REPORT
 
 ### Notes
 - **Data directory unchanged.** `~/.chickencycling/` is intentionally **kept** so the SQLite DB, profiles, ride history, intervals.icu credentials, and known-device registry survive the rebrand without re-onboarding. A future migration to `~/.domestique/` is wired through the `profile_manager._maybe_migrate_data_dir()` seam (no-op today).
-- **Strava attribution.** To get the "via Domestique" line on uploaded activities, register Domestique with `developers@strava.com` (FIT manufacturer/product registration). Until then uploads land without a third-party attribution badge but otherwise function normally.
+- **Strava attribution.** To get the "via VELARCO" line on uploaded activities, register VELARCO with `developers@strava.com` (FIT manufacturer/product registration). Until then uploads land without a third-party attribution badge but otherwise function normally.
 - DB table names, route IDs, intervals.icu credential helpers, and Python logger names are unchanged.
-- Existing `<author>ChickenCycling</author>` headers inside bundled `workouts/*.zwo` and `courses/**/*.crs` are preserved as historical artifacts; only newly generated files emit `Domestique`.
+- Existing `<author>ChickenCycling</author>` headers inside bundled `workouts/*.zwo` and `courses/**/*.crs` are preserved as historical artifacts; only newly generated files emit `VELARCO`.
 
 ### Commits
 - `90e46aa` v2.0.0: /api/training/save-ride single save endpoint + discard

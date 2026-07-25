@@ -1,4 +1,4 @@
-; PPC — Programming Cycling Coach installer (NSIS)
+; VELARCO — Programming Cycling Coach installer (NSIS)
 ; Installazione in Program Files; i dati utente restano in %USERPROFILE%\.domestique\
 ; e NON vengono toccati da installazione/aggiornamento (così connessioni e piani
 ; sopravvivono senza migrazione).
@@ -38,7 +38,7 @@ Section "Install"
 
   ; Disinstallatore
   WriteUninstaller "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PPC" "DisplayName" "${APPNAMEFULL}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO" "DisplayName" "${APPNAMEFULL}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO" "UninstallString" "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO" "DisplayVersion" "${VERSION}"
   WriteRegStr HKLM "Software\VELARCO" "InstallDir" "$INSTDIR"
