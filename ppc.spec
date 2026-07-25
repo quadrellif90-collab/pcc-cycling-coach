@@ -80,8 +80,11 @@ if os.path.exists("gpx"):
 # v2.1.x ICU OAuth — bundle the gitignored .oauth.env (client_secret) so the
 # frozen app carries it while the PUBLIC repo never does (see config._load_oauth_env).
 # The secret necessarily ships in the binary (installed-app OAuth, no PKCE).
-if os.path.exists(".oauth.env"):
-    datas.append((".oauth.env", "."))
+# Use an absolute path rooted at the spec dir so it is found regardless of the
+# CWD PyInstaller is launched from (build_win.bat activates a venv, etc.).
+_oauth_src = _spec_dir / ".oauth.env"
+if _oauth_src.exists():
+    datas.append((str(_oauth_src), "."))
 
 # Previously we enumerated top-level `.py` modules explicitly and added them
 # as `datas`. PyInstaller's Analysis pass already picks them up via its
