@@ -313,15 +313,31 @@ def parse_diet_text(text: str) -> dict:
 
 
 def parse_diet_pdf(pdf_bytes: bytes) -> dict:
-    """Estrae testo da PDF (PyPDF2) e lo parse."""
+    """Estrae testo da PDF (PyPDF2) e lo parse.
+
+    PPC 5.0 — OCR fallback: if the PDF yields no text (scanned image), try
+    Tesseract OCR before giving up. Self-contained: no cloud, degrades to a
+    text-only parse (raw_text empty) if OCR is unavailable.
+    """
     from PyPDF2 import PdfReader
     import io
     reader = PdfReader(io.BytesIO(pdf_bytes))
     text = "\n".join((pg.extract_text() or "") for pg in reader.pages)
     text = text.strip()
+    ocr_used = False
+    if not text:
+        try:
+            import ocr_pdf
+            ocr_text = ocr_pdf.ocr_pdf_text(pdf_bytes)
+            if ocr_text:
+                text = ocr_text
+                ocr_used = True
+        except Exception:
+            pass
     struct = parse_diet_text(text)
     struct["raw_text"] = text
     struct["pages"] = len(reader.pages)
+    struct["ocr_used"] = ocr_used
     return struct
 
 

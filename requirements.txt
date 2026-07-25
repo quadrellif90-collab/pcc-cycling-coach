@@ -41,6 +41,15 @@ packaging>=23,<27
 # changes have happened across major versions before).
 scipy>=1.13,<2
 
+# PPC 5.0 — OCR layer for scanned PDFs (BIA / blood-panel / diet exports).
+# pytesseract is the Python wrapper; the Tesseract *binary* is an OPTIONAL
+# external dependency (installed by the Windows installer via choco, or
+# present in PATH). Without it, OCR degrades gracefully (no crash, no cloud).
+pytesseract>=0.3.10,<0.4
+# PyMuPDF (fitz) is the PDF rasterizer used by ocr_pdf + bia_parser/diet_parser.
+# (Already a transitive/used dep; pinned explicitly so the build is reproducible.)
+PyMuPDF>=1.24,<2
+
 # Desktop app (launcher)
 pystray>=0.19.0
 Pillow>=10.0.0

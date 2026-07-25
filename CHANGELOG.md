@@ -1,5 +1,37 @@
 # Changelog
 
+## v5.0.0 — Selettore di accorgimenti + OCR per i PDF scansionati (2026-07-25)
+
+**Selettore di accorgimenti (cuore del 5.x).** Un solo motore `generate_plan`:
+l'utente sceglie se usare il **pianificatore normale** o attivare uno o più
+**accorgimenti scientifici**, ciascuno un layer che arricchisce lo stesso piano
+(non motori separati — single source of truth). Toggle nel pannello "Accorgimenti
+del piano (PPC 5.x)":
+- **Nutrizione / fueling** — note per fase/sessione (Impey 2018, IOC).
+- **Integrazione** — creatina / beta-alanina / caffeina per fase (IOC/ISSN 2023).
+- **Strategia heat** — blocco acclimatazione 3 settimane pre-evento (Rønnestad 2025, +4.1% Hb-mass).
+- **Forza periodizzata + VBT** — forza 2x/sett base → 1x/sett in-season, stop a 20% velocity loss (Han 2025).
+- **Mobilità** — hip-flexor / core / aero (Roadman 2025).
+- **Durability DFA a1** — bandiera se DFA α1 <0.75 (Van Hooren 2025).
+- **Ricalibro automatico** e **Notifiche smart** (email/toast) — motori già presenti, ora attivabili dal selettore.
+- **Contratto di non-regressione:** modalità "normale" (tutti i toggle spenti) → piano **byte-identico** a 4.4.0 (test verde).
+
+**OCR per PDF scansionati (BIA / ematochimica / dieta).**
+- `ocr_pdf.py`: rasterizza le pagine con PyMuPDF e legge il testo con Tesseract.
+- `bia_parser` e `diet_parser` provano l'OCR prima di dichiarare "scansionato":
+  un referto scansionato viene letto automaticamente se Tesseract è installato.
+- **Local-first e opzionale:** niente cloud. Se Tesseract non è presente, l'app
+  degrada graceful (nessun crash, nessun invio dati) e chiede l'inserimento manuale
+  come prima. L'installer Windows installa Tesseract come dipendenza.
+
+**Sotto il cofano.**
+- `plan_options.py`: dataclass `PlanOptions` (8 flag + mode normal/accorgimenti).
+- `training_planner.generate_plan(plan_options=...)` normalizza e applica i layer.
+- Endpoint `/api/plan/generate` legge `plan_options` dal body; serializzazione JSON
+  delle sessioni include i 6 campi nota.
+- Build: `pytesseract` + `PyMuPDF` in requirements; hidden imports in ppc.spec.
+- Test: 35 nuovi test (selettore + OCR + API end-to-end) tutti verdi.
+
 ## v4.4.0 — Login one-click che resta, profili che si cancellano, e un motore che ragiona sul tempo che hai (2026-07-24)
 
 **Login intervals.icu con singola autorizzazione (OAuth), e resta connesso.**

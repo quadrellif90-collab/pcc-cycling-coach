@@ -152,11 +152,38 @@ jobs:
       #   signtool sign /tr http://timestamp.digicert.com /td sha256 \
       #     /fd sha256 /a dist\Domestique\Domestique.exe
 
+      - name: Setup Tesseract (OCR dependency)
+        shell: pwsh
+        run: |
+          # PPC 5.0 — OCR layer needs the Tesseract binary. Install via choco
+          # and copy binary + tessdata next to the frozen EXE so ocr_pdf finds
+          # it at runtime (pytesseract is pointed at this path by ocr_pdf).
+          choco install tesseract -y --no-progress 2>&1 | Out-Null
+          $tess = "C:\Program Files\Tesseract-OCR\tesseract.exe"
+          if (-not (Test-Path $tess)) { $tess = "C:\Program Files (x86)\Tesseract-OCR\tesseract.exe" }
+          if (-not (Test-Path $tess)) { Write-Error "::error::tesseract not found after choco install"; exit 1 }
+          New-Item -ItemType Directory -Force -Path tesseract_bin | Out-Null
+          Copy-Item "$tess" tesseract_bin\tesseract.exe -Force
+          # tessdata: copy the english + italian traineddata if present
+          $td = Split-Path $tess | Join-Path -ChildPath "tessdata"
+          if (Test-Path $td) { Copy-Item "$td\*" tesseract_bin\ -Recurse -Force }
+          Write-Host "Tesseract prepared at tesseract_bin\tesseract.exe"
+
       - name: Build EXE
         shell: cmd
         run: |
           call build_win.bat
           dir dist\PPC
+
+      - name: Bundle Tesseract into the EXE folder
+        shell: pwsh
+        run: |
+          if (Test-Path tesseract_bin) {
+            Copy-Item tesseract_bin\* dist\PPC\ -Recurse -Force
+            Write-Host "Bundled Tesseract into dist\PPC"
+          } else {
+            Write-Host "::warning::tesseract_bin missing — OCR will be unavailable in the build"
+          }
 
       # Watertight gate for the OAuth fix: prove the client_secret actually made
       # it into the frozen bundle (not just that we wrote .oauth.env pre-build).

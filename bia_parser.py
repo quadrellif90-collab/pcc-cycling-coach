@@ -249,6 +249,21 @@ def parse_bia_pdf(pdf_bytes: bytes) -> dict:
             pass
     text = "\n".join(parts).strip()
     if not text:
+        # PPC 5.0 — OCR layer: a scanned PDF may still be readable if Tesseract
+        # is installed. Try OCR; if it yields text, parse it like a text export.
+        try:
+            import ocr_pdf
+            ocr_text = ocr_pdf.ocr_pdf_text(pdf_bytes)
+        except Exception:
+            ocr_text = None
+        if ocr_text:
+            reading = parse_bia_text(ocr_text)
+            reading["scanned"] = False
+            reading["source"] = "pdf_ocr"
+            reading["pages"] = page_images
+            reading["note"] = ("PDF scansionato letto via OCR (Tesseract). "
+                                "Verifica i valori estratti.")
+            return reading
         return {"scanned": True,
                 "reading": BIAReading(source="pdf_scanned").to_dict(),
                 "found_fields": [], "missing_fields": sorted(_LABEL_PATTERNS),

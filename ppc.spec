@@ -143,6 +143,11 @@ a = Analysis(
         "fit_tool.profile.messages.file_id_message",
         "fit_tool.profile.messages.workout_message",
         "fit_tool.profile.messages.workout_step_message",
+        # PPC 5.0 — OCR layer. pytesseract is the wrapper (tesseract binary is
+        # optional at runtime); fitz (PyMuPDF) is the PDF rasterizer. Both are
+        # imported lazily inside ocr_pdf, so PyInstaller won't see them.
+        "pytesseract",
+        "fitz",
         # v1.0.7 IMPL-TAU-FIT-CORE: scipy is now a hard dependency for
         # tau_fitting.py (Banister NLS via scipy.optimize.curve_fit +
         # bootstrap-CI). PyInstaller's static analyser misses scipy's lazy
