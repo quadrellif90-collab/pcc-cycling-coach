@@ -1,18 +1,16 @@
-# Domestique — System Documentation
+# Domestique (VELARCO) — System Documentation
 
-*Evidence-based indoor cycling training platform — your training domestique*
+*Evidence-based indoor cycling training platform — your training domestique. Product name: **VELARCO — Adaptive Cycling Intelligence**; the codebase retains the historical "Domestique" name.*
 
 ---
 
 ## Project Overview
 
-Domestique (formerly ChickenCycling) is an indoor cycling training platform with smart trainer control, structured workouts, virtual routes, and evidence-based training planning. It combines a local Python backend with a vanilla JavaScript frontend (no npm, no build step) and a rich library of workouts, route profiles, and nutrition data.
+Domestique (formerly ChickenCycling) is a local-first indoor cycling training platform. It combines a local Python backend with a vanilla JavaScript frontend (no npm, no build step) and a rich library of workouts, route profiles, and nutrition data.
 
 Key capabilities:
 
-- Smart trainer control over ANT+ FE-C (ERG and simulation modes)
-- Structured workout execution with live power, HR, and cadence telemetry
-- Virtual cycling routes with interactive elevation profiles and gradient simulation
+- Structured workouts and evidence-based training planning (local-first, no cloud)
 - Real-world climb profiles converted to GoldenCheetah-compatible CRS files
 - Evidence-based training plan generator (FTP / VO2max / Hybrid / Event goals)
 - Weekly mesocycle planner with HRV-guided daily adjustment (Plews protocol)
@@ -27,25 +25,15 @@ Key capabilities:
 
 ```
 Backend (pure Python, no build step)
-├── app.py                      → Flask app, HTTP routes, WebSocket telemetry
+├── app.py                      → FastAPI app, HTTP routes (no WebSocket/WebSocket-telemetry)
 ├── training_planner.py         → Periodised plan generator (base → build → peak → taper)
 ├── training_live.py            → Live workout execution engine
-├── workout_picker.py           → Readiness-aware workout selector
-├── power_control.py            → ERG / simulation mode control loop
-├── trainer_connection.py       → ANT+ FE-C smart trainer interface
 ├── readiness.py                → Composite readiness score (HRV, TSB, sleep, RHR, subjective)
 ├── training.py                 → Intervals.icu API client (CTL/ATL/TSB/ACWR/monotony/strain)
 ├── sleep.py                    → Sleep and HRV analysis (LnRMSSD 7d vs SWC)
-├── targets.py                  → Dynamic daily nutrition targets by training type
-├── nutrition_planner.py        → Carbohydrate and protein periodization
-├── nutrition_db.py             → Open Food Facts cache + local fallback DB
 ├── profile_manager.py          → Multi-athlete profile storage
 ├── ride_storage.py             → Local ride history persistence
 ├── fitness_estimation.py       → FTP / CP / VO2max estimators
-├── simulate_ride.py            → Offline ride simulation for testing
-├── running_zones.py            → Running pace/HR zone model
-├── generate_procedural_routes.py → Procedural virtual route generator
-├── rebuild_routes_json.py      → Rebuild route index from course files
 └── gpx_to_gc.py                → GPX → GoldenCheetah CRS converter (elevation smoothing)
 
 Frontend (vanilla JS, no npm)
@@ -55,7 +43,7 @@ Frontend (vanilla JS, no npm)
 └── assets/                     → Icons and static images
 ```
 
-No npm, no webpack, no TypeScript compiler. The frontend is plain HTML/CSS/JS served by Flask.
+No npm, no webpack, no TypeScript compiler. The frontend is plain HTML/CSS/JS served by FastAPI (Uvicorn).
 
 ---
 
@@ -93,7 +81,7 @@ The repository itself ships no personal data. First launch runs a 5-step setup w
 
 - **First-launch setup wizard** — Intervals.icu connect, profile creation, data path selection, training preferences
 - **Desktop app packaging** — macOS `.app` and Windows `.exe` via PyInstaller, system-tray launcher
-- **Live training** — ERG mode for structured workouts, simulation mode for virtual/real routes, live power/HR/cadence/gradient
+- **Live training** — Structured workout execution with live power/HR/cadence display (indoor trainer controlled externally; no in-app ERG/FE-C control since v4.0.0-alpha)
 - **Workout library** — ~1,750 scientific interval templates, filterable by stimulus, duration, TSS, and zone
 - **Virtual routes** — Procedurally generated courses with interactive elevation profiles
 - **Real climb library** — Famous climbs (Ventoux, Stelvio, Teide, Rocacorba, Jaizkibel, etc.) as CRS gradient files

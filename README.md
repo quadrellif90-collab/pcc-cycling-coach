@@ -14,6 +14,11 @@ Latest: **[v5.1.0 — Rebrand VELARCO + OCR IT/EN](https://github.com/quadrellif
 
 ---
 
+
+### Sicurezza & OAuth (Intervals.icu)
+
+L'integrazione Intervals.icu usa il flusso **OAuth 2.0 installed-app** (public client, senza PKCE): il `client_id` è pubblico e il `client_secret` è bundlato nel eseguibile (`ppc.spec` include `.oauth.env`). Questo è il pattern standard per le app desktop installate presso un provider che non emette segreti per-utente; il secret non grantisce accesso a dati altrui e può essere revocato dal pannello Intervals.icu in qualsiasi momento. Il file `.oauth.env` è git-ignored (mai nel repository). Non è un segreto a elevata sensibilità (non è una password utente, non è una API key cloud privata).
+
 **Indice:** [TL;DR](#tldr) · [Perché esiste](#perché-esiste) · [Cosa è cambiato rispetto a Domestique](#cosa-è-cambiato-rispetto-a-domestique) · [Avvio rapido](#avvio-rapido) · [Motore Nutrizione & Integrazione](#motore-nutrizione--integrazione) · [Forza & Mobilità](#forza--mobilità) · [Multi-disciplina](#multi-disciplina) · [Body Composition (BIA)](#body-composition-bia) · [Sync & Altri sport/app](#sync--altre-app) · [Planner adattivo](#planner-adattivo) · [Auto-aggiornamento](#auto-aggiornamento) · [Architettura](#architettura) · [La scienza](#la-scienza) · [Release](#release) · [Licenza](#licenza--attribuzione)
 
 > Approfondimento: la logica completa del planner, le formule e la tabella delle referenze citate sono in [**docs/SCIENCE.md**](docs/SCIENCE.md).

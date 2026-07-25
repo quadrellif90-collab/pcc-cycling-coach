@@ -7,11 +7,11 @@
 # Upper bounds prevent a major-version upstream release (e.g. Pydantic 3,
 # Starlette 0.40, FastAPI 0.120) from silently breaking a tagged build.
 # Review + bump these deliberately when upstream majors roll.
-fastapi>=0.119.0,<0.140
+fastapi>=0.119.0,<1.0
 # Plain uvicorn (no [standard] extra) -- no WebSockets, no uvloop needed.
+uvicorn>=0.30.0,<1.0
 # httptools stays via uvicorn's own minimal deps if we want HTTP/1.1 parser
 # acceleration, but even that is optional.
-uvicorn>=0.30.0,<0.40
 jinja2>=3.1.0,<4
 httpx>=0.27.0,<1
 fit-tool>=0.9.13,<1
