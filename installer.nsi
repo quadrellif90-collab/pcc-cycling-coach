@@ -11,7 +11,7 @@
 !ifndef VERSION
   !define VERSION "4.0.0"
 !endif
-!define INSTDIR "$PROGRAMFILES64\PPC"
+!define INSTDIR "$PROGRAMFILES64\VELARCO"
 
 Name "${APPNAMEFULL}"
 ; OutFile assoluto per evitare ambiguità di cwd su CI (GitHub Actions).
@@ -24,12 +24,12 @@ InstallDir "${INSTDIR}"
 RequestExecutionLevel admin
 
 ; I dati utente vivono fuori da INSTDIR -> non li includiamo e non li cancelliamo.
-InstallDirRegKey HKLM "Software\PPC" "InstallDir"
+InstallDirRegKey HKLM "Software\VELARCO" "InstallDir"
 
 Section "Install"
   SetOutPath "$INSTDIR"
   ; I file dell'app (EXE + dipendenze bundle da PyInstaller) vanno qui.
-  File /r "dist\PPC\*.*"
+  File /r "dist\VELARCO\*.*"
 
   ; Scorciatoia nel menu Start
   CreateDirectory "$SMPROGRAMS\${APPNAME}"
@@ -39,9 +39,9 @@ Section "Install"
   ; Disinstallatore
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PPC" "DisplayName" "${APPNAMEFULL}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PPC" "UninstallString" "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PPC" "DisplayVersion" "${VERSION}"
-  WriteRegStr HKLM "Software\PPC" "InstallDir" "$INSTDIR"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO" "UninstallString" "$INSTDIR\Uninstall.exe"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO" "DisplayVersion" "${VERSION}"
+  WriteRegStr HKLM "Software\VELARCO" "InstallDir" "$INSTDIR"
 SectionEnd
 
 Section "Uninstall"
@@ -50,6 +50,6 @@ Section "Uninstall"
   Delete "$DESKTOP\${APPNAMEFULL}.lnk"
   RMDir "$SMPROGRAMS\${APPNAME}"
   RMDir /r "$INSTDIR"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PPC"
-  DeleteRegKey HKLM "Software\PPC"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VELARCO"
+  DeleteRegKey HKLM "Software\VELARCO"
 SectionEnd
