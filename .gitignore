@@ -17,6 +17,9 @@ __pycache__/
 *.exe
 *.msi
 *.zip
+# Vendored Tesseract (OCR binary + traineddata) MUST be committed so the
+# Windows build never depends on network/choco. Override the *.exe rule.
+!vendor/tesseract/tesseract.exe
 *.tar.gz
 *.7z
 

@@ -157,48 +157,50 @@ jobs:
         continue-on-error: true   # OCR is OPTIONAL at runtime; if Tesseract
         # cannot be fetched the EXE still builds and degrades gracefully.
         run: |
-          # PPC 5.0 — OCR layer needs the Tesseract binary. Try choco first,
-          # then winget, then give up gracefully (the app works without OCR).
-          $tess = $null
-          try {
-            choco install tesseract -y --no-progress 2>&1 | Out-Null
-            Write-Host "choco install tesseract: exit $LASTEXITCODE"
-          } catch { Write-Host "choco unavailable: $($_.Exception.Message)" }
-          $tess = "C:\Program Files\Tesseract-OCR\tesseract.exe"
-          if (-not (Test-Path $tess)) { $tess = "C:\Program Files (x86)\Tesseract-OCR\tesseract.exe" }
-          if (-not (Test-Path $tess)) {
+          # PPC 5.0 — OCR layer needs the Tesseract binary. We vendor it in the
+          # repo (vendor/tesseract) so the build never depends on network/choco.
+          # Fallback to choco/winget only if the vendored copy is missing.
+          if (Test-Path "vendor\tesseract\tesseract.exe") {
+            New-Item -ItemType Directory -Force -Path tesseract_bin | Out-Null
+            Copy-Item "vendor\tesseract\tesseract.exe" tesseract_bin\ -Force
+            if (Test-Path "vendor\tesseract\tessdata") {
+              New-Item -ItemType Directory -Force -Path tesseract_bin\tessdata | Out-Null
+              Copy-Item "vendor\tesseract\tessdata\*" tesseract_bin\tessdata\ -Recurse -Force
+            }
+            Write-Host "Tesseract copied from vendor/ ($([math]::Round((Get-Item tesseract_bin\tesseract.exe).Length/1MB,1)) MB)"
+          } else {
+            $tess = $null
             try {
-              winget install --id UB-Mannheim.TesseractOCR -e --silent --accept-package-agreements --accept-source-agreements 2>&1 | Out-Null
-              $tess = "C:\Program Files\Tesseract-OCR\tesseract.exe"
-              if (-not (Test-Path $tess)) { $tess = "C:\Program Files (x86)\Tesseract-OCR\tesseract.exe" }
-            } catch { Write-Host "winget unavailable" }
+              choco install tesseract -y --no-progress 2>&1 | Out-Null
+              Write-Host "choco install tesseract: exit $LASTEXITCODE"
+            } catch { Write-Host "choco unavailable: $($_.Exception.Message)" }
+            $tess = "C:\Program Files\Tesseract-OCR\tesseract.exe"
+            if (-not (Test-Path $tess)) { $tess = "C:\Program Files (x86)\Tesseract-OCR\tesseract.exe" }
+            if (-not (Test-Path $tess)) {
+              try {
+                winget install --id UB-Mannheim.TesseractOCR -e --silent --accept-package-agreements --accept-source-agreements 2>&1 | Out-Null
+                $tess = "C:\Program Files\Tesseract-OCR\tesseract.exe"
+                if (-not (Test-Path $tess)) { $tess = "C:\Program Files (x86)\Tesseract-OCR\tesseract.exe" }
+              } catch { Write-Host "winget unavailable" }
+            }
+            if (-not (Test-Path $tess)) {
+              Write-Host "::warning::Tesseract binary not available — building WITHOUT bundled OCR (graceful)."
+              exit 0
+            }
+            New-Item -ItemType Directory -Force -Path tesseract_bin | Out-Null
+            Copy-Item "$tess" tesseract_bin\tesseract.exe -Force
+            $td = Split-Path $tess | Join-Path -ChildPath "tessdata"
+            if (Test-Path $td) { Copy-Item "$td\*" tesseract_bin\ -Recurse -Force }
+            $ita = Join-Path tesseract_bin "tessdata\ita.traineddata"
+            if (-not (Test-Path $ita)) {
+              try { curl.exe -fsSL --retry 2 -o "$ita" "https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/ita.traineddata" } catch {}
+            }
           }
-          if (-not (Test-Path $tess)) {
-            Write-Host "::warning::Tesseract binary not available on this runner — building WITHOUT bundled OCR (app degrades gracefully)."
-            exit 0
-          }
-          New-Item -ItemType Directory -Force -Path tesseract_bin | Out-Null
-          Copy-Item "$tess" tesseract_bin\tesseract.exe -Force
-          $td = Split-Path $tess | Join-Path -ChildPath "tessdata"
-          if (Test-Path $td) { Copy-Item "$td\*" tesseract_bin\ -Recurse -Force }
-          # choco/winget ship only eng by default — fetch ita explicitly
+          # Ensure ita present (vendor copy already has it; this is a safety net).
           $ita = Join-Path tesseract_bin "tessdata\ita.traineddata"
           if (-not (Test-Path $ita)) {
-            $ok = $false
-            foreach ($attempt in 1..3) {
-              try {
-                curl.exe -fsSL --retry 2 -o "$ita" `
-                  "https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/ita.traineddata"
-                if (Test-Path $ita -and (Get-Item $ita).Length -gt 1MB) { $ok = $true; break }
-              } catch {
-                Write-Host "ita.traineddata attempt $attempt failed: $($_.Exception.Message)"
-                Start-Sleep -Seconds 5
-              }
-            }
-            if ($ok) { Write-Host "Downloaded ita.traineddata" }
-            else { Write-Host "::warning::could not fetch ita.traineddata — OCR will be EN-only" }
-          } else { Write-Host "ita.traineddata already present" }
-          Write-Host "Tesseract prepared at tesseract_bin\tesseract.exe"
+            try { curl.exe -fsSL --retry 2 -o "$ita" "https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/ita.traineddata" } catch { Write-Host "::warning::ITA missing — OCR EN-only" }
+          }
 
       - name: Build EXE
         shell: cmd

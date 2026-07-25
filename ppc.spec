@@ -10,7 +10,7 @@ Output: dist/VELARCO.app (macOS) or dist/VELARCO/VELARCO.exe (Windows)
 
 NOTE: the on-disk data directory stays ~/.domestique/ so existing user data
 and intervals.icu connections survive upgrades without migration.
-
+"""
 
 import sys
 import os
