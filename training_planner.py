@@ -3587,8 +3587,11 @@ def _apply_dfa_durability(weeks, opts):
         return weeks
     for w in weeks:
         for s in w.sessions:
-            if (s.duration_min or 0) >= 120 and (s.session_type or "") in (
-                    "z2", "long_z2", "endurance"):
+            # DFA a1 durability matters on prolonged aerobic rides. The planner
+            # emits long rides at ~90-105 min (not 120+), so the older >=120
+            # threshold never matched and durability_note was always empty.
+            if (s.duration_min or 0) >= 75 and (s.session_type or "") in (
+                    "z2", "long_z2", "endurance", "sweetspot", "tempo"):
                 s.durability_note = ("DFA a1 durability: if alpha1 <0.75 >=30min "
                                      "before usual, cap intensity / add LIT fuel")
     return weeks
@@ -11006,6 +11009,7 @@ def recalculate_plan(
     recent_activities: list[dict] | None = None,
     current_eftp: float | None = None,
     athlete: dict | None = None,
+    plan_options: "plan_options.PlanOptions | None" = None,
 ) -> tuple[list, list[PlannedWeek], dict]:
     """Weekly rolling recalculation of the training plan.
 
@@ -11032,6 +11036,9 @@ def recalculate_plan(
 
     today = date.today()
     today_str = today.isoformat()
+
+    # Resolve the accorgimenti options (mirrors generate_plan / regenerate).
+    opts = plan_options if isinstance(plan_options, PO.PlanOptions) else PO.DEFAULT_PLAN_OPTIONS
 
     # 1. Keep completed weeks (including current in-progress week)
     past_weeks = [w for w in current_plan_weeks if w.end < today or (w.start <= today <= w.end)]
