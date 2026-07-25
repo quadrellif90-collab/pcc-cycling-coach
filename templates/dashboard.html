@@ -2316,6 +2316,25 @@ window.addEventListener('unhandledrejection', function(e) {
           <span class="hint" title="Concentrate each build/peak phase on ONE quality per ~3-4 week block (VO2 block then threshold block toward your event) instead of mixing every hard type weekly. Evidence is strongest for trained cyclists with adequate volume; default OFF." style="margin-left:4px;cursor:help;color:var(--text3);border:1px solid var(--border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">?</span>
         </label></div>
       </div>
+      <!-- PPC 5.x — Accorgimenti selector. Each toggle switches ON a layer that
+           enriches the SAME plan (single source of truth). All off = planner
+           normale (identical to 4.4.0). -->
+      <div class=\"form-row\" style=\"margin-top:10px;\">
+        <div style=\"flex:1 1 100%;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);\">
+          <div style=\"font-size:12px;font-weight:700;margin-bottom:2px;\">Accorgimenti del piano (PPC 5.x)</div>
+          <div style=\"font-size:11px;color:var(--text2);margin-bottom:8px;\">Attiva uno o più layer scientifici. Lasciali tutti spenti per il planner classico.</div>
+          <div style=\"display:flex;flex-wrap:wrap;gap:10px 18px;\">
+            <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-nutrition\"> Nutrizione / fueling</label>
+            <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-integrators\"> Integrazione (creatina, beta-alanina, caffeina)</label>
+            <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-heat\"> Strategia heat / acclimatazione</label>
+            <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-strength\"> Forza periodizzata + VBT</label>
+            <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-mobility\"> Mobilità (hip-flexor / core / aero)</label>
+            <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-durability\"> Durability DFA a1</label>
+            <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-autoreplan\"> Ricalibro automatico</label>
+            <label style=\"font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;\"><input type=\"checkbox\" id=\"po-notifications\"> Notifiche smart (email/toast)</label>
+          </div>
+        </div>
+      </div>
       <!-- FS1 (IP_PLANNER_MODES): plan construction mode. -->
       <div class="form-row">
         <div class="form-group"><label>Plan style
@@ -12501,6 +12520,23 @@ function _phaseSplitPayload() {
   const same = keys.every(k => (ps.rec[k] || 0) === (ps.values[k] || 0));
   return same ? undefined : { ...ps.values };
 }
+// PPC 5.x — accorgimenti selector. Reads the toggle panel; if every toggle is
+// off, returns {mode:"normal"} so the plan is byte-identical to 4.4.0.
+function _readPlanOptions() {
+  const flags = {
+    enable_nutrition: _chk('po-nutrition'),
+    enable_integrators: _chk('po-integrators'),
+    enable_heat: _chk('po-heat'),
+    enable_strength: _chk('po-strength'),
+    enable_mobility: _chk('po-mobility'),
+    enable_dfa_durability: _chk('po-durability'),
+    enable_auto_replan: _chk('po-autoreplan'),
+    enable_notifications: _chk('po-notifications'),
+  };
+  const any = Object.values(flags).some(Boolean);
+  return any ? Object.assign({ mode: 'accorgimenti' }, flags) : { mode: 'normal' };
+}
+function _chk(id) { const el = document.getElementById(id); return !!(el && el.checked); }
 function phaseStepperClick(name, delta) {
   const ps = _phaseSplit;
   if (ps.disabled || !(name in (ps.rec || {}))) return;
@@ -13267,6 +13303,9 @@ async function generatePlan(opts) {
     // v3.2.0 phase-split editor — sent ONLY when custom AND ≠ recommendation
     // (A3); undefined otherwise so the payload stays byte-identical.
     phase_weeks: _phaseSplitPayload(),
+    // PPC 5.x — accorgimenti selector. Read the toggle panel; when nothing is
+    // enabled this sends mode:"normal" (byte-identical to 4.4.0 plan).
+    plan_options: _readPlanOptions(),
   };
   // Provenance for the anchor: "recognized" when the date came from a
   // confirmed ride-scan (MODE 2), "declared" for a manually entered date.

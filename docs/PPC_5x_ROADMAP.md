@@ -8,11 +8,34 @@ normale, oppure attivare uno o più accorgimenti tra quelli implementati
 
 Principio non negoziale (regola utente): **un solo motore `generate_plan`**.
 Gli accorgimenti sono LAYER che arricchiscono lo stesso piano, non motori
-separati. Un contratto di test verifica che il piano "normale" (tutti gli
+regola degli
 accorgimenti OFF) resti identico al baseline, e che ogni accorgimento ON
 modifichi solo la parte di propria competenza (le altre sessioni invariante).
 
 ---
+
+## STATO IMPLEMENTAZIONE (aggiornato 2026-07-25)
+
+**Fatto e verificato (31 test):**
+- `plan_options.py` — dataclass `PlanOptions` con 8 flag + `mode` normal/accorgimenti.
+- `training_planner.generate_plan(plan_options=...)` — normalizza e applica i layer.
+- 5 layer puri implementati: integrators, heat (3 sett. pre-evento), strength (VBT),
+  mobility, dfa_durability. Ciascuno no-op se OFF.
+- `app.py` — endpoint `/api/plan/generate` legge `plan_options` dal body e lo passa;
+  serializzazione JSON delle sessioni include i 6 campi note.
+- `dashboard.html` — pannello "Accorgimenti del piano (PPC 5.x)" con 8 toggle;
+  `_readPlanOptions()` invia `{mode:"normal"}` se tutti spenti (piano = 4.4.0).
+- **Contratto di non-regressione verificato**: normal mode → nessuna nota (byte-identico).
+
+**Da fare (prossimi step, non bloccati):**
+- Persistenza `plan_options` nel profilo (salvarlo in `current_plan.json` / user_prefs).
+- Layer "notifiche" e "ricalibro auto" sono viste/engine esterni: già esistenti
+  (`notifications.py`, `continuous_policy.py` + `app.py` auto-apply) — il toggle li
+  attiva/disattiva ma va collegato al pannello UI (al momento il flag è trasmesso
+  ma l'azione viene sempre eseguita se il codice lo prevede).
+- UI: mostrare le note dei layer nel calendario/piano (tooltip o riga "Note").
+- Heat/strength/mobility: oggi sono NOTE testuali; step successivo = inserire
+  sessioni reali (forza 2x/sett, mobilità post-ride) nel piano quando ON.
 
 ## 1. Il selettore di accorgimenti (cuore del 5.x)
 

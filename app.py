@@ -55,6 +55,7 @@ log_ride_import = log_config.get_logger("domestique.ride_import")
 # appends an entry to the in-process ring buffer that
 # ``/api/diag/recent-errors`` reads.
 import error_codes
+import plan_options as PO          # PPC 5.x — PlanOptions selector (leaf, stdlib)
 _DIAG_RING_MAX = 256
 _DIAG_RING: collections.deque = collections.deque(maxlen=_DIAG_RING_MAX)
 _DIAG_RING_LOCK = threading.Lock()
@@ -11367,6 +11368,13 @@ def api_weekly_plan(week_offset: int = Query(0)):
             # issue #7 — race day flag + meta (name/km/climb/type/priority).
             "is_race": stored.get("is_race", getattr(s, "is_race", False)),
             "race": stored.get("race") or getattr(s, "race", None),
+            # PPC 5.x — accorgimenti layer notes (empty string when layer off).
+            "nutrition_note": getattr(s, "nutrition_note", ""),
+            "integrator_note": getattr(s, "integrator_note", ""),
+            "heat_note": getattr(s, "heat_note", ""),
+            "strength_note": getattr(s, "strength_note", ""),
+            "mobility_note": getattr(s, "mobility_note", ""),
+            "durability_note": getattr(s, "durability_note", ""),
         }
         # v4.1.1 FIX-PLANNER B: per-session zone_dist from the ACTUAL ZWO.
         meta = _lib_by_file.get(zwo_file) if zwo_file else None
@@ -13521,6 +13529,10 @@ async def api_plan_generate(request: Request):
         entry_mode = (_entry_mode_raw
                       if _entry_mode_raw in ("declared", "recognized") else None)
 
+        # PPC 5.x — accorgimenti selector. The UI sends a "plan_options" object
+        # (see plan_options.PlanOptions). Missing/empty => normal planner.
+        plan_options = PO.PlanOptions.from_dict(body.get("plan_options"))
+
         # H1 (evaluator): the UI's plan-weeks slider is TODAY-anchored (the
         # event-date sync computes weeks-to-event from now), and Goal.
         # weeks_available() short-circuits on plan_weeks>0 — so a backdated
@@ -13685,6 +13697,7 @@ async def api_plan_generate(request: Request):
             athlete=athlete,
             current_ctl=current_ctl,
             recent_weekly_tss=recent_weekly_tss,
+            plan_options=plan_options,
         )
         plan_path = tp.export_plan_md(goal, phases, weeks)
 
@@ -13771,6 +13784,13 @@ async def api_plan_generate(request: Request):
                             "is_race": bool(getattr(s, "is_race", False)),
                             "race": getattr(s, "race", None),
                             "is_opener": bool(getattr(s, "is_opener", False)),
+                            # PPC 5.x — accorgimenti layer notes (empty when off).
+                            "nutrition_note": getattr(s, "nutrition_note", ""),
+                            "integrator_note": getattr(s, "integrator_note", ""),
+                            "heat_note": getattr(s, "heat_note", ""),
+                            "strength_note": getattr(s, "strength_note", ""),
+                            "mobility_note": getattr(s, "mobility_note", ""),
+                            "durability_note": getattr(s, "durability_note", ""),
                         }
                         for s in w.sessions
                     ],

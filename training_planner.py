@@ -54,6 +54,7 @@ log = logging.getLogger(__name__)
 # avoids a circular import (app -> tp -> app).
 import error_codes  # leaf module — no circular risk
 import workout_facts  # v3.2.0 watertight classifier — L1 facts layer (leaf module)
+import plan_options as PO    # PPC 5.x — PlanOptions selector (leaf, stdlib only)
 _LOG_ERROR_HOOK = None
 
 
@@ -1641,6 +1642,13 @@ class PlannedSession:
     hr_ceiling_pct: float | None = None              # 0.88 = "stay below 88% HR_max"
     is_double_threshold_pair: bool = False
     double_threshold_partner_id: str | None = None
+    # ── PPC 5.x accorgimenti layers (populated only when the matching
+    # PlanOptions flag is on; empty string = layer off / not applicable) ──
+    integrator_note: str = ""
+    heat_note: str = ""
+    strength_note: str = ""
+    mobility_note: str = ""
+    durability_note: str = ""
     am_or_pm: str | None = None                      # "am" or "pm"
     # v2.2.14 (issue #7) — this day IS a race (A target event or a B/C event).
     # Set by _mark_race_days() AFTER taper passes: the day's training slot is
@@ -3023,6 +3031,7 @@ def plan_week(
     is_stepback: bool,
     prev_week_sessions: list | None = None,
     seed_salt: int = 0,
+    plan_options: "plan_options.PlanOptions | None" = None,
 ) -> PlannedWeek:
     """Generate a specific week's training schedule.
 
@@ -3034,6 +3043,9 @@ def plan_week(
         seed_salt: v4.3.0 B3 — entropy salt forwarded into _pick_session so
             HIT-variant selection differs across regenerations.
     """
+    # PPC 5.x: normalize the accorgimenti selector for this week's sessions.
+    opts = plan_options if isinstance(plan_options, PO.PlanOptions) \
+        else PO.DEFAULT_PLAN_OPTIONS
     tss_target = phase.weekly_tss_target
     if is_stepback:
         # Issurin 2010 (Block Periodization): recovery/unloading weeks should cut
@@ -3088,8 +3100,12 @@ def plan_week(
         session.day = d
         session.day_name = day_name
 
-        # Add nutrition note by phase
-        session.nutrition_note = _nutrition_note(phase.name, session.session_type)
+        # Add nutrition note by phase — only when the nutrition accorgimento
+        # is enabled (PPC 5.x selector). Off => no note, classic behaviour.
+        if opts.enable_nutrition:
+            session.nutrition_note = _nutrition_note(phase.name, session.session_type)
+        else:
+            session.nutrition_note = ""
 
         sessions.append(session)
 
@@ -3418,6 +3434,119 @@ def _nutrition_note(phase_name: str, session_type: str) -> str:
     if phase_name == "taper":
         return "High carbs — glycogen loading"
     return ""
+
+
+# ── PPC 5.x — accorgimenti layers (pure enrichments) ─────────────────────────
+# Each function takes the planned weeks and returns them enriched. They are
+# NO-OPs unless the matching PlanOptions flag is on. Kept stdlib-only and side
+# effect-local so they unit-test in isolation.
+
+# Supplement guidance per phase (IOC/ISSN 2023). Keyed by phase; only attached
+# to HARD sessions (VO2max/threshold/sprint) and to the taper/race window.
+_INTEGRATOR_BY_PHASE = {
+    "base": "Creatine 3-5g/d (strength support); beta-alanine 3-6g/d if >4wk block",
+    "build1": "Beta-alanine 3-6g/d (4-10wk load); caffeine 3-6mg/kg pre HIT",
+    "build2": "Beta-alanine 3-6g/d; caffeine 3-6mg/kg pre HIT; nitrate-rich 2-3d pre key rides",
+    "peak": "Caffeine 3-6mg/kg on race-day rides; nitrates 2-3d pre",
+    "taper": "Keep caffeine strategy; taper beta-alanine if loading done",
+    "continuous": "Beta-alanine 3-6g/d; caffeine 3-6mg/kg pre HIT",
+}
+
+_HARD_TYPES = ("vo2max", "threshold", "overunder", "sweetspot", "sprint", "anaerobic")
+
+
+def _apply_integrators(weeks, opts):
+    if not opts.enable_integrators:
+        return weeks
+    for w in weeks:
+        note = _INTEGRATOR_BY_PHASE.get(w.phase)
+        if not note:
+            continue
+        for s in w.sessions:
+            if (s.session_type or "") in _HARD_TYPES:
+                s.integrator_note = note
+    return weeks
+
+
+def _apply_heat(weeks, opts, goal):
+    """Heat/acclimation block in the 3 weeks before the event (Rønnestad 2025)."""
+    if not opts.enable_heat:
+        return weeks
+    target = getattr(goal, "target_date", None)
+    if target is None:
+        return weeks
+    heat_cut = target - timedelta(days=21)
+    for w in weeks:
+        wk = _monday_of(w)
+        if heat_cut <= wk < target:
+            for s in w.sessions:
+                if (s.session_type or "") in ("z2", "long_z2", "endurance"):
+                    s.heat_note = ("Heat block: 40-60min in heat suit / warm "
+                                   "room (Rønnestad 2025, +4.1% Hb-mass)")
+    return weeks
+
+
+def _apply_strength(weeks, opts):
+    """Strength periodisation note: 2x/week base -> 1x/week in-season (Rønnestad 2014)."""
+    if not opts.enable_strength:
+        return weeks
+    for w in weeks:
+        freq = 2 if w.phase in ("base", "build1") else 1
+        for s in w.sessions:
+            if (s.session_type or "") == "strength":
+                s.strength_note = (
+                    f"Strength {freq}x/week, VBT stop at 20% velocity loss, "
+                    f"separate from endurance >=6h (Han 2025)")
+    return weeks
+
+
+def _apply_mobility(weeks, opts):
+    """Hip-flexor / core / aero mobility note (Roadman 2025, 8-12wk adaptation)."""
+    if not opts.enable_mobility:
+        return weeks
+    for w in weeks:
+        for s in w.sessions:
+            if (s.session_type or "") in ("rest", "z2", "recovery"):
+                s.mobility_note = ("Mobility: hip-flexor 30-45s x3-4, core plank "
+                                   "30-60s x2-3, progressive aero exposure")
+    return weeks
+
+
+def _apply_dfa_durability(weeks, opts):
+    """DFA a1 durability flag: long sessions flagged if DFA drops early (Van Hooren 2025)."""
+    if not opts.enable_dfa_durability:
+        return weeks
+    for w in weeks:
+        for s in w.sessions:
+            if (s.duration_min or 0) >= 120 and (s.session_type or "") in (
+                    "z2", "long_z2", "endurance"):
+                s.durability_note = ("DFA a1 durability: if alpha1 <0.75 >=30min "
+                                     "before usual, cap intensity / add LIT fuel")
+    return weeks
+
+
+def _monday_of(week) -> date:
+    """Monday of the week containing the week's first session day."""
+    d = None
+    for s in week.sessions:
+        if getattr(s, "day", None) is not None:
+            d = s.day
+            break
+    if d is None:
+        return week.start
+    return d - timedelta(days=d.weekday())
+
+
+def _apply_plan_options(weeks, opts, goal):
+    """Apply every enabled accorgimento layer. No-op when opts.is_normal."""
+    if opts.is_normal:
+        return weeks
+    weeks = _apply_integrators(weeks, opts)
+    weeks = _apply_heat(weeks, opts, goal)
+    weeks = _apply_strength(weeks, opts)
+    weeks = _apply_mobility(weeks, opts)
+    weeks = _apply_dfa_durability(weeks, opts)
+    return weeks
 
 
 # ── ZWO matching ──────────────────────────────────────────────────────────────
@@ -6392,6 +6521,7 @@ def generate_plan(
     athlete: dict | None = None,
     current_ctl: float | None = None,
     recent_weekly_tss: float | None = None,
+    plan_options: "plan_options.PlanOptions | None" = None,
 ) -> tuple[list[Phase], list[PlannedWeek]]:
     """Generate the full training plan.
 
@@ -6478,6 +6608,11 @@ def generate_plan(
                 "one A event per plan — the target event is your A race; "
                 "mark additional races as priority B or C."
             )
+
+    # PPC 5.x: normalize the accorgimenti selector. None -> DEFAULT (normal
+    # mode) so existing callers/tests keep 4.4.0 behaviour unchanged.
+    opts = plan_options if isinstance(plan_options, PO.PlanOptions) \
+        else PO.DEFAULT_PLAN_OPTIONS
 
     # J1 (v2.1.0): honor the goal's chosen intensity-distribution model for every
     # get_budget_for_phase lookup in this run (default "polarized" → unchanged).
@@ -6608,7 +6743,7 @@ def generate_plan(
                 # non-rest slots with library-sampled workouts.
                 pw = plan_week(week_num, cursor, phase, goal, is_stepback,
                                prev_week_sessions=prev_week_sessions,
-                               seed_salt=seed_salt)
+                               seed_salt=seed_salt, plan_options=opts)
 
                 # v4.6.0: rolling-eviction window 12 weeks (was 24) so files
                 # re-enter the "fresh" novelty pool sooner in long plans.
@@ -7031,6 +7166,18 @@ def generate_plan(
     _enforce_slot_file_coherence(weeks, library,
                                  plan_start_date=plan_start_date,
                                  seed_salt=seed_salt)
+
+    # PPC 5.x — apply the user-selected "accorgimenti" layers. Each layer is a
+    # pure enrichment of the plan; with opts.is_normal it is a no-op so the
+    # output is identical to 4.4.0 (contract: non-regression test).
+    _apply_plan_options(weeks, opts, goal)
+    # Single-source guard: nutrition is a VIEW of the plan. If the nutrition
+    # accorgimento is OFF, strip every nutrition_note so normal mode is
+    # byte-identical to 4.4.0 (covers all generate/refit paths).
+    if not opts.enable_nutrition:
+        for w in weeks:
+            for s in w.sessions:
+                s.nutrition_note = ""
 
     return phases, weeks
 
@@ -10422,7 +10569,7 @@ def regenerate_from_today(
             is_stepback = (phase_week % STEP_BACK_EVERY == 0) and phase.name != "taper"
             pw = plan_week(week_num, cursor, phase, adjusted_goal, is_stepback,
                            prev_week_sessions=prev_week_sessions,
-                           seed_salt=seed_salt)
+                           seed_salt=seed_salt, plan_options=opts)
 
             # Mark unavailable days as REST
             for s in pw.sessions:
@@ -11022,7 +11169,7 @@ def recalculate_plan(
 
             pw = plan_week(week_num, cursor, phase, adjusted_goal, is_stepback,
                            prev_week_sessions=prev_week_sessions,
-                           seed_salt=seed_salt)
+                           seed_salt=seed_salt, plan_options=opts)
 
             # Insert FTP test session if due. Runs BEFORE the sampler pass so the
             # ftp_test slot is preserved by the session-replacement skip below.
@@ -11450,7 +11597,7 @@ def extend_continuous_plan(
 
         pw = plan_week(week_num, cursor, phase, goal, is_stepback,
                        prev_week_sessions=prev_week_sessions,
-                       seed_salt=seed_salt)
+                       seed_salt=seed_salt, plan_options=opts)
 
         # FTP test placement — mirrors recalculate_plan (prev-day-easy rule,
         # 3.3.1 H3; runs before the sampler pass so the slot is preserved).
