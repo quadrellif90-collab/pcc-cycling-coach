@@ -2190,6 +2190,21 @@ window.addEventListener('unhandledrejection', function(e) {
     <span id="calendar-link-status" style="font-size:11px;color:var(--text2);"></span>
   </div>
 
+  <!-- PCC 5.x — Injury / illness -> auto-remodulazione (VISTA sul piano). -->
+  <div class="card" style="margin-bottom:12px;border-left:3px solid var(--red);">
+    <h3>🚑 Infortunio / Malattia <span style="font-size:10px;font-weight:400;color:var(--text3);">— auto-riposo nel piano</span></h3>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <input type="date" id="inj-start" style="font-size:11px;padding:3px 6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;" />
+      <input type="date" id="inj-end" style="font-size:11px;padding:3px 6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;" />
+      <select id="inj-type" style="font-size:11px;padding:3px 6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+        <option value="injury">Infortunio</option><option value="illness">Malattia</option>
+      </select>
+      <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="addInjuryBlock()">Blocca giorni</button>
+    </div>
+    <div id="injury-blocks" style="font-size:11px;color:var(--text2);margin-top:8px;"></div>
+    <div id="injury-flag" style="font-size:12px;margin-top:6px;"></div>
+  </div>
+
   <!-- PCC 5.x — Attività & RPE (JOIN-style view). Backed by
        /api/activity-insights; reuses the planner's rematch engine + RPE log. -->
   <div class="card" style="margin-bottom:12px;">
@@ -5954,6 +5969,48 @@ async function copyCalendarLink() {
   } catch (e) {
     if (st) st.textContent = 'Link: ' + location.origin + '/api/calendar.ics';
   }
+}
+
+// PCC 5.x — Injury / illness -> auto-remodulazione (VISTA sul piano).
+async function loadInjuryBlocks() {
+  const host = document.getElementById('injury-blocks');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/injury/blocks');
+    if (!res.ok) { host.textContent = ''; return; }
+    const d = await res.json();
+    const blocks = d.blocks || [];
+    if (!blocks.length) { host.innerHTML = '<span style="color:var(--text3);">Nessun blocco. Il piano resta invariato.</span>'; return; }
+    const today = new Date().toISOString().slice(0, 10);
+    host.innerHTML = blocks.map(b => {
+      const active = b.start <= today && today <= (b.end || b.start);
+      return `<span style="margin-right:10px;${active ? 'color:var(--red);font-weight:600;' : ''}">${b.type === 'illness' ? '🤒' : '🚑'} ${b.start}→${b.end} <a href="#" style="color:var(--text3);" onclick="removeInjuryBlock('${esc(b.id)}');return false;">✕</a></span>`;
+    }).join('');
+  } catch (e) { host.textContent = ''; }
+}
+
+async function addInjuryBlock() {
+  const s = document.getElementById('inj-start').value;
+  const e = document.getElementById('inj-end').value;
+  const t = document.getElementById('inj-type').value;
+  if (!s || !e) { showToast('Inserisci inizio e fine', 2000, 'error'); return; }
+  try {
+    const res = await fetch('/api/injury/blocks', { method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ start: s, end: e, type: t }) });
+    if (!res.ok) { showToast('Salvataggio fallito', 2000, 'error'); return; }
+    showToast('Blocco aggiunto — piano aggiornato', 2000, 'success');
+    loadInjuryBlocks();
+    loadPlan();  // ricalcola la VISTA con i giorni bloccati -> rest
+  } catch (err) { showToast('Errore', 2000, 'error'); }
+}
+
+async function removeInjuryBlock(id) {
+  try {
+    await fetch('/api/injury/blocks/' + encodeURIComponent(id), { method: 'DELETE' });
+    loadInjuryBlocks();
+    loadPlan();
+  } catch (err) {}
 }
 
 // P3.1 — compact CTL/TSB sparkline on Home (the full Fitness & Form chart
@@ -16192,7 +16249,22 @@ async function submitAddRace() {
 async function loadPlan() {
   let d;
   try {
-    d = await (await fetch('/api/plan')).json();
+    // PCC 5.x — injury/illness: se ci sono blocchi attivi, usa la VISTA
+    // /api/plan/adjusted (giorni bloccati -> rest) invece di /api/plan.
+    let adjusted = null;
+    try {
+      const bres = await fetch('/api/injury/blocks');
+      if (bres.ok) { const bd = await bres.json(); if (bd.active_today) adjusted = true; }
+    } catch (_) {}
+    const url = adjusted ? '/api/plan/adjusted' : '/api/plan';
+    d = await (await fetch(url)).json();
+    if (adjusted) {
+      const flag = document.getElementById('injury-flag');
+      if (flag) flag.innerHTML = '<span style="color:var(--red);font-weight:600;">⚠️ Piano con riposo automatico per infortunio/malattia attivo.</span>';
+    } else {
+      const flag = document.getElementById('injury-flag');
+      if (flag) flag.textContent = '';
+    }
   } catch(e) {
     console.error('loadPlan failed:', e);
     try { window._diagFrontendError('E_FRONTEND_LOADPLAN', {msg: String(e && e.message || e)}); } catch(_) {}
@@ -16204,6 +16276,7 @@ async function loadPlan() {
     try { populatePlanFormFromGoal(d.plan_json.goal); } catch (_) {}
     try { renderPlanDriftChip(d.plan_json.ctl_drift); } catch (_) {}
     try { if (typeof loadActivityInsights === 'function') loadActivityInsights(); } catch (_) {}
+    try { if (typeof loadInjuryBlocks === 'function') loadInjuryBlocks(); } catch (_) {}
   }
   if (d.plan) {
     // Also render markdown below as fallback/reference

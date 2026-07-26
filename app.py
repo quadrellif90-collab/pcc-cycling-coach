@@ -4443,6 +4443,49 @@ def api_calendar_ics():
         return JSONResponse(status_code=400, content={"error": str(e)})
 
 
+# ═══ PCC 5.x — Injury / illness -> auto-remodulazione (VISTA sul piano) ═══
+@app.get("/api/injury/blocks")
+def api_injury_blocks():
+    from injury_manager import load_blocks, active_blocks
+    return {"blocks": load_blocks(), "active_today": len(active_blocks()) > 0}
+
+
+@app.post("/api/injury/blocks")
+async def api_injury_blocks_add(request: Request):
+    try:
+        body = await request.json()
+        if not body.get("start") or not body.get("end"):
+            return JSONResponse(status_code=400, content={"error": "start e end richiesti"})
+        from injury_manager import save_block
+        rec = save_block(body)
+        return {"ok": True, **rec}
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+
+@app.delete("/api/injury/blocks/{block_id}")
+def api_injury_blocks_del(block_id: str):
+    from injury_manager import delete_block
+    return {"ok": delete_block(block_id)}
+
+
+@app.get("/api/plan/adjusted")
+def api_plan_adjusted():
+    """VISTA: current_plan.json con i blocchi infortunio/malattia applicati.
+    Giorni bloccati -> rest, TSS 0. Single source of truth (legge lo stesso
+    current_plan.json del motore)."""
+    from injury_manager import apply_blocks_to_plan
+    json_path = _plan_dir() / "current_plan.json"
+    if not json_path.exists():
+        return {"weeks": [], "sessions": [], "blocked_dates": []}
+    try:
+        with open(json_path, encoding="utf-8") as f:
+            plan = json.load(f)
+    except Exception:
+        return {"weeks": [], "sessions": [], "blocked_dates": []}
+    return apply_blocks_to_plan(plan)
+
+
 # ═══ BIA — Body Impedance Analysis: import + storico + sync Intervals.icu ═══
 import json as _json
 
