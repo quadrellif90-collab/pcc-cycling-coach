@@ -1,5 +1,17 @@
 # Changelog
 
+## v5.2.0 — Release stabile: Design System Pro + 12 funzioni (2026-07-26)
+
+Release stabile che consolida le beta.1 e beta.2. Rispetto alle beta non cambia codice: porta lo stesso set di funzioni e la stessa UI professionale in una versione definitiva (consigliata al posto delle beta).
+
+**12 nuove funzioni** (viste sul motore unico `generate_plan`, single source of truth):
+- **#1 Semaforo fatica** · **#2 FTP continuo** · **#3 Decoder metabolico** · **#4 Modelli CP multipli** · **#5 Classificazione & RPE** · **#6 Import lab test (CPET/INSCYD PDF)** · **#7 Grafici personalizzati** · **#8 Asimmetrie pedala / LEOMO MPI**
+- **A — Field-test FTP** · **B — Export bundle (ZIP portabile)** · **C — Calendario .ics (webcal)** · **D — Injury/illness → auto-riposo**
+
+**Design System Pro:** card con profondità + hover-lift, header sticky frosted-glass con KPI, tab a underline morbido, whitespace generoso, tipografia rifinita. Verificata in light e dark; 13 tab navigano con 0 errori JS; pytest 22/22.
+
+> Le beta restano disponibili come prerelease storici: `v5.2.0-beta.2` (restyling) e `v5.2.0-beta.1` (12 funzioni).
+
 ## v5.2.0-beta.2 — Design System Pro: restyling grafico strutturato (2026-07-26)
 
 **UI professionale, pari ai migliori software del settore** (TrainingPeaks / Intervals.icu / WKO). Solo CSS presentazionale: nessun cambiamento a logica o dati, tutte le funzioni #1–#8 + A/B/C/D restano identiche.
