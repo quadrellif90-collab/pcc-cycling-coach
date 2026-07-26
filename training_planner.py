@@ -6739,6 +6739,16 @@ def generate_plan(
     if current_ctl is None:
         current_ctl = 37.0
 
+    # DIFESA: se il CTL calcolato è implausibilmente basso (< 25) pur essendoci
+    # carico storico, quasi sempre è un artefatto di dati mancanti (es. attività
+    # senza weight_kg → TSS=0 → CTL collassa al seed minimo). In quel caso un
+    # piano "tutto riposo" sarebbe un bug, non una scelta: usiamo un CTL di
+    # default sensato così la base Z2 parte reale invece di azzerarsi.
+    # (Non tocca chi ha davvero CTL basso ma coerente con le proprie uscite.)
+    if current_ctl < 25.0:
+        log.warning(f"EVENT=ctl_floor_applied raw_ctl={current_ctl} -> 40 (dati storici inconsistenti)")
+        current_ctl = 40.0
+
     # v2.1.0 (E1) — recent mean weekly TSS sets the load-based volume ceiling.
     # Self-fetch from the full local archive when the caller didn't supply it
     # (best-effort; None → generate_phases keeps the legacy availability cap).
