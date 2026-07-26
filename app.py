@@ -9850,7 +9850,13 @@ def _select_platform_asset(assets, plat):
         dmgs = [a for a in assets if _name(a).lower().endswith(".dmg")]
         if not dmgs:
             return None, None
-        canonical = [a for a in dmgs if _name(a) in ("PCC.dmg", "pcc.dmg")]
+        # Canonical = the unadorned .dmg (no version/decorated suffix), e.g.
+        # PCC.dmg or Domestique.dmg wins over PCC-1.0.3.dmg / Domestique-2.3.4.dmg.
+        import re as _re
+        _ver = _re.compile(r"[-_ ].*\d+\.\d+")
+        canonical = [a for a in dmgs
+                     if _name(a) in ("PCC.dmg", "pcc.dmg", "Domestique.dmg", "domestique.dmg")
+                     or not _ver.search(_name(a)[:-4])]
         chosen = canonical[0] if canonical else dmgs[0]
         return _url(chosen) or None, _name(chosen) or None
 
