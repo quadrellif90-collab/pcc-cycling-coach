@@ -4291,6 +4291,16 @@ function showClientError(e,title){ showToast((title?title+' ':'')+normalizeErr(e
 // ===== v5.2 tab switch helper =====
 function gotoTab(t){ var el=document.querySelector('.tab[data-tab="'+t+'"]'); if(el) el.click(); }
 
+// ===== v5.2 empty-state riutilizzabile =====
+function emptyState(icon, title, subtitle, ctaLabel, ctaOnclick){
+  var cta = ctaLabel ? '<button class="btn btn-sm" style="margin-top:10px;" onclick="'+ctaOnclick+'">'+ctaLabel+'</button>' : '';
+  return '<div style="text-align:center;padding:22px 12px;color:var(--text3);">'
+    + '<div style="font-size:28px;margin-bottom:6px;">'+(icon||'')+'</div>'
+    + '<div style="font-size:14px;font-weight:600;color:var(--text2);">'+(title||'')+'</div>'
+    + (subtitle?'<div style="font-size:12px;margin-top:4px;">'+subtitle+'</div>':'')
+    + cta + '</div>';
+}
+
 // ===== v5.2 stato di caricamento sui pulsanti azioni lunghe =====
 function busyButton(btn, fn, busyText){
   if(typeof btn==='string') btn=document.getElementById(btn)||document.querySelector(btn);
@@ -8135,7 +8145,7 @@ async function loadHome() {
         return `<div class="activity" ${clickAttr}><div><span class="act-name">${esc(a.name||'Activity')}</span>
          <span class="act-meta"> ${esc(a.sport||'')}</span></div>
          <div class="act-meta">${a.duration_min||0}min ${loadLabel} ${a.avg_power?a.avg_power+'W':''}</div></div>`;
-      }).join('') : '<div style="color:var(--text3)">Nessuna attività recente</div>';
+      }).join('') : emptyState('🚴','Nessuna uscita ancora','Importa il tuo primo file .fit per iniziare a chiudere il loop.','Importa FIT','openImportFitPicker()');
     } catch (e) {
       try { window._diagFrontendError('E_FRONTEND_ACTIVITIES_RENDER', {msg: String(e && e.message || e)}); } catch(_) {}
     }
