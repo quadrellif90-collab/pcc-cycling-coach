@@ -1686,6 +1686,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <div style="display:flex;align-items:center;gap:12px;">
     <div class="header-stats" id="header-stats"></div>
     <button onclick="resetCardLayout()" title="Ripristina l'ordine originale delle card" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:7px 10px;border-radius:8px;font-size:12px;cursor:pointer;margin-right:6px;">⤺ Disposizione</button>
+<button onclick="toggleShortcutHelp()" title="Scorciatoie da tastiera (?)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:7px 10px;border-radius:8px;font-size:12px;cursor:pointer;margin-right:6px;">⌨ ?</button>
 <button onclick="openImportFitPicker()" style="background:var(--accent);color:#fff;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Importa una uscita .fit da MyWhoosh / Tacx / Golden Cheetah">
       &#x2b06; Import FIT
     </button>
@@ -4298,9 +4299,26 @@ function resetCardLayout(){
   if(!confirmDanger || !confirmDanger('Ripristinare l\'ordine originale delle card? Le modifiche manuali andranno perse.')) return;
 
 
+
+
   try{ localStorage.removeItem('pcc-layout:' + (window.__ACTIVE_PROFILE_ID || 'default')); }catch(_){}
   location.reload();
 }
+function toggleShortcutHelp(){ var p=document.getElementById('shortcut-help'); if(p) p.style.display = (p.style.display==='block'?'none':'block'); }
+
+function _isTyping(e){ var t=e.target; if(!t) return false; var tag=t.tagName; return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||t.isContentEditable; }
+document.addEventListener('keydown', function(e){
+  if(_isTyping(e) || e.ctrlKey || e.metaKey || e.altKey) return;
+  var k=e.key.toLowerCase();
+  if(k==='?'){ e.preventDefault(); toggleShortcutHelp(); return; }
+  if(k==='g'){ e.preventDefault(); var b=document.getElementById('btn-generate-plan'); if(b) b.click(); }
+  else if(k==='i'){ e.preventDefault(); openImportFitPicker(); }
+  else if(k==='t'){ e.preventDefault(); if(typeof toggleTheme==='function') toggleTheme(); }
+  else if(k==='p'){ e.preventDefault(); var bp=document.querySelector('[onclick="busyButton(this, myPushPlan, \'Invio a intervals.icu…\')"]'); if(bp) bp.click(); }
+});
+
+
+
 function renderRecentActivities(filter){
   var box=document.getElementById('recent-activities'); if(!box) return;
   var all=window.__ALL_ACTIVITIES||[];
@@ -22678,6 +22696,20 @@ document.addEventListener('DOMContentLoaded', function() {
   <div id="whatsnew-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;"></div>
 </div>
 
+<div id="shortcut-help" style="display:none;position:fixed;right:18px;bottom:18px;width:300px;max-width:90vw;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px;z-index:90;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <strong style="font-size:14px;">Scorciatoie da tastiera</strong>
+    <button onclick="toggleShortcutHelp()" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;">×</button>
+  </div>
+  <div style="font-size:13px;line-height:1.9;">
+    <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-family:monospace;">G</kbd> &nbsp; Genera piano</div>
+    <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-family:monospace;">I</kbd> &nbsp; Importa FIT</div>
+    <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-family:monospace;">T</kbd> &nbsp; Cambia tema</div>
+    <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-family:monospace;">P</kbd> &nbsp; Push su Intervals.icu</div>
+    <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-family:monospace;">?</kbd> &nbsp; Questo pannello</div>
+    <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-family:monospace;">Esc</kbd> &nbsp; Chiudi / annulla</div>
+  </div>
+</div>
 </div><!-- /main-content -->
 </div><!-- /app-shell -->
 </body>
