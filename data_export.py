@@ -83,10 +83,17 @@ def build_bundle() -> tuple[bytes, str]:
             z.writestr("plan/current_plan.json", cp.read_text(encoding="utf-8"))
         # raw backup of full profile dir (exclude the zip itself)
         if pdir and pdir.exists():
+            written = set(z.namelist())
+            sidecars = {"field_tests.json", "cpep_history.json",
+                        "pedal_asymmetry_history.json", "custom_charts.json",
+                        "injury_blocks.json"}
             for f in pdir.rglob("*"):
                 if f.is_file():
+                    rel = str(f.relative_to(pdir))
+                    if rel in written or rel in sidecars:
+                        continue
                     try:
-                        z.writestr(str(f.relative_to(pdir)), f.read_bytes())
+                        z.writestr(rel, f.read_bytes())
                     except Exception:
                         pass
     stamp = _stamp()
