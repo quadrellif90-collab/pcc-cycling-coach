@@ -1574,6 +1574,9 @@ window.addEventListener('unhandledrejection', function(e) {
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;">
   <div class="card" data-card=" class="card" style="margin-bottom:0;" id="today-card"" style="margin-bottom:0;" id="today-card">
     <h3>Oggi</h3>
+    <!-- PCC 5.x — Fatigue traffic-light (RLGL-style). Backed by /api/readiness
+         fatigue_signal; single source of truth = readiness engine severity. -->
+    <div id="fatigue-signal-badge" style="display:none;margin:6px 0 10px;font-size:13px;font-weight:700;align-items:center;gap:8px;"></div>
     <div id="today-verdict" style="margin-top:8px;">
       <div style="font-size:12px;color:var(--text3);">Caricamento…</div>
     </div>
@@ -8029,6 +8032,18 @@ async function loadReadinessComposite() {
       </div>`;
 
     const why = reasons.length ? reasons[0] : advice;
+
+    // PCC 5.x — Fatigue traffic-light badge (RLGL-style). Single source of
+    // truth = backend fatigue_signal derived from readiness severity.
+    const fsBadge = document.getElementById('fatigue-signal-badge');
+    const fs = d.fatigue_signal;
+    if (fsBadge && fs) {
+      fsBadge.style.display = 'flex';
+      const fsColor = fs.color === 'red' ? 'var(--red)'
+                    : fs.color === 'amber' ? 'var(--yellow)' : 'var(--green)';
+      fsBadge.style.color = fsColor;
+      fsBadge.innerHTML = `${fs.emoji || ''} ${esc(fs.label)} — ${esc(fs.action)}`;
+    }
 
     // Single action, gated on severity. ids preserved for the handlers.
     let actionHtml = '';

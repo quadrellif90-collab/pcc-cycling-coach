@@ -4717,6 +4717,10 @@ def api_readiness(subjective: float = Query(None)):
         "severity": severity,
         "source": source,
         "severity_reasons": severity_reasons,
+        # PCC 5.x — Fatigue traffic-light (single source of truth: derived from
+        # the existing severity computed by the readiness engine, not a new
+        # model). Severity bands map to Red/Amber/Green like TrainerRoad RLGL.
+        "fatigue_signal": _fatigue_signal_from_severity(severity, severity_reasons),
         "training": merged_load,
         "sleep": {
             "sleep_h": sleep.get("sleep_h"), "sleep_score": sleep.get("sleep_score"),
@@ -4742,6 +4746,21 @@ def api_readiness(subjective: float = Query(None)):
         "decoupling_advisory_detail": dec_adv,
         "cap_reverted_today": reverted,
     }
+
+
+# PCC 5.x — Fatigue traffic-light helper (view over the readiness engine's
+# severity band, TrainerRoad RLGL style). No new model: the single source of
+# truth is compute_training_severity(), already invoked inside api_readiness.
+def _fatigue_signal_from_severity(severity, reasons):
+    SEV_REST, SEV_TIER_DOWN, SEV_NORMAL = ("rest", "tier_down", "normal")
+    if severity == SEV_REST:
+        return {"color": "red", "label": "Rosso — recupero", "emoji": "🔴",
+                "action": "Giorno di riposo / solo facile", "reasons": reasons or []}
+    if severity == SEV_TIER_DOWN:
+        return {"color": "amber", "label": "Giallo — riduci", "emoji": "🟡",
+                "action": "Carico ridotto / allenamento leggero", "reasons": reasons or []}
+    return {"color": "green", "label": "Verde — ok", "emoji": "🟢",
+            "action": "Allenati come pianificato", "reasons": reasons or []}
 
 
 @app.post("/api/readiness/revert-cap")
