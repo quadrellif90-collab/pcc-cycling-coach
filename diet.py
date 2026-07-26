@@ -1,6 +1,6 @@
-# Copyright 2024-2026 PPC — Programming Cycling Coach
+# Copyright 2024-2026 PCC — Performance Cycling Coach
 # Licensed under the Apache License, Version 2.0 (LICENSE / NOTICE).
-"""PPC — Piano alimentare settimanale (vista presentazionale di nutrition.py).
+"""PCC — Piano alimentare settimanale (vista presentazionale di nutrition.py).
 
 QUESTO MODULO NON CALCOLA MACRO. Legge `day_macros()` da nutrition.py (l'unico
 motore: TDEE Mifflin + obiettivo + compensazione carico) e SCOMPONE quei macro
@@ -281,7 +281,7 @@ def build_weekly_diet(goal_type: str = "maintain", bodyweight_kg: float = 72.0,
         "goal_type": goal_type,
         "bodyweight_kg": bodyweight_kg,
         "calorie_source": ("impostato dal nutrizionista" if custom_calories
-                           else "motore unico PPC (Mifflin + obiettivo + carico)"),
+                           else "motore unico PCC (Mifflin + obiettivo + carico)"),
         "days": [{"day": d["day"], "day_type": d["day_type"],
                   "meals": [m.__dict__ for m in d["diet"].meals],
                   "avoid": d["diet"].avoid,

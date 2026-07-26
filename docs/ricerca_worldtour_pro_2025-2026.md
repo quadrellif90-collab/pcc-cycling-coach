@@ -2,7 +2,7 @@
 
 Sintesi di studi e pratiche aggiornate nel mondo del ciclismo professionistico
 (WorldTour, Grand Tour) e sport pro, con fonti citate. Base per decidere cosa
-implementare in PPC oltre al selettore accorgimenti già presente.
+implementare in PCC oltre al selettore accorgimenti già presente.
 
 > Tutte le fonti sono verificate via web (PMC, Frontiers, Outside/Velo, NPR,
 > studi peer-reviewed 2025-2026). I claim senza studio sono marcati.
@@ -22,7 +22,7 @@ implementare in PPC oltre al selettore accorgimenti già presente.
 - **Gut training**: si può allenare l'intestino a tollerare >100 g/h con
   progressione (EF Pro Cycling).
 
-**Implicazione per PPC:** il layer "fueling" oggi suggerisce ~60-90 g/h.
+**Implicazione per PCC:** il layer "fueling" oggi suggerisce ~60-90 g/h.
 Evidenza 2025 → portare a **90-120 g/h in gare >2.5h**, con mix 2:1 e nota
 "gut-training progression". Già parzialmente nel motore nutrizione.
 
@@ -39,7 +39,7 @@ Evidenza 2025 → portare a **90-120 g/h in gare >2.5h**, con mix 2:1 e nota
   Heat Acclimation...").
 - **Durata protocollo**: ~10-14 giorni di esposizione calda prima dell'evento.
 
-**Implicazione:** il layer "heat" di PPC oggi inserisce una nota 3 sett.
+**Implicazione:** il layer "heat" di PCC oggi inserisce una nota 3 sett.
 pre-evento. Evidenza 2024-2025 → estendere a **10-14 giorni** + aggiungere
 suggerimento **pre-cooling** (ghiaccio/bevande fredde) per giorno gara.
 
@@ -57,7 +57,7 @@ suggerimento **pre-cooling** (ghiaccio/bevande fredde) per giorno gara.
   si perdono in 6-8 settimane di stop. **48h** tra forza e uscita chiave.
 - **Over-40**: lo strength batte "più chilometri" (roadmancycling, 2026).
 
-**Implicazione:** il layer "strength" di PPC oggi è nota testuale. Evidenza
+**Implicazione:** il layer "strength" di PCC oggi è nota testuale. Evidenza
 2025 → inserire **2 sessioni/sett (30-40 min)**, distribuite a ~48h da uscite
 chiave, con mantenimento 1x/sett. Già coerente con il layer ma da rendere
 sessioni reali nel piano.
@@ -75,7 +75,7 @@ sessioni reali nel piano.
 - **Frontiers 2025** (fspor.2025.1574087): HRV nel controllo del carico, recovery,
   periodizzazione.
 
-**Implicazione:** il layer "durability" di PPC oggi è una nota. Evidenza →
+**Implicazione:** il layer "durability" di PCC oggi è una nota. Evidenza →
 calcolare DFA α1 dalle sessioni (se ci sono dati HRV/RMSSD) e flaggare sessioni
 che scendono <0.75 come "alta intensità / attenzione durabilità". Già parzialmente
 nel motore HRV; da collegare al layer.
@@ -92,7 +92,7 @@ nel motore HRV; da collegare al layer.
 - **Altitude training**: combinato con block HIT per adattamenti (PMC9796663).
   Pratica diffusa TdF 2025 (es. Seixas, 1500km/37000m in 12 giorni a quota).
 
-**Implicazione:** PPC già usa polarizzazione + block (base_recall ogni 3
+**Implicazione:** PCC già usa polarizzazione + block (base_recall ogni 3
 blocchi). Evidenza conferma l'approccio. Altitude: opzionale come nota layer.
 
 ---
@@ -103,16 +103,16 @@ blocchi). Evidenza conferma l'approccio. Altitude: opzionale come nota layer.
   **4-6 mg/kg, 60' prima** → **+2% TT** vs dose bassa (1-3 mg/kg). Dose assoluta
   comune 200-400 mg.
 - **Ketoni**: UCI 2024 ne ha limitato l'uso (note di sicurezza); evidenza
-  prestazionale mista — PPC non li raccomanda (già in sport_science.py).
+  prestazionale mista — PCC non li raccomanda (già in sport_science.py).
 
-**Implicazione:** il layer "integrazione" di PPC ha già caffeina dosata sul
+**Implicazione:** il layer "integrazione" di PCC ha già caffeina dosata sul
 peso. Evidenza 2025 → conferma 3-6 mg/kg a 60' pre-gara; ketoni NON inclusi.
 
 ---
 
 ## Sintesi — cosa è GIÀ implementato vs cosa migliorare
 
-| Tema | Stato in PPC (5.x) | Evidenza 2025-26 | Azione proposta |
+| Tema | Stato in PCC (5.x) | Evidenza 2025-26 | Azione proposta |
 |---|---|---|---|
 | Fueling 90-120 g/h | parziale (60-90) | 120+ TdF2025 | alza a 90-120 g/h in gara |
 | Heat 10-14 gg + pre-cool | 3 sett. nota | 6-8% (2024) | estendi + pre-cooling |

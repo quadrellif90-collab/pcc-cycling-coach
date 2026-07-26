@@ -54,7 +54,7 @@ log = logging.getLogger(__name__)
 # avoids a circular import (app -> tp -> app).
 import error_codes  # leaf module — no circular risk
 import workout_facts  # v3.2.0 watertight classifier — L1 facts layer (leaf module)
-import plan_options as PO    # PPC 5.x — PlanOptions selector (leaf, stdlib only)
+import plan_options as PO    # PCC 5.x — PlanOptions selector (leaf, stdlib only)
 _LOG_ERROR_HOOK = None
 
 
@@ -1643,7 +1643,7 @@ class PlannedSession:
     is_double_threshold_pair: bool = False
     double_threshold_partner_id: str | None = None
     am_or_pm: str | None = None                      # "am" or "pm"
-    # ── PPC 5.x accorgimenti layers (populated only when the matching
+    # ── PCC 5.x accorgimenti layers (populated only when the matching
     # PlanOptions flag is on; empty string = layer off / not applicable) ──
     integrator_note: str = ""
     heat_note: str = ""
@@ -3045,7 +3045,7 @@ def plan_week(
         seed_salt: v4.3.0 B3 — entropy salt forwarded into _pick_session so
             HIT-variant selection differs across regenerations.
     """
-    # PPC 5.x: normalize the accorgimenti selector for this week's sessions.
+    # PCC 5.x: normalize the accorgimenti selector for this week's sessions.
     opts = plan_options if isinstance(plan_options, PO.PlanOptions) \
         else PO.DEFAULT_PLAN_OPTIONS
     tss_target = phase.weekly_tss_target
@@ -3103,7 +3103,7 @@ def plan_week(
         session.day_name = day_name
 
         # Add nutrition note by phase — only when the nutrition accorgimento
-        # is enabled (PPC 5.x selector). Off => no note, classic behaviour.
+        # is enabled (PCC 5.x selector). Off => no note, classic behaviour.
         if opts.enable_nutrition:
             session.nutrition_note = _nutrition_note(phase.name, session.session_type)
         else:
@@ -3450,7 +3450,7 @@ def _nutrition_note(phase_name: str, session_type: str) -> str:
     return ""
 
 
-# ── PPC 5.x — accorgimenti layers (pure enrichments) ─────────────────────────
+# ── PCC 5.x — accorgimenti layers (pure enrichments) ─────────────────────────
 # Each function takes the planned weeks and returns them enriched. They are
 # NO-OPs unless the matching PlanOptions flag is on. Kept stdlib-only and side
 # effect-local so they unit-test in isolation.
@@ -6701,7 +6701,7 @@ def generate_plan(
                 "mark additional races as priority B or C."
             )
 
-    # PPC 5.x: normalize the accorgimenti selector. None -> DEFAULT (normal
+    # PCC 5.x: normalize the accorgimenti selector. None -> DEFAULT (normal
     # mode) so existing callers/tests keep 4.4.0 behaviour unchanged.
     opts = plan_options if isinstance(plan_options, PO.PlanOptions) \
         else PO.DEFAULT_PLAN_OPTIONS
@@ -7259,7 +7259,7 @@ def generate_plan(
                                  plan_start_date=plan_start_date,
                                  seed_salt=seed_salt)
 
-    # PPC 5.x — apply the user-selected "accorgimenti" layers. Each layer is a
+    # PCC 5.x — apply the user-selected "accorgimenti" layers. Each layer is a
     # pure enrichment of the plan; with opts.is_normal it is a no-op so the
     # output is identical to 4.4.0 (contract: non-regression test).
     _apply_plan_options(weeks, opts, goal)

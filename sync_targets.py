@@ -1,6 +1,6 @@
-"""PPC — Sync targets abstraction (pluggable data destinations).
+"""PCC — Sync targets abstraction (pluggable data destinations).
 
-This module defines a small, explicit interface so PPC can push/pull training
+This module defines a small, explicit interface so PCC can push/pull training
 & body-composition data to MULTIPLE external apps, not just Intervals.icu.
 
 Design
@@ -31,7 +31,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
-log = logging.getLogger("ppc.sync_targets")
+log = logging.getLogger("pcc.sync_targets")
 
 
 @dataclass

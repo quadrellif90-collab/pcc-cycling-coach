@@ -1,4 +1,4 @@
-"""Tests for the OCR layer + parser integration (PPC 5.0).
+"""Tests for the OCR layer + parser integration (PCC 5.0).
 
 These run WITHOUT a Tesseract binary installed, so they verify the critical
 property: OCR is OPTIONAL and the app degrades gracefully (no crash, no cloud).

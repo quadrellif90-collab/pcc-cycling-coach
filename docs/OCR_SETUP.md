@@ -1,6 +1,6 @@
-# OCR in PPC 5.0 — PDF scansionati (BIA / ematochimica / dieta)
+# OCR in PCC 5.0 — PDF scansionati (BIA / ematochimica / dieta)
 
-PPC 5.0 legge automaticamente i **PDF scansionati** (immagini, non testo)
+PCC 5.0 legge automaticamente i **PDF scansionati** (immagini, non testo)
 grazie a un layer OCR locale. Niente cloud: tutto resta sul tuo computer.
 
 ## Come funziona
@@ -12,7 +12,7 @@ grazie a un layer OCR locale. Niente cloud: tutto resta sul tuo computer.
 
 ## Tesseract è opzionale
 - **Se Tesseract è installato** → i PDF scansionati vengono letti in automatico.
-- **Se NON è installato** → PPC non crasha e non invia nulla a internet:
+- **Se NON è installato** → PCC non crasha e non invia nulla a internet:
   mostra semplicemente "PDF scansionato, incolla i valori" come nelle versioni
   precedenti. L'OCR è solo un bonus quando il motore è presente.
 
@@ -20,7 +20,7 @@ grazie a un layer OCR locale. Niente cloud: tutto resta sul tuo computer.
 `ocr_pdf.py` cerca (in ordine):
 1. `tesseract` nel PATH di sistema;
 2. `C:\Program Files\Tesseract-OCR\tesseract.exe` (installazione choco/standard);
-3. `tesseract.exe` / `tesseract_bin\tesseract.exe` **accanto all'EXE di PPC**
+3. `tesseract.exe` / `tesseract_bin\tesseract.exe` **accanto all'EXE di PCC**
    (questo è il caso dell'installer Windows, che lo include).
 
 ## Installazione manuale (solo se usi il sorgente, non l'EXE)
@@ -33,8 +33,8 @@ nella cartella `tessdata` accanto al binary. L'installer Windows li include.
 
 ## Note per lo sviluppo
 - `requirements.txt`: `pytesseract` + `PyMuPDF` (già usato dai parser).
-- `ppc.spec`: hidden imports `pytesseract`, `fitz`.
+- `pcc.spec`: hidden imports `pytesseract`, `fitz`.
 - `release.yml`: il CI installa Tesseract via `choco install tesseract` e lo
-  copia in `dist\PPC\` così l'EXE bundlato funziona out-of-the-box.
+  copia in `dist\PCC\` così l'EXE bundlato funziona out-of-the-box.
 - Test: `tests/test_ocr_pdf.py` verifica il graceful degrade (nessun Tesseract
   sull'host di test → nessun crash, nessun invio dati).

@@ -9,7 +9,7 @@ Alla fine killa l'EXE.
 """
 import subprocess, time, sys, os, urllib.request, json, signal
 
-EXE = r"C:\Users\Siviglino\Desktop\PPC\domestique-beta\dist\Domestique\Domestique.exe"
+EXE = r"C:\Users\Siviglino\Desktop\PCC\domestique-beta\dist\Domestique\Domestique.exe"
 PORTS = [8080, 8000, 5000, 8888, 12789, 1423]
 
 def wait_port(timeout=40):

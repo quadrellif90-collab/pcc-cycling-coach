@@ -1,11 +1,11 @@
-"""PPC — Parser BIA (Body Impedance Analysis) + mappatura Intervals.icu.
+"""PCC — Parser BIA (Body Impedance Analysis) + mappatura Intervals.icu.
 
 Supporta report di bilance BIA / bioimpedenziometri (InBody, Tanita, AKERN
 BODYGRAM, Garmin Index, ecc.). Il PDF puo' essere:
   - testuale (export nativo): il testo viene estratto e parsato via regex;
   - scansionato (immagine): il testo non e' estraibile -> il parser ritorna
     `scanned: True` e l'UI chiede all'atleta di incollare i valori o usare
-    un export testuale (il backend PPC non include OCR).
+    un export testuale (il backend PCC non include OCR).
 
 Campi estratti (schema comune, unita incluse):
   weight_kg, height_cm, bmi,
@@ -249,7 +249,7 @@ def parse_bia_pdf(pdf_bytes: bytes) -> dict:
             pass
     text = "\n".join(parts).strip()
     if not text:
-        # PPC 5.0 — OCR layer: a scanned PDF may still be readable if Tesseract
+        # PCC 5.0 — OCR layer: a scanned PDF may still be readable if Tesseract
         # is installed. Try OCR; if it yields text, parse it like a text export.
         try:
             import ocr_pdf

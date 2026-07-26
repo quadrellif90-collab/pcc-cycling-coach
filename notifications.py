@@ -1,9 +1,9 @@
-"""Smart-notification delivery layer for PPC (Fase 1 — il focus utente: avvisi/notifiche/email).
+"""Smart-notification delivery layer for PCC (Fase 1 — il focus utente: avvisi/notifiche/email).
 
-PPC is local-first: notifications are computed from the SAME signals the
+PCC is local-first: notifications are computed from the SAME signals the
 planner already derives (readiness score, TSB, HRV band, plan calendar) and
 delivered through channels the user owns — desktop toast + email via the
-user's own SMTP server. No PPC cloud, no third-party push service.
+user's own SMTP server. No PCC cloud, no third-party push service.
 
 Design rules (single source of truth):
 * This module NEVER recomputes training state. It consumes
@@ -302,7 +302,7 @@ class NotificationEngine:
             return False
         try:
             from plyer import notification as plyer_notify  # type: ignore
-            plyer_notify.notify(title=title, message=body, app_name="PPC")
+            plyer_notify.notify(title=title, message=body, app_name="PCC")
             return True
         except Exception as exc:  # plyer missing / non-Windows / no D-Bus
             _log.info("toast skipped (%s): %s", type(exc).__name__, exc)

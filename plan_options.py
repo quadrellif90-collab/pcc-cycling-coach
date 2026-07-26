@@ -1,4 +1,4 @@
-"""PlanOptions — the PPC 5.x "accorgimenti" selector.
+"""PlanOptions — the PCC 5.x "accorgimenti" selector.
 
 One object the user toggles in the UI. It is passed to ``training_planner.
 generate_plan`` and ONLY switches on layers that enrich the single plan —
@@ -6,7 +6,7 @@ it never spawns a parallel planner. With ``mode="normal"`` (or every flag
 False) the plan is byte-for-byte the same as 4.4.0 (contract: non-
 regression test).
 
-Layers and what each enriches (see docs/PPC_5x_ROADMAP.md and
+Layers and what each enriches (see docs/PCC_5x_ROADMAP.md and
 docs/ricerca_worldtour_pro_2025-2026.md for sources):
   enable_nutrition     -> per-session fueling note (Impey 2018 / IOC)
   enable_integrators   -> supplement note per block (IOC/ISSN)

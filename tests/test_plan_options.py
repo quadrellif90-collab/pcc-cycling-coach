@@ -1,4 +1,4 @@
-"""Tests for PPC 5.x PlanOptions selector + accorgimenti layers.
+"""Tests for PCC 5.x PlanOptions selector + accorgimenti layers.
 
 Contract: when mode="normal" (or no PlanOptions), the plan is unchanged
 (non-regression vs 4.4.0). Each layer enriches ONLY its target sessions.

@@ -1,11 +1,11 @@
-# Copyright 2024-2026 PPC — Programming Cycling Coach
+# Copyright 2024-2026 PCC — Performance Cycling Coach
 # Licensed under the Apache License, Version 2.0 (LICENSE / NOTICE).
-"""PPC — avvio come web app (HTML nel browser), senza involucro desktop EXE.
+"""PCC — avvio come web app (HTML nel browser), senza involucro desktop EXE.
 
 Questo è il punto d'ingresso "versione HTML": parte il backend FastAPI e apre
 il browser sull'interfaccia. Nessun PyWebView / nessun .exe richiesto — basta
 Python. Utile per:
-  - usare PPC come app web locale invece di desktop,
+  - usare PCC come app web locale invece di desktop,
   - esporre la UI su un altro dispositivo della rete (es. cellulare) puntando
     al proprio PC:  http://<IP-PC>:8080
   - deploy su un server (Render/Fly) per la versione mobile (vedi README).
@@ -40,7 +40,7 @@ def main():
             webbrowser.open(url)
         threading.Thread(target=_open, daemon=True).start()
 
-    print(f"\nPPC — Programming Cycling Coach (web mode)")
+    print(f"\nPCC — Performance Cycling Coach (web mode)")
     print(f"Interfaccia: {url}\n")
     if host == "0.0.0.0":
         import socket

@@ -54,7 +54,7 @@ def _extract_const(src: str, name: str) -> str:
 
 
 def _run_node(harness: str) -> str:
-    # PPC fix: su Windows il comando `node -e "<harness lungo>"` supera il
+    # PCC fix: su Windows il comando `node -e "<harness lungo>"` supera il
     # limite di lunghezza della riga di comando (WinError 206) e viene rifiutato
     # da CreateProcess prima ancora che Node parta. Scriviamo l'harness in un
     # file .js temporaneo e lanciamo `node file.js`: stesso controllo, riga
@@ -278,7 +278,7 @@ def test_grid_card_has_name_duration_tss():
 def test_grid_missed_done_states():
     out, html, chunks = _grid_render()
     m = chunks["dMissed"]
-    # PPC: wording localizzato IT ("saltata", non "missed"); lo stile italic rosso
+    # PCC: wording localizzato IT ("saltata", non "missed"); lo stile italic rosso
     # resta per segnalare la sessione non svolta.
     assert ">saltata<" in m and "font-style:italic" in m  # calendar wording (IT)
     assert "pg-card-actual" in m

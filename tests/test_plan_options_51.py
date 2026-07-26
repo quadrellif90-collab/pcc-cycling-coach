@@ -1,4 +1,4 @@
-"""Tests for PPC 5.1 — altitude layer + real strength/mobility injection.
+"""Tests for PCC 5.1 — altitude layer + real strength/mobility injection.
 
 These verify the new accorgimenti behaviour grounded in the 2025-2026
 WorldTour / pro literature review (docs/ricerca_worldtour_pro_2025-2026.md):
@@ -10,7 +10,7 @@ WorldTour / pro literature review (docs/ricerca_worldtour_pro_2025-2026.md):
 import sys
 from datetime import date, timedelta
 
-sys.path.insert(0, r"C:\Users\Siviglino\Desktop\PPC\PPC")
+sys.path.insert(0, r"C:\Users\Siviglino\Desktop\PCC\PCC")
 
 import plan_options as PO
 import training_planner as tp

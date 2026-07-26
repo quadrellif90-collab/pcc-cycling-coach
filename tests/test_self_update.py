@@ -1,4 +1,4 @@
-"""Test PPC — endpoint auto-aggiornamento (/api/self-update).
+"""Test PCC — endpoint auto-aggiornamento (/api/self-update).
 
 Verifica il flusso senza rete reale (conftest blocca la rete): mockiamo
 api_update_check e httpx.AsyncClient. Copre il bug fix del turno precedente
@@ -47,7 +47,7 @@ def test_self_update_no_asset_returns_400(monkeypatch):
 
 
 def test_self_update_windows_launches_installer(monkeypatch):
-    """Con asset Win + download finto: lancia PPC-Setup.exe /S (silenzioso)."""
+    """Con asset Win + download finto: lancia PCC-Setup.exe /S (silenzioso)."""
     if sys.platform != "win32":
         import pytest
         pytest.skip("ramo Windows")
@@ -55,9 +55,9 @@ def test_self_update_windows_launches_installer(monkeypatch):
     monkeypatch.setattr(
         app_mod, "api_update_check",
         lambda force=0: {
-            "download_url": "https://example.com/PPC-Setup-4.0.0.exe",
-            "asset_name": "PPC-Setup-4.0.0.exe",
-            "release_url": "https://github.com/quadrellif90-collab/ppc-cycling-coach/releases/tag/v4.0.0",
+            "download_url": "https://example.com/PCC-Setup-4.0.0.exe",
+            "asset_name": "PCC-Setup-4.0.0.exe",
+            "release_url": "https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v4.0.0",
         },
     )
     import httpx as _httpx

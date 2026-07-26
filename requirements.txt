@@ -41,7 +41,7 @@ packaging>=23,<27
 # changes have happened across major versions before).
 scipy>=1.13,<2
 
-# PPC 5.0 — OCR layer for scanned PDFs (BIA / blood-panel / diet exports).
+# PCC 5.0 — OCR layer for scanned PDFs (BIA / blood-panel / diet exports).
 # pytesseract is the Python wrapper; the Tesseract *binary* is an OPTIONAL
 # external dependency (installed by the Windows installer via choco, or
 # present in PATH). Without it, OCR degrades gracefully (no crash, no cloud).

@@ -1,4 +1,4 @@
-"""Test PPC — parser PDF dieta + endpoint nutrizione/dieta."""
+"""Test PCC — parser PDF dieta + endpoint nutrizione/dieta."""
 import os
 from fastapi.testclient import TestClient
 import app as app_mod
@@ -6,10 +6,10 @@ import app as app_mod
 # diet_parser
 from diet_parser import parse_diet_pdf, parse_diet_text, nutrition_for
 
-# Il PDF di test e' fuori da PPC (in .hermes). Risali da PPC -> Desktop/PPC/.hermes
+# Il PDF di test e' fuori da PCC (in .hermes). Risali da PCC -> Desktop/PCC/.hermes
 _HERE = os.path.dirname(__file__)
-_PPC = os.path.dirname(_HERE)
-_DESKTOP = os.path.dirname(_PPC)
+_PCC = os.path.dirname(_HERE)
+_DESKTOP = os.path.dirname(_PCC)
 PDF_PATH = os.path.join(_DESKTOP, ".hermes", "desktop-attachments", "Filippo estate.pdf")
 
 client = TestClient(app_mod.app)

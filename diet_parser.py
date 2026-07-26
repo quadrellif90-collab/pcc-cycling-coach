@@ -1,4 +1,4 @@
-"""PPC — Parser intelligente diete PDF (nutrizionista) + DB nutrizionale.
+"""PCC — Parser intelligente diete PDF (nutrizionista) + DB nutrizionale.
 
 Il PDF del nutrizionista (es. "Filippo estate.pdf") ha struttura:
   - intestazione "10/04/2026 pagina N"
@@ -315,7 +315,7 @@ def parse_diet_text(text: str) -> dict:
 def parse_diet_pdf(pdf_bytes: bytes) -> dict:
     """Estrae testo da PDF (PyPDF2) e lo parse.
 
-    PPC 5.0 — OCR fallback: if the PDF yields no text (scanned image), try
+    PCC 5.0 — OCR fallback: if the PDF yields no text (scanned image), try
     Tesseract OCR before giving up. Self-contained: no cloud, degrades to a
     text-only parse (raw_text empty) if OCR is unavailable.
     """
@@ -342,7 +342,7 @@ def parse_diet_pdf(pdf_bytes: bytes) -> dict:
 
 
 def day_macros_summary(struct: dict) -> list:
-    """Riepilogo macro per giorno (primary_only) per UI/confronto con target PPC."""
+    """Riepilogo macro per giorno (primary_only) per UI/confronto con target PCC."""
     out = []
     for d in struct.get("days", []):
         t = d.totals(primary_only=True)

@@ -1,4 +1,4 @@
-# PPC 5.x — Piano operativo (con selettore di accorgimenti)
+# PCC 5.x — Piano operativo (con selettore di accorgimenti)
 
 Sintesi delle 4 ricerche (competitiva + scientifica 2022-2024 + notifiche
 2024-2026 + scientifica 2025-2026) tradotta in **lavoro implementabile**, con
@@ -23,7 +23,7 @@ modifichi solo la parte di propria competenza (le altre sessioni invariante).
   mobility, dfa_durability. Ciascuno no-op se OFF.
 - `app.py` — endpoint `/api/plan/generate` legge `plan_options` dal body e lo passa;
   serializzazione JSON delle sessioni include i 6 campi note.
-- `dashboard.html` — pannello "Accorgimenti del piano (PPC 5.x)" con 8 toggle;
+- `dashboard.html` — pannello "Accorgimenti del piano (PCC 5.x)" con 8 toggle;
   `_readPlanOptions()` invia `{mode:"normal"}` se tutti spenti (piano = 4.4.0).
 - **Contratto di non-regressione verificato**: normal mode → nessuna nota (byte-identico).
 
@@ -95,7 +95,7 @@ tipi (da `ricerca_notifiche_smart_2024-2026.md`): Morning Readiness, RLGL Day
 Flag, Workout of the Day, Swap advisory, PR detect, eFTP drift, HRV trend,
 Missed workout, Weekly Review, Pre-race countdown, Fueling reminder, Monotony
 alert. Scheduler locale (thread) innesca agli orari configurati. Endpoint
-`/api/notifications/*` per settings/test. Nessun cloud PPC.
+`/api/notifications/*` per settings/test. Nessun cloud PCC.
 
 **Attivabile dal selettore** (`enable_notifications`) — ma funziona anche da
 solo sul piano "normale" (legge solo readiness/TSB, non richiede altri layer).
@@ -122,13 +122,13 @@ che il piano base non cambi (contract test).
 
 ---
 
-## 5. Gap di mercato (perché PPC vince)
+## 5. Gap di mercato (perché PCC vince)
 
 Nessun competitor **local-first/no-subscription** offre email+toast proattivi
 combinando HRV intervals + carico, e nessuno lascia all'utente il **controllo
 granulare** su quali accorgimenti scientifici applicare al proprio piano.
 TrainingPeaks/Xert/AI Endurance sono cloud e opachi; FasCat/Wahoo fanno forza
-ma non il selettore modulare. PPC: scienza 2025-2026, dati tuoi, piano uno,
+ma non il selettore modulare. PCC: scienza 2025-2026, dati tuoi, piano uno,
 viste molteplici, accorgimenti a scelta.
 
 ---

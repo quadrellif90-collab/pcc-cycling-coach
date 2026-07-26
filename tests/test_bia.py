@@ -1,4 +1,4 @@
-"""Test PPC — import/sync BIA + integrazione Intervals.icu."""
+"""Test PCC — import/sync BIA + integrazione Intervals.icu."""
 import os
 from fastapi.testclient import TestClient
 import app as app_mod
@@ -6,10 +6,10 @@ from bia_parser import parse_bia_text, parse_bia_pdf, to_icu_wellness, BIAReadin
 
 client = TestClient(app_mod.app)
 
-# Il PDF di test e' fuori da PPC (in .hermes). Risali da PPC -> Desktop/PPC/.hermes
+# Il PDF di test e' fuori da PCC (in .hermes). Risali da PCC -> Desktop/PCC/.hermes
 _HERE = os.path.dirname(__file__)
-_PPC = os.path.dirname(_HERE)
-_DESKTOP = os.path.dirname(_PPC)
+_PCC = os.path.dirname(_HERE)
+_DESKTOP = os.path.dirname(_PCC)
 BIA_PDF = os.path.join(_DESKTOP, ".hermes", "desktop-attachments",
                         "Report utente - F.Q. - 18-06-2026.pdf")
 

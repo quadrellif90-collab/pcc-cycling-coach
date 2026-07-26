@@ -1,4 +1,4 @@
-"""PPC — OCR layer for scanned PDFs (BIA / blood-panel / diet exports).
+"""PCC — OCR layer for scanned PDFs (BIA / blood-panel / diet exports).
 
 Local-first: no cloud OCR. Uses PyMuPDF (fitz) to rasterize each page and
 pytesseract to read it. Tesseract is an OPTIONAL external binary — if it is

@@ -5,7 +5,7 @@
   (interval→Endurance su yellow, →Rest su red). Nessun competitor local-first
   fa email+toast proattivi combinando HRV Intervals + carico.
 
-## 12 NOTIFICHE SMART per PPC (local-first: SMTP utente + toast desktop + HRV/wellness da Intervals.icu API)
+## 12 NOTIFICHE SMART per PCC (local-first: SMTP utente + toast desktop + HRV/wellness da Intervals.icu API)
 1. **Morning Readiness Report** (email ~7:00 + toast): HRV vs baseline 7/42gg, restingHR, sleep, Form (TSB) → 🟢🟡🔴.
 2. **RLGL Day Flag**: ramp rate CTL >5–7/sett o TSB < −25 o HRV sotto baseline−1SD per 2+ gg → "Red Day: rest/recovery" (toast + colore calendario).
 3. **Workout of the Day email** (stile TrainingPeaks): sessione, target W/zone, meteo.
@@ -25,4 +25,4 @@ Intervals.icu API, regole soglia, `smtplib` per email, `win10toast`/`plyer` per 
 ## Tabella gap (sintesi)
 - Nessun concorrente self-hosted/local-first manda email+toast proattivi combinando
   HRV Intervals + carico. Intervals.icu stesso NON ha daily reminder (feature request aperta).
-- PPC può vincere qui: local-first, privacy, nessun abbonamento, notifiche proattive.
+- PCC può vincere qui: local-first, privacy, nessun abbonamento, notifiche proattive.

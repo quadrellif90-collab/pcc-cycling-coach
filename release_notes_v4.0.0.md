@@ -1,4 +1,4 @@
-# PPC — Programming Cycling Coach v4.0.0
+# PCC — Performance Cycling Coach v4.0.0
 
 **Fork italiano di Domestique (Apache-2.0, `platypus45`).** Questa release è una versione derivata: stessa architettura di pianificazione adattiva dell'originale, estesa con motore nutrizione/integrazione riscritto, forza/mobilità iniettabili, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento.
 
@@ -8,7 +8,7 @@
 
 ## Cosa è cambiato rispetto a Domestique 3.5.2
 
-| Area | Domestique 3.5.2 | PPC 4.0.0 |
+| Area | Domestique 3.5.2 | PCC 4.0.0 |
 |---|---|---|
 | Lingua UI | Inglese | Italiano (termini dominio in EN: CTL, TSS, FTP, W/kg, VO2max, ZWO, FIT, rMSSD, DFA α1) |
 | Motore nutrizione | Note generiche per fase | Motore completo: TDEE Mifflin-St Jeor, macro obiettivo, compensazione carico, race-fueling, pasti con grammi |
@@ -19,10 +19,10 @@
 | Multi-disciplina | Ciclismo centrale | Campo `disciplines` (cycling/running/mtb/swim/strength/mobility) + cross-sport TSS |
 | Auto-aggiornamento | Banner "update disponibile" | Install reale da GitHub Releases |
 | Palette / Dashboard | Blu originale | Teal/amber, sidebar tab a sinistra, card ridimensionabili/riordinabili |
-| Brand | Domestique | PPC — Programming Cycling Coach |
-| Build | `domestique.spec` | `ppc.spec`, installer NSIS `PPC-Setup.exe`, CI macOS `.dmg` |
+| Brand | Domestique | PCC — Performance Cycling Coach |
+| Build | `domestique.spec` | `pcc.spec`, installer NSIS `PCC-Setup.exe`, CI macOS `.dmg` |
 
-**Non rimosso:** la logica di pianificazione adattiva di Domestique (guardrail G1–G7, ricalibrazione FTP a metà ciclo, micro-intervalli 30/15 Rønnestad, 4×8 Seiler, polarizzazione, ACWR Gabbett). PPC la estende.
+**Non rimosso:** la logica di pianificazione adattiva di Domestique (guardrail G1–G7, ricalibrazione FTP a metà ciclo, micro-intervalli 30/15 Rønnestad, 4×8 Seiler, polarizzazione, ACWR Gabbett). PCC la estende.
 
 ---
 
@@ -42,11 +42,11 @@
 ## Installazione
 
 ### Windows
-Scarica `PPC-Setup-4.0.0.exe` e installa. L'app si auto-aggiorna dalle future release.
+Scarica `PCC-Setup-4.0.0.exe` e installa. L'app si auto-aggiorna dalle future release.
 
 ### macOS
-Scarica `PPC.dmg`, trascina PPC in Applicazioni.
-> Nota: il `.dmg` non è notarizzato Apple. Al primo avvio, se serve: tasto destro → Apri, oppure `xattr -d com.apple.quarantine /Applications/PPC.app`.
+Scarica `PCC.dmg`, trascina PCC in Applicazioni.
+> Nota: il `.dmg` non è notarizzato Apple. Al primo avvio, se serve: tasto destro → Apri, oppure `xattr -d com.apple.quarantine /Applications/PCC.app`.
 
 ### Sviluppo / Web
 ```bash
@@ -66,4 +66,4 @@ Rønnestad 2014/2020 (30/15s), Seiler (4×8), Gabbett 2016 (ACWR), Hulin 2014, R
 
 ## Licenza
 
-Apache-2.0. PPC è un fork di Domestique (`platypus45`). Vedi `LICENSE` e `NOTICE`.
+Apache-2.0. PCC è un fork di Domestique (`platypus45`). Vedi `LICENSE` e `NOTICE`.

@@ -1,12 +1,12 @@
-# PPC (PPC) — System Documentation
+# PCC (PCC) — System Documentation
 
-*Evidence-based indoor cycling training platform — your training domestique. Product name: **PPC — Adaptive Cycling Intelligence**; the codebase retains the historical "PPC" name.*
+*Evidence-based indoor cycling training platform — your training domestique. Product name: **PCC — Adaptive Cycling Intelligence**; the codebase retains the historical "PCC" name.*
 
 ---
 
 ## Project Overview
 
-PPC (formerly ChickenCycling) is a local-first indoor cycling training platform. It combines a local Python backend with a vanilla JavaScript frontend (no npm, no build step) and a rich library of workouts, route profiles, and nutrition data.
+PCC (formerly ChickenCycling) is a local-first indoor cycling training platform. It combines a local Python backend with a vanilla JavaScript frontend (no npm, no build step) and a rich library of workouts, route profiles, and nutrition data.
 
 Key capabilities:
 

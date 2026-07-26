@@ -1,10 +1,10 @@
 @echo off
-REM Build PPC — Adaptive Cycling Intelligence for Windows
-REM Output: dist\PPC\PPC.exe  (then installer.nsi -> PPC-Setup-<ver>.exe)
+REM Build PCC — Adaptive Cycling Intelligence for Windows
+REM Output: dist\PCC\PCC.exe  (then installer.nsi -> PCC-Setup-<ver>.exe)
 
 cd /d "%~dp0"
 
-echo === PPC Windows Build ===
+echo === PCC Windows Build ===
 
 REM 1. Create virtual environment if needed
 if not exist venv (
@@ -20,9 +20,9 @@ pip install -r requirements.txt pyinstaller
 REM 3. Create assets dir if missing
 if not exist assets mkdir assets
 
-REM 4. Build with PyInstaller (ppc.spec produces dist\PPC\PPC.exe)
+REM 4. Build with PyInstaller (pcc.spec produces dist\PCC\PCC.exe)
 echo Building...
-pyinstaller ppc.spec --clean --noconfirm
+pyinstaller pcc.spec --clean --noconfirm
 if errorlevel 1 (
     echo PYINSTALLER FAILED
     exit /b 1
@@ -30,7 +30,7 @@ if errorlevel 1 (
 
 echo.
 echo === Build complete ===
-echo Executable: dist\PPC\PPC.exe
-echo To run: dist\PPC\PPC.exe
+echo Executable: dist\PCC\PCC.exe
+echo To run: dist\PCC\PCC.exe
 REM (no `pause` — would hang CI runners waiting for input)
 exit /b 0
