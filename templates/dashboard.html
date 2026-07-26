@@ -2020,6 +2020,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <div style="margin-top:12px;">
     <div class="card">
       <h3>Attività recenti</h3>
+      <input id="recent-activities-search" type="text" placeholder="🔍 Cerca tra le tue uscite…" oninput="renderRecentActivities(this.value)" style="width:100%;margin:0 0 10px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:12px;" />
       <div id="recent-activities" class="loading">Caricamento...</div>
     </div>
   </div>
@@ -4295,9 +4296,28 @@ function gotoTab(t){ var el=document.querySelector('.tab[data-tab="'+t+'"]'); if
 // ===== v5.2.x Ripristina disposizione card =====
 function resetCardLayout(){
   if(!confirmDanger || !confirmDanger('Ripristinare l\'ordine originale delle card? Le modifiche manuali andranno perse.')) return;
+
+
   try{ localStorage.removeItem('pcc-layout:' + (window.__ACTIVE_PROFILE_ID || 'default')); }catch(_){}
   location.reload();
 }
+function renderRecentActivities(filter){
+  var box=document.getElementById('recent-activities'); if(!box) return;
+  var all=window.__ALL_ACTIVITIES||[];
+  var f=(filter||'').trim().toLowerCase();
+  var list=all.filter(function(a){ if(!f) return true; var name=(a.name||'')+' '+(a.date||a.start_date||''); return name.toLowerCase().indexOf(f)>=0; });
+  if(!list.length){ box.innerHTML=emptyState('🔍','Nessuna attivita trovata', f?('Nessun risultato per "'+filter+'"'):'Ancora nessuna uscita.', 'Importa FIT','openImportFitPicker()'); return; }
+  var shown=list.slice().reverse();
+  box.innerHTML=shown.map(function(a){
+    var id=_normalizeRideId(a);
+    var click=id?('onclick="openActivityModal(\''+escJs(id)+'\')" style="cursor:pointer;"'):'';
+    var load=a.effective_load&&a.effective_load!==a.tss?('Load '+a.effective_load):(a.tss?('TSS '+a.tss):'');
+    return '<div class="activity" '+click+'><div><span class="act-name">'+esc(a.name||'Activity')+'</span>'+
+      '<div style="font-size:11px;color:var(--text3);">'+esc((a.date||a.start_date||'').slice(0,10))+'</div></div>'+
+      '<div style="font-size:12px;color:var(--accent);font-weight:600;">'+load+'</div></div>';
+  }).join('');
+}
+
 
 // ===== v5.2 conferma azioni distruttive =====
 function confirmDanger(msg){ return window.confirm(msg||'Sei sicuro? L\'operazione non e reversibile.'); }
@@ -14392,6 +14412,7 @@ async function renderPlanJSON(plan) {
   try {
     const actRes = await fetch('/api/activities');
     const activities = await actRes.json();
+    window.__ALL_ACTIVITIES = activities;
     for (const a of (activities || [])) {
       // Cycling plan view: a run/swim must not appear in the overlay or count
       // toward the week's actual TSS (consistent with /api/calendar + gap math).
