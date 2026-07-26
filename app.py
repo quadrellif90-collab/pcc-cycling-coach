@@ -11096,6 +11096,49 @@ async def api_metrics_log(request: Request):
     return {"ok": True, "date": dt, "metric": metric, "value": float(value)}
 
 
+# PCC 5.x — Custom metrics / charts (GoldenCheetah-style view over metric store).
+@app.get("/api/custom-charts")
+def api_custom_charts_list():
+    from custom_charts import load_charts
+    return {"charts": load_charts()}
+
+
+@app.post("/api/custom-charts")
+async def api_custom_charts_save(request: Request):
+    try:
+        body = await request.json()
+        from custom_charts import upsert_chart
+        rec = upsert_chart(body)
+        return {"ok": True, **rec}
+    except (ValueError, TypeError) as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+
+@app.delete("/api/custom-charts/{chart_id}")
+def api_custom_charts_delete(chart_id: str):
+    from custom_charts import delete_chart
+    ok = delete_chart(chart_id)
+    return {"ok": ok}
+
+
+@app.get("/api/custom-charts/data/{chart_id}")
+def api_custom_charts_data(chart_id: str, days: int = Query(365, ge=1, le=3650)):
+    try:
+        from custom_charts import load_charts, compute_series
+        defs = load_charts()
+        defn = next((c for c in defs if c.get("id") == chart_id), None)
+        if not defn:
+            return JSONResponse(status_code=404, content={"error": "chart not found"})
+        defn = dict(defn)
+        defn["days"] = days
+        series = compute_series(defn, lambda m, d: db.query_metric_history(m, d))
+        return {"id": chart_id, **series}
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # DAILY LOG (Morning Questionnaire) APIs
 # ═══════════════════════════════════════════════════════════════════════════════

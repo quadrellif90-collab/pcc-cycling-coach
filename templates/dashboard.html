@@ -2930,6 +2930,33 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="cp-models" style="font-size:13px;color:var(--text2);">Caricamento…</div>
   </div>
 
+  <!-- PCC 5.x — Custom charts (GoldenCheetah-style view over metric store). -->
+  <div class="card" style="margin-bottom:12px;">
+    <h3>Grafici personalizzati <span style="font-size:10px;font-weight:400;color:var(--text3);">(metriche definite)</span></h3>
+    <div id="custom-charts-list" style="margin-bottom:10px;"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <input id="cc-title" placeholder="Titolo" style="font-size:11px;padding:3px 6px;width:120px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;" />
+      <select id="cc-y" style="font-size:11px;padding:3px 6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+        <option value="ftp">FTP</option><option value="vo2max">VO2max</option>
+        <option value="weight">Peso</option><option value="body_fat">Body fat</option>
+        <option value="lbm">LBM</option><option value="w_per_kg">W/kg</option>
+        <option value="ctl">CTL</option><option value="tsb">TSB</option>
+        <option value="rhr">RHR</option><option value="hrv_rmssd">HRV rMSSD</option>
+      </select>
+      <select id="cc-x" style="font-size:11px;padding:3px 6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+        <option value="">Asse X: data</option>
+        <option value="weight">Peso</option><option value="ctl">CTL</option>
+        <option value="tsb">TSB</option><option value="ftp">FTP</option>
+      </select>
+      <select id="cc-type" style="font-size:11px;padding:3px 6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+        <option value="line">Linea</option><option value="scatter">Scatter</option><option value="bar">Barre</option>
+      </select>
+      <input id="cc-formula" placeholder="formula (a,b): es. a/b" style="font-size:11px;padding:3px 6px;width:120px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;" />
+      <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="addCustomChart()">Aggiungi</button>
+    </div>
+    <div id="custom-charts-canvases"></div>
+  </div>
+
   <!-- Fitness Chart — full width -->
   <div class="card" style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -5566,6 +5593,8 @@ function loadAnalysisTab() {
   try { if (typeof loadRiderStats === 'function') loadRiderStats(); } catch (_) {}
   // PCC 5.x — CP models + Progression Levels (view over power-duration).
   try { if (typeof loadCpModels === 'function') loadCpModels(); } catch (_) {}
+  // PCC 5.x — Custom charts (view over metric store).
+  try { if (typeof loadCustomCharts === 'function') loadCustomCharts(); } catch (_) {}
 }
 
 // P2.4 (v3.0.0) — Rider Profile stats card. One fetch of /api/rider-stats;
@@ -5701,6 +5730,78 @@ async function loadCpModels() {
       <div style="font-weight:600;font-size:12px;margin:4px 0 2px;color:var(--text1);">Livelli di progressione (per zona)</div>
       ${lvlHtml || '<div style="font-size:11px;color:var(--text3);">Nessun dato di potenza.</div>'}`;
   } catch (e) { host.textContent = 'Errore modelli CP.'; }
+}
+
+// PCC 5.x — Custom charts (GoldenCheetah-style view over the metric store).
+const _customChartInstances = {};
+async function loadCustomCharts() {
+  const list = document.getElementById('custom-charts-list');
+  const canv = document.getElementById('custom-charts-canvases');
+  if (!list || !canv) return;
+  try {
+    const res = await fetch('/api/custom-charts');
+    if (!res.ok) { list.textContent = 'Grafici non disponibili.'; return; }
+    const d = await res.json();
+    const charts = d.charts || [];
+    if (!charts.length) {
+      list.innerHTML = '<div style="font-size:11px;color:var(--text3);">Nessun grafico. Aggiungine uno: scegli metrica Y, tipo, opz. formula a/b.</div>';
+      canv.innerHTML = '';
+      return;
+    }
+    list.innerHTML = charts.map(c =>
+      `<span style="font-size:11px;margin-right:10px;cursor:pointer;" onclick="removeCustomChart('${esc(c.id)}')" title="Rimuovi">✕ ${esc(c.title)}</span>`
+    ).join('');
+    canv.innerHTML = charts.map(c =>
+      `<div style="margin:10px 0;"><canvas id="cc-canvas-${esc(c.id)}" height="160"></canvas></div>`
+    ).join('');
+    for (const c of charts) {
+      try { await renderCustomChart(c); } catch (_) {}
+    }
+  } catch (e) { list.textContent = 'Errore grafici.'; }
+}
+
+async function renderCustomChart(c) {
+  const canvas = document.getElementById('cc-canvas-' + c.id);
+  if (!canvas || typeof Chart === 'undefined') return;
+  const res = await fetch('/api/custom-charts/data/' + encodeURIComponent(c.id));
+  if (!res.ok) return;
+  const d = await res.json();
+  if (_customChartInstances[c.id]) { try { _customChartInstances[c.id].destroy(); } catch (_) {} }
+  _customChartInstances[c.id] = new Chart(canvas, {
+    type: c.type || 'line',
+    data: {
+      labels: d.labels || [],
+      datasets: [{ label: c.title, data: d.values || [],
+        borderColor: c.color || '#f59e0b', backgroundColor: c.color || '#f59e0b',
+        fill: false, tension: 0.25, pointRadius: c.type === 'scatter' ? 3 : 0 }],
+    },
+    options: { plugins: { legend: { labels: { color: 'var(--text2)' } } },
+      scales: { x: { ticks: { color: 'var(--text3)', maxTicksLimit: 8 } }, y: { ticks: { color: 'var(--text3)' } } } }
+  });
+}
+
+async function addCustomChart() {
+  const title = document.getElementById('cc-title').value.trim();
+  const y = document.getElementById('cc-y').value;
+  const x = document.getElementById('cc-x').value || null;
+  const type = document.getElementById('cc-type').value;
+  const formula = document.getElementById('cc-formula').value.trim() || null;
+  if (!title) { showToast('Inserisci un titolo', 2000, 'error'); return; }
+  try {
+    const res = await fetch('/api/custom-charts', { method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ title, y_metric: y, x_metric: x, type, formula }) });
+    if (!res.ok) { showToast('Salvataggio fallito', 2000, 'error'); return; }
+    showToast('Grafico aggiunto', 2000, 'success');
+    loadCustomCharts();
+  } catch (e) { showToast('Errore', 2000, 'error'); }
+}
+
+async function removeCustomChart(id) {
+  try {
+    await fetch('/api/custom-charts/' + encodeURIComponent(id), { method: 'DELETE' });
+    loadCustomCharts();
+  } catch (e) {}
 }
 
 // P3.1 — compact CTL/TSB sparkline on Home (the full Fitness & Form chart
