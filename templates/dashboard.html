@@ -4053,7 +4053,7 @@ async function resetActiveProfile() {
     if (!res.ok || !j.ok) { alert('Reset fallito: ' + (j.error || res.status)); return; }
     alert('Profilo resettato. La pagina verrà ricaricata.');
     window.location.reload();
-  } catch (e) { alert('Reset fallito: ' + e.message); }
+  } catch (e) { showClientError(e, 'Reset non riuscito:'); }
 }
 // v4.4 — Elimina il profilo ATTIVO (anche l'ultimo → torna al wizard).
 async function deleteActiveProfile() {
@@ -4064,7 +4064,7 @@ async function deleteActiveProfile() {
     const res = await fetch(`/api/profiles/${encodeURIComponent(p)}`, {method:'DELETE'});
     if (!res.ok) { const b = await res.text().catch(()=> ''); alert(`Eliminazione fallita (${res.status}): ${b}`); return; }
     window.location.href = '/profile-picker';
-  } catch (e) { alert('Eliminazione fallita: ' + e.message); }
+  } catch (e) { showClientError(e, 'Eliminazione non riuscita:'); }
 }
 async function deleteProfileFromBadge(id, name) {
   if (_deletingProfile) return;
@@ -4093,7 +4093,7 @@ async function deleteProfileFromBadge(id, name) {
     const dd = $('profile-dropdown');
     if (dd) dd.classList.remove('open');
   } catch (e) {
-    alert('Delete failed: ' + e.message);
+    showClientError(e, 'Eliminazione non riuscita:');
   } finally {
     _deletingProfile = false;
   }
@@ -4112,7 +4112,7 @@ async function switchProfileFromBadge(id) {
     coursesData = null;
     location.reload();
   } catch(e) {
-    alert('Failed to switch profile: ' + e.message);
+    showClientError(e, 'Cambio profilo non riuscito:');
   }
 }
 document.addEventListener('click', () => { const dd=$('profile-dropdown'); if(dd) dd.classList.remove('open'); });
@@ -4597,7 +4597,7 @@ async function _importFitFile(file) {
       setTimeout(() => { try { maybeShowFtpTestModal(); } catch(_) {} }, 400);
     } catch(_) {}
   } catch (e) {
-    showToast('Import failed: ' + (e.message || e), 6000);
+    showClientError(e, 'Import non riuscito:');
     console.error('FIT import error', e);
   }
 }
@@ -4696,7 +4696,7 @@ async function openCourseDetail(region, filename) {
       el.innerHTML = `<b style="color:${col};">Fattibilità W′: ${j.feasibility === 'ok' ? 'ok' : j.feasibility === 'stretch' ? 'ambizioso' : 'duro'}</b> — lavoro salite ${j.climb_work_kj} kJ / W′ ${j.wprime_kj} kJ (${j.wprime_used_pct}% del budget), massa ${j.mass_kg} kg`;
     }).catch(() => {});
   } catch (e) {
-    alert('Failed to load course: ' + e.message);
+    showClientError(e, 'Caricamento percorso non riuscito:');
   }
 }
 
@@ -7341,7 +7341,7 @@ async function loadBanisterValidationPanel(force = false) {
       c.innerHTML = '<div style="color:#f97316;">Computing took > 90 s — try Refresh later.</div>';
     } else {
       c.innerHTML = '<div style="color:#f97316;">Failed.</div>';
-      try { showToast('Refresh failed: ' + (e.message || e), 4000); } catch (_) {}
+      try { showClientError(e, 'Aggiornamento non riuscito:'); } catch (_) {}
     }
   } finally {
     clearTimeout(tid);
@@ -10034,7 +10034,7 @@ async function customFtp(suggested, method, source, opts) {
     if (typeof loadSettings === 'function') { try { loadSettings(); } catch(_) {} }
     if (opts.closeModal) { try { closeModal(); } catch(_) {} }
   } catch(e) {
-    try { showToast('FTP update failed: ' + e.message, 4000); } catch(_) {}
+    try { showClientError(e, 'Aggiornamento FTP non riuscito:'); } catch(_) {}
   }
 }
 
@@ -10771,7 +10771,7 @@ async function openRideDetail(rideId) {
       ${_raceCheckboxHtml}
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a class="btn" href="/api/rides/${rideIdEnc}/fit" download style="background:var(--surface2);text-decoration:none;display:inline-block;">Scarica FIT</a>
-        <button class="btn" style="background:var(--surface2);color:var(--dev-red);border-color:var(--dev-red);" onclick="if(confirm('Delete this ride?')){fetch('/api/rides/${rideIdEnc}',{method:'DELETE'}).then(r=>{if(!r.ok)throw new Error('Failed');$('ride-detail-overlay').style.display='none';}).catch(e=>alert('Failed to delete ride: '+e.message))}">Delete Ride</button>
+        <button class="btn" style="background:var(--surface2);color:var(--dev-red);border-color:var(--dev-red);" onclick="if(confirm('Delete this ride?')){fetch('/api/rides/${rideIdEnc}',{method:'DELETE'}).then(r=>{if(!r.ok)throw new Error('Failed');$('ride-detail-overlay').style.display='none';}).catch(e=>showClientError(e, 'Eliminazione uscita non riuscita:'))}">Delete Ride</button>
       </div>
     </div>`;
 
@@ -12614,7 +12614,7 @@ async function startRideOnRoute(routeId) {
     window.open(`/api/course/${encodeURIComponent(region)}/${encodeURIComponent(filename)}/download`, '_blank');
     showToast('Downloading ' + (r.name || routeId) + ' — open in your trainer app, then Import FIT afterward.', 5000);
   } catch (e) {
-    alert('Failed to download route: ' + (e.message || e));
+    showClientError(e, 'Download percorso non riuscito:');
   }
 }
 
@@ -17158,7 +17158,7 @@ async function copyLogs() {
     const text = `PCC v${v.version} | ${v.platform} | Python ${v.python}\n${'='.repeat(60)}\n${(d.lines||[]).join('\n')}`;
     await navigator.clipboard.writeText(text);
     alert('Logs copied to clipboard! Paste them in a bug report.');
-  } catch(e) { alert('Failed: ' + e.message); }
+  } catch(e) { showClientError(e); }
 }
 
 async function viewVersion() {
@@ -17782,7 +17782,7 @@ async function saveSettings() {
     loadSettings(); // refresh zones
     loadHome(); // refresh header
   } catch(e) {
-    alert('Failed to save settings: ' + e.message);
+    showClientError(e, 'Salvataggio impostazioni non riuscito:');
   }
 }
 
@@ -21555,7 +21555,7 @@ async function applySelfUpdate() {
     }
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Aggiorna ora'; }
-    showToast('Auto-aggiornamento non riuscito: ' + e.message, 5000);
+    showClientError(e, 'Auto-aggiornamento non riuscito:');
   }
 }
 
