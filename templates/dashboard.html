@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3768,8 +3768,8 @@ function applyTheme(name) {
   localStorage.setItem('pcc-theme', name);
   const sel = $('theme-select'); if (sel) sel.value = name;
 }
-// Ripristina tema salvato all'avvio
-(function() { const t = localStorage.getItem('pcc-theme'); if (t && t !== 'dark') { document.documentElement.setAttribute('data-theme', t); } })();
+// Ripristina tema salvato all'avvio (default: chiaro)
+(function() { const t = localStorage.getItem('pcc-theme'); if (t === 'dark') { document.documentElement.removeAttribute('data-theme'); } else { document.documentElement.setAttribute('data-theme', 'light'); } })();
 loadProfileBadge();
 // Pre-load FTP for workout library mini SVGs (don't wait for Settings tab).
 // _targetMode too — red-team F6: it was only set on the Settings tab, so every
@@ -3797,10 +3797,14 @@ function toggleTheme() {
     $('theme-toggle').textContent = '☀️';
   }
 }
-// Restore saved theme on load
+// Restore saved theme on load (default: chiaro)
 (function() {
   const saved = _lsGet('theme');
-  if (saved === 'light') {
+  if (saved === 'dark') {
+    document.documentElement.removeAttribute('data-theme');
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = '🌙';
+  } else {
     document.documentElement.setAttribute('data-theme', 'light');
     const btn = document.getElementById('theme-toggle');
     if (btn) btn.textContent = '☀️';
