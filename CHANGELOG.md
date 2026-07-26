@@ -1,5 +1,37 @@
 # Changelog
 
+## v5.2.0-beta.2 — Design System Pro: restyling grafico strutturato (2026-07-26)
+
+**UI professionale, pari ai migliori software del settore** (TrainingPeaks / Intervals.icu / WKO). Solo CSS presentazionale: nessun cambiamento a logica o dati, tutte le funzioni #1–#8 + A/B/C/D restano identiche.
+
+- **Elevation system** a 3 livelli (soft shadows) + hover-lift sulle card → fine dell'effetto "piatto/appiccicato".
+- **Header sticky frosted-glass** con KPI raggruppati (Readiness / CTL / FTP / Peso) e dot semaforo.
+- **Tab bar** a underline morbido (niente più blocchi verde neon); più respiro.
+- **Whitespace generoso** (padding card 20px, gap 16px) contro il "data wall".
+- **Tipografia** rifinita: base 14.5px, numeri tabulari, header di sezione con barra accent.
+- **Tile metrica**, bottoni con elevazione coerente, sparkline più spesse/leggibili.
+- Verificato visivamente via browser in **light e dark**; 13 tab cliccati con 0 errori JS; pytest 22/22.
+
+## v5.2.0-beta.1 — 12 nuove funzioni (viste sul motore esistente) (2026-07-26)
+
+Tutte le feature sono **viste sul motore unico `generate_plan`** (single source of truth): nessun motore parallelo, nessun numero divergente. Verificate end-to-end (server live + pytest).
+
+**Affinamenti motore & scienza (#1–#8):**
+- **#1 Semaforo fatica** — `fatigue_signal` da `compute_training_severity` nel readiness.
+- **#2 FTP continuo** — già nel motore (`eftp_auto`): stima FTP ad ogni uscita, nessun codice nuovo.
+- **#3 Decoder metabolico** — da power-duration + peso stima VO2max / VLamax / FatMax.
+- **#4 Modelli CP multipli** — Monod 2-param + Morton 3-param + Progression Levels.
+- **#5 Classificazione & RPE** — protocollo da IF, cattura RPE lato atleta, replan guidato.
+- **#6 Import lab test** — parser CPET/INSCYD da PDF (+ FIT già presente).
+- **#7 Grafici personalizzati** — metriche derivate da formula sicura (no eval) sullo store metriche.
+- **#8 Asimmetrie pedala/LEOMO MPI** — L-R / torque effectiveness / pedal smoothness da sidecar.
+
+**Portabilità & chiusura loop (A/B/C/D):**
+- **A — Field-test FTP** — stima FTP da 20min / ramp / 4×8min / 4×4min, chiude il loop #2.
+- **B — Export bundle** — ZIP portabile: profilo + metriche CSV + sidecar + backup `~/.domestique`.
+- **C — Calendario .ics** — feed webcal (VISTA sul piano) per importare gli allenamenti in Google/Outlook/Apple Calendar.
+- **D — Injury/illness → auto-riposo** — blocco infortunio/malattia che rimodula il piano (giorni → rest, TSS 0), applicato come VISTA su `current_plan.json`.
+
 ## v5.1.0 — Rebrand PCC + OCR IT/EN (2026-07-25)
 
 **Nuova identità.** Il progetto non è più "PCC — Performance Cycling Coach" (fork anonimo di PCC): ora si chiama **PCC — Adaptive Cycling Intelligence**.

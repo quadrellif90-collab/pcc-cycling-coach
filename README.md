@@ -6,9 +6,9 @@
 
 > **PCC** (VELocità + ARCO di potenza): il nome evoca la *power-duration curve*, il cuore scientifico del pianificatore — la curva che descrive quanto riesci a produrre per quanto tempo. Il logo unisce quell'arco ascendente a una ruota, con il gradiente teal→amber della palette.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.1.0-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-PCC-orange)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.2.0--beta.2-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-PCC-orange)
 
-Latest: **[v5.1.0 — Rebrand PCC + OCR IT/EN](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.1.0)**
+Latest: **[v5.2.0-beta.2 — Design System Pro + 12 nuove funzioni](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.2.0-beta.2)**
 
 > ⚠️ **Fork italiano di PCC** (Apache-2.0, `platypus45`). Questa è una versione derivata: stessa architettura di pianificazione adattiva, ma con motore nutrizione/integrazione riscritto, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento. Il credito all'autore originale è in [`NOTICE`](NOTICE).
 
@@ -39,6 +39,30 @@ PCC è un planner ciclistico **localhost-only** che:
 - Si **auto-aggiorna** dalla release GitHub (Windows installer silenzioso, macOS `.dmg`).
 
 Hardware-agnostic: genera ZWO, pedali in MyWhoosh / Tacx / Zwift / Hammerhead / outdoor, re-importi il FIT. Nessun power meter? Una modalità a frequenza cardiaca prescrive range bpm invece di watt. Un atleta, nessun cloud, nessun telemetry.
+
+---
+
+## Novità v5.2
+
+La release **v5.2.0-beta.2** porta PCC a un livello professionale sia funzionale che visivo. Tutte le funzioni sono **viste sul motore unico di pianificazione** (single source of truth): nessun motore parallelo, nessun numero divergente.
+
+**12 nuove funzioni (tutte verificate end-to-end):**
+- **#1 Semaforo fatica** — segnale di fatica composito nel readiness.
+- **#2 FTP continuo** — stima FTP ad ogni uscita (motore esistente, ora esposto).
+- **#3 Decoder metabolico** — da power-duration + peso stima VO2max / VLamax / FatMax.
+- **#4 Modelli CP multipli** — Monod 2-param + Morton 3-param + Progression Levels.
+- **#5 Classificazione & RPE** — tipo di sessione da IF + rilevamento RPE atleta + replan guidato.
+- **#6 Import lab test** — parser CPET / INSCYD da PDF (+ import FIT già presente).
+- **#7 Grafici personalizzati** — metriche derivate da formula sicura (no eval) sullo store metriche.
+- **#8 Asimmetrie pedala / LEOMO MPI** — L-R / torque effectiveness / pedal smoothness.
+- **A — Field-test FTP** — stima FTP da 20min / ramp / 4×8min / 4×4min (chiude il loop #2).
+- **B — Export bundle** — ZIP portabile (profilo + metriche + sidecar + backup `~/.domestique`).
+- **C — Calendario .ics** — feed webcal per importare il piano in Google / Outlook / Apple Calendar.
+- **D — Injury/illness → auto-riposo** — blocco infortunio/malattia che rimodula il piano (giorni → rest, TSS 0).
+
+**Design System Pro (beta.2):** UI elevata al pari di TrainingPeaks / Intervals.icu — card con profondità e hover-lift, header sticky frosted-glass con KPI, tab a underline morbido, whitespace generoso, tipografia rifinita. Verificata in light e dark.
+
+> ⚠️ Le release v5.2.0-beta.x sono **beta pubbliche**: l'auto-aggiornamento le rileva come "latest". Se preferisci restare sulla stable v5.1.0, non installarle finché non esce la v5.2.0 definitiva.
 
 ---
 
