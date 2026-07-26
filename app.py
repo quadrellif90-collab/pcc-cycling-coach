@@ -4318,6 +4318,38 @@ async def api_diet_pdf_import(request: Request):
         return JSONResponse(status_code=400, content={"error": f"PDF non leggibile: {e}"})
 
 
+@app.post("/api/cpep-import")
+async def api_cpep_import(request: Request):
+    """PCC 5.x — import a CPET / INSCYD lab-test PDF as athlete context.
+
+    Best-effort regex extraction of VO2max, HRmax, VT1/VT2 power, peak
+    lactate, VLamax, FatMax, CP. Stored as CONTEXT (gold-standard anchor)
+    alongside the field-derived metabolic_decoder estimates — not a
+    replacement. Mirrors /api/diet-pdf-import (PyPDF2 raw bytes).
+    """
+    try:
+        body = await request.body()
+        from cpep_import import parse_cpep_pdf, save_cpep_record
+        rec = parse_cpep_pdf(body)
+        if rec.get("_error"):
+            return JSONResponse(status_code=400, content={"error": rec["_error"]})
+        saved = save_cpep_record(rec)
+        out = {k: v for k, v in rec.items() if not k.startswith("_")}
+        out["saved"] = saved
+        return {"ok": True, **out}
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=400, content={"error": f"PDF non leggibile: {e}"})
+
+
+@app.get("/api/cpep-latest")
+def api_cpep_latest():
+    try:
+        from cpep_import import load_latest_cpep
+        return load_latest_cpep() or {"found": []}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e), "found": []}
+
+
 # ═══ BIA — Body Impedance Analysis: import + storico + sync Intervals.icu ═══
 import json as _json
 

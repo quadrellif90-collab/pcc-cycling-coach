@@ -3164,6 +3164,19 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="metabolic-profile" style="font-size:13px;color:var(--text2);">Caricamento…</div>
     <div id="metabolic-assumptions" style="font-size:10px;color:var(--text3);margin-top:8px;"></div>
   </div>
+
+  <!-- PCC 5.x — CPET / INSCYD lab-test PDF import (context anchor). Backed by
+       /api/cpep-import + /api/cpep-latest; stored as gold-standard context. -->
+  <div class="card" style="margin-bottom:12px;">
+    <h3>Test lab (CPET / INSCYD) <span style="font-size:10px;font-weight:400;color:var(--text3);">— import PDF come contesto</span></h3>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="file" id="cpep-file" accept=".pdf" style="font-size:11px;max-width:220px;" />
+      <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="importCpep()">Importa</button>
+      <span id="cpep-status" style="font-size:11px;color:var(--text2);"></span>
+    </div>
+    <div id="cpep-latest" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
+  </div>
+
   <!-- Sorgente dieta -->
   <div class="card" style="margin-bottom:12px;">
     <h3>Alimentazione — sorgente e import</h3>
@@ -7501,6 +7514,7 @@ async function loadNutrition() {
     const res = await fetch(`/api/nutrition-full?goal_type=${encodeURIComponent(goal)}`);
     if (!res.ok) return;
     loadMetabolicProfile();
+    loadCpepLatest();
     const p = await res.json();
     const m = p.macros || {};
     const lc = p.load_compensation || {};
@@ -7557,6 +7571,43 @@ async function loadMetabolicProfile() {
       assum.innerHTML = '⚠️ ' + d.assumptions.slice(0, 2).map(a => esc(a)).join(' · ');
     }
   } catch (e) { host.textContent = 'Errore profilo metabolico.'; }
+}
+
+// PCC 5.x — CPET / INSCYD lab-test import (context anchor for metabolic_decoder).
+async function importCpep() {
+  const inp = document.getElementById('cpep-file');
+  const st = document.getElementById('cpep-status');
+  if (!inp || !inp.files || !inp.files.length) { if (st) st.textContent = 'Scegli un PDF.'; return; }
+  const fd = new FormData();
+  fd.append('file', inp.files[0]);
+  // endpoint expects raw body, not multipart; send the bytes directly.
+  const buf = await inp.files[0].arrayBuffer();
+  try {
+    const res = await fetch('/api/cpep-import', { method: 'POST', body: buf });
+    const d = await res.json();
+    if (!res.ok) { if (st) st.textContent = 'Errore: ' + (d.error || res.status); return; }
+    if (st) st.textContent = 'Importato: ' + (d.found || []).length + ' valori estratti.';
+    loadCpepLatest();
+  } catch (e) { if (st) st.textContent = 'Errore import.'; }
+}
+
+async function loadCpepLatest() {
+  const host = document.getElementById('cpep-latest');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/cpep-latest');
+    if (!res.ok) { host.textContent = ''; return; }
+    const d = await res.json();
+    const found = d.found || [];
+    if (!found.length) { host.innerHTML = '<span style="color:var(--text3);">Nessun test lab importato. Il profilo metabolico usa stime da power-duration.</span>'; return; }
+    const label = {
+      vo2max_ml_kg_min: 'VO₂max', hr_max: 'HRmax', vt1_power_w: 'VT1',
+      vt2_power_w: 'VT2', lactate_max_mmol: 'Lattato max', vlamax_mmol_l_s: 'VLamax',
+      fatmax_w: 'FatMax', cp_w: 'CP',
+    };
+    const rows = found.map(k => `<span style="margin-right:10px;"><b>${label[k] || k}</b>: ${d[k]}</span>`).join('');
+    host.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Contesto da test lab (gold-standard):</div>${rows}`;
+  } catch (e) { host.textContent = ''; }
 }
 
 // PCC — Nutrizione AUTO: l'app decide il carico da piano + ICU
