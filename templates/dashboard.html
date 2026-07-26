@@ -2903,7 +2903,7 @@ window.addEventListener('unhandledrejection', function(e) {
        Read-only grid over /api/rider-stats; every value carries provenance
        {value, source, source_date} and greys out when its source_date is
        stale. Empty-states render "—" + a calibrate hint, never numbers. -->
-  <div class="card" data-card=" class="card" id="rider-stats-card" style="margin-bottom:12px;"" id="rider-stats-card" style="margin-bottom:12px;">
+  <div class="card" data-card=" class="card" id="rider-stats-card"" style="margin-bottom:12px;" id="rider-stats-card" style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <h3 style="margin:0;">Profilo ciclista</h3>
       <span style="font-size:10px;color:var(--text3);">picchi: finestra 90g · grigio = obsoleto</span>
@@ -2911,6 +2911,13 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="rider-stats-body" style="margin-top:10px;font-size:12px;color:var(--text2);">
       <div style="color:var(--text3);">Caricamento…</div>
     </div>
+  </div>
+
+  <!-- PCC 5.x — CP models (Monod 2P + Morton 3P) + Progression Levels.
+       Backed by /api/cp-models; single source = power-duration curve. -->
+  <div class="card" style="margin-bottom:12px;">
+    <h3>Modelli CP &amp; Livelli di progressione <span style="font-size:10px;font-weight:400;color:var(--text3);">(da power-duration)</span></h3>
+    <div id="cp-models" style="font-size:13px;color:var(--text2);">Caricamento…</div>
   </div>
 
   <!-- Fitness Chart — full width -->
@@ -5534,6 +5541,8 @@ function loadAnalysisTab() {
   try { if (typeof loadFatigueResistance === 'function') loadFatigueResistance(); } catch (_) {}
   // P2.4 — Rider Profile stats card (lazy with the tab, one round-trip).
   try { if (typeof loadRiderStats === 'function') loadRiderStats(); } catch (_) {}
+  // PCC 5.x — CP models + Progression Levels (view over power-duration).
+  try { if (typeof loadCpModels === 'function') loadCpModels(); } catch (_) {}
 }
 
 // P2.4 (v3.0.0) — Rider Profile stats card. One fetch of /api/rider-stats;
@@ -5637,6 +5646,38 @@ async function loadRiderStats() {
   } catch (e) {
     host.innerHTML = '<div style="color:var(--text3);">Statistiche non disponibili</div>';
   }
+}
+
+// PCC 5.x — CP models + Progression Levels view (backed by /api/cp-models).
+async function loadCpModels() {
+  const host = document.getElementById('cp-models');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/cp-models');
+    if (!res.ok) { host.textContent = 'Modelli CP non disponibili.'; return; }
+    const d = await res.json();
+    if (d.error) { host.textContent = 'Dati insufficienti per i modelli CP.'; return; }
+    const m = d.monod || {}, t = d.morton_3p || {};
+    const levels = (d.progression_levels || []);
+    let lvlHtml = levels.map(l => {
+      const lv = l.level != null ? l.level : '—';
+      const wkg = l.wkg != null ? l.wkg + ' W/kg' : 'n/d';
+      return `<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);">
+        <span>${esc(l.zone)}</span>
+        <span><b style="color:var(--accent);">L${lv}</b> · ${wkg}</span>
+      </div>`;
+    }).join('');
+    host.innerHTML = `
+      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px;">
+        <div><b style="font-size:15px;color:var(--accent);">${m.cp_w != null ? m.cp_w : '—'}</b> <span style="font-size:10px;color:var(--text3);">CP 2P (W)</span></div>
+        <div><b style="font-size:15px;color:var(--accent);">${t.cp_w != null ? t.cp_w : '—'}</b> <span style="font-size:10px;color:var(--text3);">CP 3P (W)</span></div>
+        <div><b style="font-size:15px;color:var(--accent);">${(t.wprime_j != null) ? Math.round(t.wprime_j/1000) + ' kJ' : '—'}</b> <span style="font-size:10px;color:var(--text3);">W′ 3P</span></div>
+        <div><b style="font-size:15px;color:var(--accent);">${t.tau_s != null ? t.tau_s + ' s' : '—'}</b> <span style="font-size:10px;color:var(--text3);">τ (3P)</span></div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px;">τ = costante di ricostituzione W′ (Morton 3P). R² 3P = ${t.r2 != null ? t.r2 : '—'}. ${d.n_rides != null ? d.n_rides + ' attività (90g).' : ''}</div>
+      <div style="font-weight:600;font-size:12px;margin:4px 0 2px;color:var(--text1);">Livelli di progressione (per zona)</div>
+      ${lvlHtml || '<div style="font-size:11px;color:var(--text3);">Nessun dato di potenza.</div>'}`;
+  } catch (e) { host.textContent = 'Errore modelli CP.'; }
 }
 
 // P3.1 — compact CTL/TSB sparkline on Home (the full Fitness & Form chart

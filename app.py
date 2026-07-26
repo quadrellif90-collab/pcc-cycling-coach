@@ -4623,6 +4623,25 @@ def api_my_push_plan():
     return {"pushed": pushed, "errors": errors, "athlete": aid}
 
 
+# PCC 5.x — CP models + Progression Levels (view over power-duration curve).
+@app.get("/api/cp-models")
+def api_cp_models(window_days: int = Query(90, ge=7, le=3650)):
+    try:
+        from power_curve import aggregate_power_curve
+        from cp_models import compute_cp_models, cp_models_to_dict
+        from profile_manager import ProfileManager
+        curve = aggregate_power_curve(None, window_days=window_days)
+        best_efforts = {int(p["duration_s"]): int(p["watts"])
+                         for p in curve.get("rider_curve", []) if "duration_s" in p and "watts" in p}
+        bw = float(curve.get("weight_kg") or (ProfileManager.get()._athlete or {}).get("weight_kg") or 72.0)
+        out = cp_models_to_dict(compute_cp_models(best_efforts, bw))
+        out["window_days"] = window_days
+        out["n_rides"] = curve.get("n_rides")
+        return out
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e), "method": "fit su power-duration"}
+
+
 @app.get("/api/metabolic-profile")
 def api_metabolic_profile(window_days: int = Query(90, ge=7, le=3650)):
     try:
