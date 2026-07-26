@@ -3,8 +3,12 @@
 ; e NON vengono toccati da installazione/aggiornamento (così connessioni e piani
 ; sopravvivono senza migrazione).
 
+; Build Unicode: gestisce correttamente i caratteri non-ASCII (es. em-dash "—" nel
+; nome completo) invece di mostrarli come mojibake (â€") nel nome app/collegamenti.
+Unicode true
+
 !define APPNAME "PCC"
-!define APPNAMEFULL "PCC — Adaptive Cycling Intelligence"
+!define APPNAMEFULL "PCC - Adaptive Cycling Intelligence"
 !define PUBLISHER "PCC"
 ; VERSION è passata dal CI come /DVERSION=X.Y.Z
 ; Default di sicurezza se compilato a mano senza /D.
