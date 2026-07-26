@@ -1946,7 +1946,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <option value="peak">Peak</option><option value="taper">Taper</option>
       </select>
       <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadStrength()">Genera piano</button>
-      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="injectMultidiscipline()" title="Inserisce forza+mobilità + running/MTB (se nei discipline) nel piano, affine al ciclismo">⚡ Inietta multi</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, injectMultidiscipline, 'Inietto…')" title="Inserisce forza+mobilità + running/MTB (se nei discipline) nel piano, affine al ciclismo">⚡ Inietta multi</button>
       <a class="btn" style="font-size:11px;padding:3px 10px;" href="/api/export-plan-html?athlete=Atleta&phase=base" target="_blank" rel="noopener">⤓ Esporta piano (PDF/HTML)</a>
     </div>
     <div id="strength-summary" style="font-size:12px;color:var(--text2);margin-bottom:8px;"></div>
@@ -1959,7 +1959,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <h3 data-tip="Il tuo calendario: per ogni settimana del piano mostra TSS pianificato vs eseguito (da intervals.icu) e l'aderenza %. 'Hai eseguito quanto richiesto' = barre verdi su blu.">Il mio calendario</h3>
     <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
       <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadMyCalendar()">Aggiorna</button>
-      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="myPushPlan()">⤴ Push piano su intervals.icu</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, myPushPlan, 'Invio a intervals.icu…')">⤴ Push piano su intervals.icu</button>
 
     </div>
     <div id="my-calendar" style="font-size:11px;color:var(--text2);">Genera un piano per vedere l'aderenza…</div>
@@ -2740,7 +2740,7 @@ window.addEventListener('unhandledrejection', function(e) {
              and "Rebuild from scratch"). After that the plan updates itself:
              automatically after each ride sync and on every plan-tab open
              (runPlanOpenSequence → /api/plan/update). -->
-        <button class="btn btn-primary" onclick="generatePlan()" id="btn-generate-plan" title="Crea il tuo piano — o ricostruiscilo dalle impostazioni e dalla forma attuali. Dopo, si aggiorna automaticamente dopo ogni sincronizzazione uscita e ogni volta che apri questa scheda.">Genera piano</button>
+        <button class="btn btn-primary" onclick="busyButton(this, generatePlan, 'Genero il piano…')" id="btn-generate-plan" title="Crea il tuo piano — o ricostruiscilo dalle impostazioni e dalla forma attuali. Dopo, si aggiorna automaticamente dopo ogni sincronizzazione uscita e ogni volta che apri questa scheda.">Genera piano</button>
         <!-- v3.0.1 IP_ICU_PUSH: mirror the next 14 days onto the intervals.icu
              calendar (Garmin/MyWhoosh pull workouts from there). States set by
              icuPushRefreshButton(): hidden (not connected) / normal / spinner
@@ -4290,6 +4290,23 @@ function showClientError(e,title){ showToast((title?title+' ':'')+normalizeErr(e
 
 // ===== v5.2 tab switch helper =====
 function gotoTab(t){ var el=document.querySelector('.tab[data-tab="'+t+'"]'); if(el) el.click(); }
+
+// ===== v5.2 stato di caricamento sui pulsanti azioni lunghe =====
+function busyButton(btn, fn, busyText){
+  if(typeof btn==='string') btn=document.getElementById(btn)||document.querySelector(btn);
+  if(!btn) { try{ return fn(); }catch(e){ throw e; } }
+  if(btn.dataset.busy==='1') return; // gia in corso
+  var orig=btn.innerHTML, origW=btn.style.minWidth;
+  btn.dataset.busy='1'; btn.disabled=true; btn.style.opacity='0.75'; btn.style.cursor='wait';
+  btn.style.minWidth=(btn.offsetWidth||0)+'px';
+  btn.innerHTML='<span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:pg-redraw-spin 0.7s linear infinite;vertical-align:middle;margin-right:6px;"></span>'+(busyText||'Attendere…');
+  function done(){ btn.dataset.busy=''; btn.disabled=false; btn.style.opacity=''; btn.style.cursor=''; btn.innerHTML=orig; btn.style.minWidth=origW; }
+  var res;
+  try{ res=fn(); }catch(e){ done(); if(typeof showClientError==='function') showClientError(e); throw e; }
+  if(res && typeof res.then==='function'){ res.then(done, function(e){ done(); if(typeof showClientError==='function') showClientError(e); }); }
+  else { done(); }
+  return res;
+}
 
 // ===== v5.2 onboarding =====
 async function loadOnboarding(){
