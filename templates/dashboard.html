@@ -21587,9 +21587,8 @@ document.addEventListener('DOMContentLoaded', initHintTooltips);
     }
   } catch(e){}
   // drag handle + pointer events
-  cards.forEach(card => {
-    const key = card.id || card.dataset.card;
-    if (!key) return;
+  cards.forEach((card, idx) => {
+    const key = card.id || card.dataset.card || ('auto-' + idx);
     if (!card.querySelector('.card-drag')) {
       const h = document.createElement('span');
       h.className = 'card-drag'; h.textContent = '⋮⋮';
