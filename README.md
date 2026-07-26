@@ -1,6 +1,6 @@
 ![PPC](assets/icon.png)
 
-# PPC — Programming Cycling Coach
+# PCC — Professional Cycling Coach
 
 **Pianificatore di allenamento ciclistico adattivo, locale, che chiude il loop tra ciò che hai programmato e ciò che hai realmente fatto — con nutrizione, forza, mobilità e body-composition integrati.**
 
