@@ -1376,6 +1376,219 @@ details > summary:hover::before { color: var(--accent); }
   background:var(--surface2); border:1px solid var(--border); color:var(--text2);
   white-space:nowrap; cursor:help; }
 @media (max-width:780px){ .app-shell{flex-direction:column;} .sidebar-tabs{flex-direction:row;flex-wrap:wrap;width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);} }
+
+/* ═══ PCC 5.x — Design System Pro (elevazione + tipografia + micro-interazioni) ═══
+   Solo presentazione: nessun cambiamento a logica/dati. Classi additive;
+   le sezioni/sec-* e i tab restano invariati. */
+:root {
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.35);
+  --shadow: 0 4px 14px rgba(0,0,0,0.40);
+  --shadow-lg: 0 14px 40px rgba(0,0,0,0.50);
+  --elev: 0 1px 0 rgba(255,255,255,0.05) inset, 0 0 0 1px rgba(255,255,255,0.04) inset;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px;
+  --r-sm:6px; --r-md:10px; --r-lg:14px;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --c-mut: #64748b;
+  --text2: #c3d2e0; --text3: #93a6ba;
+}
+[data-theme="light"] {
+  --shadow-sm: 0 1px 3px rgba(15,23,42,0.10);
+  --shadow: 0 4px 16px rgba(15,23,42,0.14);
+  --shadow-lg: 0 16px 40px rgba(15,23,42,0.18);
+  --elev: 0 1px 0 rgba(255,255,255,0.7) inset;
+  --text2: #475569; --text3: #64748b;
+}
+/* Card: profondità + hover lift */
+.card {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+/* Tipografia display per titoli card */
+.card h3 {
+  font-family: var(--font-display);
+  letter-spacing: .06em;
+  color: var(--text3);
+  display:flex; align-items:center; gap:6px;
+}
+/* Numeri tabulari per metriche */
+.big, .hs-val, .gauge-score, .ring-text, .card .big {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+/* Tab/sidebar: pill attiva + hover elegante */
+.tab { border-radius: var(--r-sm); position:relative; transition: background .18s ease, color .18s ease, transform .12s ease; }
+.tab:hover { transform: translateX(2px); }
+.tab.active {
+  box-shadow: var(--shadow-sm);
+  letter-spacing:.02em;
+}
+/* Bottoni uniformi (.btn esistente potenziato) */
+.btn {
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-weight:600;
+  box-shadow: var(--shadow-sm);
+  transition: transform .12s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+  cursor:pointer;
+}
+.btn:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface2)); border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+/* Tile metrica (per card con una sola metrica dominante) */
+.tile { display:flex; flex-direction:column; gap:2px; padding:14px 16px; border-left:3px solid var(--accent); }
+.tile .tile-val { font-size:30px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
+.tile .tile-label { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text3); }
+.tile .tile-sub { font-size:11px; color:var(--text2); }
+/* Header raffinato */
+header { box-shadow: var(--shadow-sm); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(6px); border-radius: var(--r-md); padding:14px 18px; }
+header h1 { letter-spacing:-.02em; }
+/* Badge + chip con elevation */
+.badge, .pg-strat-chip { box-shadow: var(--shadow-sm); }
+/* Tabella: righe con hover easing */
+tr:hover { transition: background .15s ease; }
+/* Focus accessibile */
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+/* Scrollbar sottile */
+::-webkit-scrollbar { width:9px; height:9px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PCC 5.x — DESIGN SYSTEM PRO (restyling strutturato, solo presentazione)
+   Obiettivo: profondità + respiro + gerarchia tipografica, pari ai software
+   pro (TrainingPeaks / Intervals.icu / WKO). Nessun cambiamento a logica JS
+   o struttura dati — solo classe CSS additive + potenziamento di quelle
+   esistenti. Le classi di navigazione (.tab/.active/.section) restano invariate.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Elevation — sistema a 3 livelli, più morbido e "app" rispetto ai bordi */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.30), 0 1px 3px rgba(0,0,0,0.20);
+  --shadow:    0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.22);
+  --shadow-lg: 0 14px 40px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.30);
+  --shadow-accent: 0 6px 18px rgba(20,184,166,0.28);
+  /* Spaziatura generosa (vs "data wall") */
+  --sp-1:6px; --sp-2:10px; --sp-3:14px; --sp-4:20px; --sp-5:28px;
+  --radius:12px; --radius-sm:8px; --radius-lg:16px;
+  --text2:#a9bccf; --text3:#7f94ab;
+  --ring: 0 0 0 3px rgba(20,184,166,0.18);
+}
+[data-theme="light"] {
+  --shadow-sm: 0 1px 2px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.05);
+  --shadow:    0 4px 14px rgba(15,23,42,0.10), 0 2px 5px rgba(15,23,42,0.06);
+  --shadow-lg: 0 18px 48px rgba(15,23,42,0.16), 0 6px 14px rgba(15,23,42,0.10);
+  --shadow-accent: 0 6px 18px rgba(13,148,136,0.22);
+  --text2:#52617a; --text3:#7689a0;
+  --ring: 0 0 0 3px rgba(13,148,136,0.16);
+}
+/* base type — più respiro */
+body { font-size:14.5px; letter-spacing:0.1px; }
+/* numeri tabulari ovunque ci siano metriche */
+.card .big, .hs-val, .metric .mv, .gauge-score, .ring-text, .tile .tv,
+.body-stat .v { font-variant-numeric: tabular-nums; font-feature-settings:"tnum" 1; }
+
+/* ——— CARDS: profondità + hover-lift (killa l'effetto "incollato") ——— */
+.card {
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+}
+.card:hover { box-shadow: var(--shadow); transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+/* header di sezione uniforme e raffinato */
+.card h3 {
+  font-size:11px; font-weight:700; color:var(--text2);
+  text-transform:uppercase; letter-spacing:.09em; margin-bottom:14px;
+  display:flex; align-items:center; gap:7px;
+}
+.card h3::before {
+  content:""; width:3px; height:13px; border-radius:2px;
+  background:linear-gradient(180deg,var(--accent),var(--accent2)); display:inline-block;
+}
+
+/* ——— TILE metrica (per card a metrica singola dominante) ——— */
+.tile { display:flex; flex-direction:column; gap:3px; padding:16px 18px;
+  border-left:3px solid var(--accent); background:var(--surface2);
+  border-radius:var(--radius-sm); }
+.tile .tv { font-size:30px; font-weight:800; line-height:1; color:var(--text);
+  font-variant-numeric:tabular-nums; }
+.tile .tl { font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--text3); }
+.tile .ts { font-size:11px; color:var(--text2); margin-top:2px; }
+.tile.good { border-left-color:var(--green); } .tile.warn { border-left-color:var(--yellow); }
+.tile.bad  { border-left-color:var(--red); }   .tile.accent { border-left-color:var(--accent2); }
+
+/* ——— HEADER: barra sticky "glassy" con KPI raggruppati ——— */
+header {
+  position:sticky; top:0; z-index:50;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  border-bottom:1px solid var(--border);
+  padding:14px 20px; margin-bottom:20px;
+  box-shadow: var(--shadow-sm);
+}
+header h1 { font-size:21px; letter-spacing:-.01em; }
+.header-stats { gap:10px; }
+.hs { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:7px 14px; min-width:74px; box-shadow:var(--shadow-sm);
+  display:flex; flex-direction:column; align-items:center; gap:1px; }
+.hs-val { font-size:17px; }
+.hs .hs-val .dot { display:inline-block; width:8px; height:8px; border-radius:50%;
+  margin-right:5px; vertical-align:middle; }
+.dot.green{background:var(--green);} .dot.yellow{background:var(--yellow);}
+.dot.orange{background:var(--orange);} .dot.red{background:var(--red);}
+
+/* ——— TAB BAR / SIDEBAR: stato attivo morbido + respiro ——— */
+.tabs { background:transparent; padding:0; margin-bottom:20px; gap:6px;
+  border-bottom:1px solid var(--border); border-radius:0; overflow:visible; }
+.tab { padding:11px 16px; border-radius:var(--radius-sm) var(--radius-sm) 0 0;
+  color:var(--text3); font-weight:600; font-size:13px; border:1px solid transparent;
+  border-bottom:none; position:relative; }
+.tab:hover { color:var(--text); background:var(--surface); }
+.tab.active {
+  color:var(--accent); background:var(--surface); border-color:var(--border);
+  border-bottom:1px solid var(--surface);
+  box-shadow:0 -2px 0 var(--accent) inset, var(--shadow-sm);
+}
+.tab.active::after {
+  content:""; position:absolute; left:14px; right:14px; bottom:-1px; height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:2px;
+}
+
+/* ——— BOTTONI: elevazione coerente + stati ——— */
+.btn { padding:8px 16px; font-size:12.5px; border-radius:var(--radius-sm);
+  box-shadow:var(--shadow-sm); transition:all .18s ease; }
+.btn:hover { box-shadow:var(--shadow); transform:translateY(-1px);
+  background:color-mix(in srgb, var(--accent) 16%, var(--surface2));
+  border-color:var(--accent); color:var(--text); }
+.btn:active { transform:translateY(0); box-shadow:var(--shadow-sm); }
+.btn-primary { box-shadow:var(--shadow-accent); }
+.btn-primary:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* ——— GRAFICI: sparkline più leggibili ——— */
+.sparkline polyline { stroke-width:2.2; }
+.sparkline .area { opacity:0.22; }
+.elev-line { stroke-width:2.2; }
+/* separa i blocchi di contenuto con più respiro */
+.grid { gap:16px; } .g2,.g3,.g4 { gap:16px; }
+.section { padding:2px 0 40px; }
+/* modali e popover già con ombra — uniforma il raggio */
+.modal, .info-popover, .ff-cal-pop, .tooltip, .zone-tip, .chart-tip {
+  border-radius:var(--radius); }
+/* tabella: righe con easing + separazione morbida */
+td { border-bottom:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+tr:hover { background:color-mix(in srgb, var(--accent) 7%, transparent); }
+/* badge già definiti — aggiungi respiro */
+.badge { padding:3px 9px; border-radius:11px; letter-spacing:.02em; }
+/* focus accessibile globale */
+:focus-visible { outline:none; box-shadow:var(--ring); }
 </style>
 
 </head>
