@@ -10844,10 +10844,28 @@ async def api_self_update(request: Request):
             with open(dest, "wb") as f:
                 f.write(r.content)
         if plat == "win32" and fname.lower().endswith(".exe"):
-            # installer NSIS silenzioso; poi usciamo per liberare l'EXE
-            subprocess.Popen([dest, "/S"], shell=False)
-            return {"ok": True, "launched": True, "mode": "windows-installer",
-                    "msg": "Installer avviato. L'app si chiudera' per aggiornarsi."}
+            # installer NSIS silenzioso; poi usciamo per liberare l'EXE.
+            # Su Windows il launcher silenzioso richiede i privilegi di admin
+            # (UAC): se mancano, Popen solleva OSError WinError 740. In quel
+            # caso NON ritorniamo un 500 criptico ma un payload pulito che la
+            # UI usa per mostrare "Esegui come amministratore" + link manuale.
+            try:
+                subprocess.Popen([dest, "/S"], shell=False)
+                return {"ok": True, "launched": True, "mode": "windows-installer",
+                        "msg": "Installer avviato. L'app si chiudera' per aggiornarsi."}
+            except OSError as e:
+                needs_admin = (getattr(e, "winerror", None) == 740
+                               or "740" in str(e) or "elevated" in str(e).lower())
+                return JSONResponse(status_code=200, content={
+                    "ok": False, "launched": False,
+                    "needs_admin": bool(needs_admin),
+                    "mode": "windows-installer-blocked",
+                    "manual_url": info.get("release_url") or dl,
+                    "error": ("Richiesti privilegi di amministratore per "
+                              "l'aggiornamento silenzioso. Esegui l'installer "
+                              "manualmente come amministratore oppure riavvia "
+                              "PCC come admin.") if needs_admin else str(e),
+                })
         elif plat == "darwin" and fname.lower().endswith(".dmg"):
             # monta e copia l'app
             subprocess.Popen(["open", dest])
