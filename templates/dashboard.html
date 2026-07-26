@@ -4291,6 +4291,9 @@ function showClientError(e,title){ showToast((title?title+' ':'')+normalizeErr(e
 // ===== v5.2 tab switch helper =====
 function gotoTab(t){ var el=document.querySelector('.tab[data-tab="'+t+'"]'); if(el) el.click(); }
 
+// ===== v5.2 conferma azioni distruttive =====
+function confirmDanger(msg){ return window.confirm(msg||'Sei sicuro? L\'operazione non e reversibile.'); }
+
 // ===== v5.2 empty-state riutilizzabile =====
 function emptyState(icon, title, subtitle, ctaLabel, ctaOnclick){
   var cta = ctaLabel ? '<button class="btn btn-sm" style="margin-top:10px;" onclick="'+ctaOnclick+'">'+ctaLabel+'</button>' : '';
@@ -10781,7 +10784,7 @@ async function openRideDetail(rideId) {
       ${_raceCheckboxHtml}
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a class="btn" href="/api/rides/${rideIdEnc}/fit" download style="background:var(--surface2);text-decoration:none;display:inline-block;">Scarica FIT</a>
-        <button class="btn" style="background:var(--surface2);color:var(--dev-red);border-color:var(--dev-red);" onclick="if(confirm('Delete this ride?')){fetch('/api/rides/${rideIdEnc}',{method:'DELETE'}).then(r=>{if(!r.ok)throw new Error('Failed');$('ride-detail-overlay').style.display='none';}).catch(e=>showClientError(e, 'Eliminazione uscita non riuscita:'))}">Delete Ride</button>
+        <button class="btn" style="background:var(--surface2);color:var(--dev-red);border-color:var(--dev-red);" onclick="if(confirmDanger('Eliminare questa uscita? L\'operazione non e reversibile.')){fetch('/api/rides/${rideIdEnc}',{method:'DELETE'}).then(r=>{if(!r.ok)throw new Error('Failed');$('ride-detail-overlay').style.display='none';}).catch(e=>showClientError(e, 'Eliminazione uscita non riuscita:'))}">Delete Ride</button>
       </div>
     </div>`;
 
@@ -17342,6 +17345,7 @@ async function saveZones(kind) {
   } catch (e) { showToast('Could not save zones', 4500, 'error'); }
 }
 async function resetZones(kind) {
+  if(!confirmDanger('Ripristinare le zone di potenza ai valori automatici? Le personalizzazioni verranno perse.')) return;
   try {
     await fetch('/api/settings/zones', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -17665,6 +17669,7 @@ async function runSync(btn) {
 }
 
 async function resetHrRows() {
+  if(!confirmDanger('Ripristinare le zone di frequenza cardiaca ai valori Coggan? Le personalizzazioni verranno perse.')) return;
   // W1: back to the Coggan defaults (server drops the custom key).
   try {
     const r = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({hr_rows_custom: null})});
