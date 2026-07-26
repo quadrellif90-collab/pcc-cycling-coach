@@ -4384,6 +4384,65 @@ def api_pedal_history():
         return {"error": str(e), "history": []}
 
 
+# ═══ PCC 5.x — Field-test protocol manager (chiude il loop FTP, vedi #2) ═══
+@app.get("/api/field-test/protocols")
+def api_field_test_protocols():
+    from field_test_protocols import list_protocols
+    return {"protocols": list_protocols()}
+
+
+@app.post("/api/field-test/estimate")
+async def api_field_test_estimate(request: Request):
+    try:
+        body = await request.json()
+        from field_test_protocols import estimate_ftp, save_test
+        protocol = body.get("protocol")
+        values = body.get("values", {})
+        est = estimate_ftp(protocol, values)
+        if not est.get("valid"):
+            return JSONResponse(status_code=400, content={"error": est.get("error", "test non valido")})
+        saved = save_test(protocol, values, est["ftp_w"])
+        return {"ok": True, "ftp_w": est["ftp_w"], "factor": est["factor"],
+                "note": est["note"], "saved": saved}
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+
+@app.get("/api/field-test/history")
+def api_field_test_history():
+    try:
+        from field_test_protocols import load_tests
+        return {"tests": load_tests()}
+    except Exception as e:  # noqa: BLE001
+        return {"tests": [], "error": str(e)}
+
+
+# ═══ PCC 5.x — Export bundle (portabilità / backup) ═══
+@app.get("/api/export/bundle")
+def api_export_bundle():
+    try:
+        from data_export import build_bundle
+        data, fname = build_bundle()
+        from fastapi.responses import Response
+        return Response(content=data, media_type="application/zip",
+                        headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+
+# ═══ PCC 5.x — Calendar subscription feed (.ics / webcal VIEW) ═══
+@app.get("/api/calendar.ics")
+def api_calendar_ics():
+    try:
+        from calendar_ics import build_ics
+        ics = build_ics()
+        from fastapi.responses import Response
+        return Response(content=ics, media_type="text/calendar; charset=utf-8",
+                        headers={"Content-Disposition": 'inline; filename="pcc_plan.ics"'})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+
 # ═══ BIA — Body Impedance Analysis: import + storico + sync Intervals.icu ═══
 import json as _json
 

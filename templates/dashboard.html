@@ -2184,6 +2184,12 @@ window.addEventListener('unhandledrejection', function(e) {
   <!-- Current Metrics Banner -->
   <div id="plan-metrics-banner" style="display:flex;gap:16px;margin-bottom:12px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text2);flex-wrap:wrap;"></div>
 
+  <!-- PCC 5.x — Calendar subscription (.ics / webcal VIEW). -->
+  <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="copyCalendarLink()">📅 Copia link calendario (.ics)</button>
+    <span id="calendar-link-status" style="font-size:11px;color:var(--text2);"></span>
+  </div>
+
   <!-- PCC 5.x — Attività & RPE (JOIN-style view). Backed by
        /api/activity-insights; reuses the planner's rematch engine + RPE log. -->
   <div class="card" style="margin-bottom:12px;">
@@ -2966,6 +2972,25 @@ window.addEventListener('unhandledrejection', function(e) {
       <span id="pedal-status" style="font-size:11px;color:var(--text2);"></span>
     </div>
     <div id="pedal-latest" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
+  </div>
+
+  <!-- PCC 5.x — Field-test protocol manager (chiude loop FTP). -->
+  <div class="card" style="margin-bottom:12px;">
+    <h3>Field test FTP <span style="font-size:10px;font-weight:400;color:var(--text3);">— protocolli guidati</span></h3>
+    <div id="field-test-history" style="font-size:11px;color:var(--text2);margin-bottom:8px;"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <select id="ft-protocol" style="font-size:11px;padding:3px 6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;"></select>
+      <input id="ft-value" placeholder="Valore (W)" style="font-size:11px;padding:3px 6px;width:100px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;" />
+      <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="runFieldTest()">Calcola FTP</button>
+    </div>
+    <div id="ft-result" style="font-size:12px;color:var(--text2);margin-top:6px;"></div>
+  </div>
+
+  <!-- PCC 5.x — Export bundle (portabilità / backup). -->
+  <div class="card" style="margin-bottom:12px;">
+    <h3>Backup / Esporta tutto <span style="font-size:10px;font-weight:400;color:var(--text3);">— locale, zip</span></h3>
+    <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="exportBundle()">Scarica archivio PCC (.zip)</button>
+    <span id="export-status" style="font-size:11px;color:var(--text2);margin-left:8px;"></span>
   </div>
 
   <!-- Fitness Chart — full width -->
@@ -5608,6 +5633,8 @@ function loadAnalysisTab() {
   try { if (typeof loadCustomCharts === 'function') loadCustomCharts(); } catch (_) {}
   // PCC 5.x — Pedaling asymmetry / LEOMO MPI (importable context).
   try { if (typeof loadPedalLatest === 'function') loadPedalLatest(); } catch (_) {}
+  // PCC 5.x — Field-test protocol manager (chiude loop FTP).
+  try { if (typeof loadFieldTestProtocols === 'function') loadFieldTestProtocols(); } catch (_) {}
 }
 
 // P2.4 (v3.0.0) — Rider Profile stats card. One fetch of /api/rider-stats;
@@ -5851,6 +5878,82 @@ async function loadPedalLatest() {
     if (d.mpi != null) rows.push(`<span style="margin-right:10px;">MPI <b>${d.mpi}</b></span>`);
     host.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Ultimo: ${esc(d.ride_id || d.date || '')}</div>${rows.join('')}`;
   } catch (e) { host.textContent = ''; }
+}
+
+// PCC 5.x — Field-test protocol manager (chiude il loop FTP, vedi #2).
+async function loadFieldTestProtocols() {
+  const sel = document.getElementById('ft-protocol');
+  if (!sel) return;
+  try {
+    const res = await fetch('/api/field-test/protocols');
+    if (!res.ok) return;
+    const d = await res.json();
+    sel.innerHTML = (d.protocols || []).map(p =>
+      `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('');
+    loadFieldTestHistory();
+  } catch (e) {}
+}
+
+async function loadFieldTestHistory() {
+  const host = document.getElementById('field-test-history');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/field-test/history');
+    if (!res.ok) { host.textContent = ''; return; }
+    const d = await res.json();
+    const tests = d.tests || [];
+    if (!tests.length) { host.innerHTML = '<span style="color:var(--text3);">Nessun test salvato.</span>'; return; }
+    host.innerHTML = 'Ultimi: ' + tests.slice(0, 3).map(t =>
+      `<span style="margin-right:8px;">${esc(t.protocol_label)} → <b>${t.ftp_w}W</b></span>`).join('');
+  } catch (e) { host.textContent = ''; }
+}
+
+async function runFieldTest() {
+  const sel = document.getElementById('ft-protocol');
+  const val = document.getElementById('ft-value');
+  const out = document.getElementById('ft-result');
+  if (!sel || !val) return;
+  const protocol = sel.value;
+  const v = parseFloat(val.value);
+  if (!protocol || isNaN(v)) { if (out) out.textContent = 'Scegli protocollo e inserisci il valore (W).'; return; }
+  try {
+    const res = await fetch('/api/field-test/estimate', { method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ protocol, values: { avg_w: v, peak_w: v, best8_w: v, best4_w: v, avg60_w: v } }) });
+    const d = await res.json();
+    if (!res.ok) { if (out) out.textContent = 'Errore: ' + (d.error || res.status); return; }
+    if (out) out.innerHTML = `FTP stimata: <b style="color:var(--green)">${d.ftp_w} W</b> <span style="color:var(--text3);">(${esc(d.note)})</span>`;
+    loadFieldTestHistory();
+  } catch (e) { if (out) out.textContent = 'Errore.'; }
+}
+
+// PCC 5.x — Export bundle (portabilità / backup).
+async function exportBundle() {
+  const st = document.getElementById('export-status');
+  try {
+    const res = await fetch('/api/export/bundle');
+    if (!res.ok) { if (st) st.textContent = 'Errore export.'; return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (res.headers.get('Content-Disposition') || 'pcc_export.zip').split('filename=')[1].replace(/"/g, '');
+    a.click();
+    URL.revokeObjectURL(url);
+    if (st) st.textContent = 'Archivio scaricato.';
+  } catch (e) { if (st) st.textContent = 'Errore export.'; }
+}
+
+// PCC 5.x — Calendar subscription link (.ics / webcal VIEW).
+async function copyCalendarLink() {
+  const st = document.getElementById('calendar-link-status');
+  try {
+    const url = location.origin + '/api/calendar.ics';
+    await navigator.clipboard.writeText(url);
+    if (st) st.textContent = 'Link copiato: incollalo in Google/Apple Calendar.';
+  } catch (e) {
+    if (st) st.textContent = 'Link: ' + location.origin + '/api/calendar.ics';
+  }
 }
 
 // P3.1 — compact CTL/TSB sparkline on Home (the full Fitness & Form chart
