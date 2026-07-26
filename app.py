@@ -4350,6 +4350,40 @@ def api_cpep_latest():
         return {"error": str(e), "found": []}
 
 
+# PCC 5.x — Pedaling asymmetry / LEOMO MPI (importable context). Backed by
+# pedal_asymmetry.py; accepts JSON or CSV (Favero/Garmin/LEOMO exports).
+@app.post("/api/pedal-import")
+async def api_pedal_import(request: Request):
+    try:
+        body = await request.body()
+        from pedal_asymmetry import parse_pedal_payload, save_record
+        rec = parse_pedal_payload(body)
+        saved = save_record(rec)
+        out = {k: v for k, v in rec.items()}
+        out["saved"] = saved
+        return {"ok": True, **out}
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse(status_code=400, content={"error": f"Dati pedala non validi: {e}"})
+
+
+@app.get("/api/pedal-latest")
+def api_pedal_latest():
+    try:
+        from pedal_asymmetry import load_latest
+        return load_latest() or {}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)}
+
+
+@app.get("/api/pedal-history")
+def api_pedal_history():
+    try:
+        from pedal_asymmetry import load_history
+        return load_history()
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e), "history": []}
+
+
 # ═══ BIA — Body Impedance Analysis: import + storico + sync Intervals.icu ═══
 import json as _json
 

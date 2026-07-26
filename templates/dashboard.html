@@ -2957,6 +2957,17 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="custom-charts-canvases"></div>
   </div>
 
+  <!-- PCC 5.x — Pedaling asymmetry / LEOMO MPI (importable context). -->
+  <div class="card" style="margin-bottom:12px;">
+    <h3>Asimmetrie pedalata (L-R) <span style="font-size:10px;font-weight:400;color:var(--text3);">— import da pedali smart / LEOMO</span></h3>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="file" id="pedal-file" accept=".json,.csv" style="font-size:11px;max-width:220px;" />
+      <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="importPedal()">Importa</button>
+      <span id="pedal-status" style="font-size:11px;color:var(--text2);"></span>
+    </div>
+    <div id="pedal-latest" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
+  </div>
+
   <!-- Fitness Chart — full width -->
   <div class="card" style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -5595,6 +5606,8 @@ function loadAnalysisTab() {
   try { if (typeof loadCpModels === 'function') loadCpModels(); } catch (_) {}
   // PCC 5.x — Custom charts (view over metric store).
   try { if (typeof loadCustomCharts === 'function') loadCustomCharts(); } catch (_) {}
+  // PCC 5.x — Pedaling asymmetry / LEOMO MPI (importable context).
+  try { if (typeof loadPedalLatest === 'function') loadPedalLatest(); } catch (_) {}
 }
 
 // P2.4 (v3.0.0) — Rider Profile stats card. One fetch of /api/rider-stats;
@@ -5802,6 +5815,42 @@ async function removeCustomChart(id) {
     await fetch('/api/custom-charts/' + encodeURIComponent(id), { method: 'DELETE' });
     loadCustomCharts();
   } catch (e) {}
+}
+
+// PCC 5.x — Pedaling asymmetry / LEOMO MPI import (importable context).
+async function importPedal() {
+  const inp = document.getElementById('pedal-file');
+  const st = document.getElementById('pedal-status');
+  if (!inp || !inp.files || !inp.files.length) { if (st) st.textContent = 'Scegli un file .json/.csv.'; return; }
+  const buf = await inp.files[0].arrayBuffer();
+  try {
+    const res = await fetch('/api/pedal-import', { method: 'POST', body: buf });
+    const d = await res.json();
+    if (!res.ok) { if (st) st.textContent = 'Errore: ' + (d.error || res.status); return; }
+    if (st) st.textContent = 'Importato' + (d.flag ? ' — asimmetria >10% da monitorare.' : '.');
+    loadPedalLatest();
+  } catch (e) { if (st) st.textContent = 'Errore import.'; }
+}
+
+async function loadPedalLatest() {
+  const host = document.getElementById('pedal-latest');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/pedal-latest');
+    if (!res.ok) { host.textContent = ''; return; }
+    const d = await res.json();
+    if (!d || !d.ride_id && d.left_balance_pct == null && d.mpi == null) {
+      host.innerHTML = '<span style="color:var(--text3);">Nessun dato pedala importato. Esporta da pedali smart (Favero/Garmin/LEOMO) e importa qui.</span>';
+      return;
+    }
+    const rows = [];
+    if (d.left_balance_pct != null) rows.push(`<span style="margin-right:10px;">L <b>${d.left_balance_pct}%</b> / R <b>${d.right_balance_pct}%</b></span>`);
+    if (d.asymmetry_balance != null) rows.push(`<span style="margin-right:10px;">Asimmetria <b style="color:${d.flag ? 'var(--red)' : 'var(--green)'}">${(d.asymmetry_balance*100).toFixed(1)}%</b></span>`);
+    if (d.left_te != null) rows.push(`<span style="margin-right:10px;">TE L/R <b>${d.left_te}/${d.right_te}</b></span>`);
+    if (d.left_ps != null) rows.push(`<span style="margin-right:10px;">PS L/R <b>${d.left_ps}/${d.right_ps}</b></span>`);
+    if (d.mpi != null) rows.push(`<span style="margin-right:10px;">MPI <b>${d.mpi}</b></span>`);
+    host.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Ultimo: ${esc(d.ride_id || d.date || '')}</div>${rows.join('')}`;
+  } catch (e) { host.textContent = ''; }
 }
 
 // P3.1 — compact CTL/TSB sparkline on Home (the full Fitness & Form chart
