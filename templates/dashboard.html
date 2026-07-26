@@ -1685,7 +1685,8 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <div class="header-stats" id="header-stats"></div>
-    <button onclick="openImportFitPicker()" style="background:var(--accent);color:#fff;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Importa una uscita .fit da MyWhoosh / Tacx / Golden Cheetah">
+    <button onclick="resetCardLayout()" title="Ripristina l'ordine originale delle card" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:7px 10px;border-radius:8px;font-size:12px;cursor:pointer;margin-right:6px;">⤺ Disposizione</button>
+<button onclick="openImportFitPicker()" style="background:var(--accent);color:#fff;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Importa una uscita .fit da MyWhoosh / Tacx / Golden Cheetah">
       &#x2b06; Import FIT
     </button>
     <input type="file" id="import-fit-input" accept=".fit,application/octet-stream" style="display:none;" onchange="handleImportFit(this)">
@@ -4290,6 +4291,13 @@ function showClientError(e,title){ showToast((title?title+' ':'')+normalizeErr(e
 
 // ===== v5.2 tab switch helper =====
 function gotoTab(t){ var el=document.querySelector('.tab[data-tab="'+t+'"]'); if(el) el.click(); }
+
+// ===== v5.2.x Ripristina disposizione card =====
+function resetCardLayout(){
+  if(!confirmDanger || !confirmDanger('Ripristinare l\'ordine originale delle card? Le modifiche manuali andranno perse.')) return;
+  try{ localStorage.removeItem('pcc-layout:' + (window.__ACTIVE_PROFILE_ID || 'default')); }catch(_){}
+  location.reload();
+}
 
 // ===== v5.2 conferma azioni distruttive =====
 function confirmDanger(msg){ return window.confirm(msg||'Sei sicuro? L\'operazione non e reversibile.'); }
