@@ -1002,7 +1002,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; h
   box-shadow: 0 1px 4px rgba(79,156,247,0.25);
 }
 
-/* Section headers for Workout Shuffle tab — dialed down from the original
+/* Section headers for Mescola workout tab — dialed down from the original
    36px gradient billboards (grill A#1-#4). They now match the general app
    voice: 22px/700, plain text, no caps, no gradient. */
 .picker-section-header { margin: 4px 0 14px; }
@@ -1702,8 +1702,8 @@ window.addEventListener('unhandledrejection', function(e) {
      file over the app; drop a .fit anywhere to import it. -->
 <div id="fit-drop-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;pointer-events:none;">
   <div style="border:3px dashed #fff;border-radius:16px;padding:48px 64px;color:#fff;font-size:20px;font-weight:700;text-align:center;background:rgba(0,0,0,0.25);">
-    &#x2b06;&#xfe0f; Drop your <code style="color:#fff;">.fit</code> ride to import
-    <div style="font-size:13px;font-weight:400;margin-top:8px;opacity:0.85;">It'll be added, reconciled, and your plan will adapt automatically.</div>
+    &#x2b06;&#xfe0f; Drop your <code style="color:#fff;">.fit</code> trascina una uscita da importare
+    <div style="font-size:13px;font-weight:400;margin-top:8px;opacity:0.85;">Verrà aggiunta, riconciliata e il piano si adatterà automaticamente.</div>
   </div>
 </div>
 
@@ -1754,7 +1754,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <div class="app-shell">
 <div class="sidebar-tabs tabs" id="tabs">
   <div class="tab active" data-tab="home">Inizio</div>
-  <div class="tab" data-tab="picker">Workout Shuffle</div>
+  <div class="tab" data-tab="picker">Mescola workout</div>
   <div class="tab" data-tab="library">Libreria workout</div>
   <div class="tab" data-tab="courses">Percorsi e salite</div>
   <div class="tab" data-tab="plan">Piano di allenamento</div>
@@ -2085,7 +2085,7 @@ window.addEventListener('unhandledrejection', function(e) {
       </div>
       <div class="form-group" style="align-self:flex-end;">
         <button class="btn btn-primary btn-picker-submit" onclick="runPicker()">
-          Pick My Workout →
+          Scegli il mio workout →
         </button>
       </div>
     </div>
@@ -2134,7 +2134,7 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
 
     <div class="form-group">
-      <label>Finish type <span class="all-hint" id="rp-finish-hint">· qualsiasi arrivo</span></label>
+      <label>Tipo di arrivo <span class="all-hint" id="rp-finish-hint">· qualsiasi arrivo</span></label>
       <div class="picker-hint">What ending suits you? <em>Steep wall = short &amp; brutal (&gt;10%). Sprint = fast flat kick.</em></div>
       <div class="chip-row" id="rp-finish">
         <button type="button" class="chip active" data-val="flat">Arrivo in piano</button>
@@ -2468,7 +2468,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <details class="plan-help-panel" style="margin-bottom:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;">
     <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text);">Come si aggiorna il piano</summary>
     <div style="margin-top:8px;font-size:12px;line-height:1.5;color:var(--text2);">
-      <strong>Genera piano</strong> is the one button — it builds your plan, and rebuilds it from your current settings + fitness if one already exists (use it after a goal, event-date, or big training-time change). After that your plan <strong>si aggiorna da solo</strong>: automatically after every ride sync and each time you open this tab. It rebalances load to today's fitness and fatigue, or — if you've missed enough training to fall behind — rebuilds with a safe recovery ramp (no catch-up spike); the status line shows what changed. The <strong>Calendario disponibilità</strong> edits which days you can train; click a day to set hours, right-click to mark unavailable, then press the pulsing UPDATE button to reflow. <strong>Sostituisci workout</strong> (in any day's detail view) re-rolls only that single workout at the same duration if the suggestion doesn't fit. Don't manually edit unless something's clearly wrong — the planner already accounts for fatigue and load.
+      <strong>Genera piano</strong> is the one button — it builds your plan, and rebuilds it from your current settings + fitness if one already exists (use it after a goal, event-date, or big training-time change). After that your plan <strong>si aggiorna da solo</strong>: automatically after every ride sync and each time you open this tab. It rebalances load to today's fitness and fatigue, or — if you've missed enough training to fall behind — rebuilds with a safe recovery ramp (no catch-up spike); the status line shows what changed. The <strong>Calendario disponibilità</strong> modifica i giorni in cui puoi allenarti; clicca un giorno per impostare le ore, tasto destro per segnare non disponibile, then press the pulsing UPDATE button to reflow. <strong>Sostituisci workout</strong> (in any day's detail view) re-rolls only that single workout at the same duration if the suggestion doesn't fit. Don't manually edit unless something's clearly wrong — the planner already accounts for fatigue and load.
     </div>
   </details>
 
@@ -2480,9 +2480,9 @@ window.addEventListener('unhandledrejection', function(e) {
        ONLY popovers whose icons render statically INSIDE this section belong
        here — popovers referenced from modal-rendered content live at body
        level next to the modal overlay (see calpush-info). -->
-  <div class="info-popover" id="planpop-update"><strong>Aggiorna piano</strong> automatically picks the right adjustment: a structure-preserving <em>ribilanciamento</em> to today's TSB (fatigue), ACWR (load ratio) and availability when you're on track, or a full <em>ricostruzione con rampa di recupero</em> when you've missed enough to fall behind (Gabbett-safe, never a catch-up spike). Runs automatically after each ride sync too. Won't re-roll past or completed sessions, and won't move a fixed event date.</div>
-  <div class="info-popover" id="planpop-availability"><strong>Modifica disponibilità</strong> sets per-day training time. Click a date to set hours; right-click to mark unavailable (holiday/injury). <strong>Premi il pulsante UPDATE lampeggiante per applicare — il piano si ridispone al clic.</strong></div>
-  <div class="info-popover" id="planpop-mode"><strong>Stile piano</strong> — how your weekly sessions are chosen.<br><br><strong>Automatico (variato)</strong>: a varied, auto-adapting plan drawn from the full library — different sessions week to week.<br><strong>Core fisso (ripetibile)</strong>: the same weekly shape — one hard session type per phase that progresses by reps, over a Z2 base that scales to your available time.<br><strong>Modello</strong>: un blueprint core fisso già pronto.</div>
+  <div class="info-popover" id="planpop-update"><strong>Aggiorna piano</strong> sceglie automaticamente l'aggiustamento giusto: un <em>ribilanciamento</em> to today's TSB (fatigue), ACWR (load ratio) and availability when you're on track, or a full <em>ricostruzione con rampa di recupero</em> when you've missed enough to fall behind (Gabbett-safe, never a catch-up spike). Runs automatically after each ride sync too. Won't re-roll past or completed sessions, and won't move a fixed event date.</div>
+  <div class="info-popover" id="planpop-availability"><strong>Modifica disponibilità</strong> imposta il tempo di allenamento giornaliero. Clicca una data per impostare le ore; tasto destro per non disponibile (holiday/injury). <strong>Premi il pulsante UPDATE lampeggiante per applicare — il piano si ridispone al clic.</strong></div>
+  <div class="info-popover" id="planpop-mode"><strong>Stile piano</strong> — come vengono scelte le tue sessioni settimanali.<br><br><strong>Automatico (variato)</strong>: un piano vario e auto-adattivo tratto da tutta la libreria — sessioni diverse di settimana in settimana.<br><strong>Core fisso (ripetibile)</strong>: the same weekly shape — one hard session type per phase that progresses by reps, over a Z2 base that scales to your available time.<br><strong>Modello</strong>: un blueprint core fisso già pronto.</div>
 
   <!-- v1.8.25 — "catching up your plan" overlay: greyed backdrop + stepped
        checklist shown on Plan-tab open while runPlanOpenSequence() runs. Click
@@ -2545,7 +2545,7 @@ window.addEventListener('unhandledrejection', function(e) {
              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectPlanMode('continuous');}"
              style="flex:1;min-width:210px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;background:transparent;">
           <div style="font-weight:700;font-size:13px;">♾ Allenati continuativamente</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:3px;">No end date — reads your rides &amp; readiness daily, extends itself weekly.</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:3px;">Senza data di fine — legge le tue uscite e la readiness ogni giorno e si estende settimanalmente.</div>
         </div>
       </div>
       <div class="form-row">
@@ -2575,7 +2575,7 @@ window.addEventListener('unhandledrejection', function(e) {
              engine ignores: rolling 4-week horizon) with the honest note. -->
         <div class="form-group" id="plan-horizon-note" style="display:none;align-self:center;font-size:12px;color:var(--text2);">Orizzonte mobile 4 settimane — si estende settimanalmente</div>
       </div>
-      <!-- Plan configuration — Plan style / periodization / intensity model,
+      <!-- Plan configuration — Stile di piano / periodization / intensity model,
            grouped + labelled so they're discoverable (they round-trip from the
            saved plan via populatePlanFormFromGoal). -->
       <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 6px;border-top:1px solid var(--border);padding-top:10px;">Configurazione piano</div>
@@ -2619,8 +2619,8 @@ window.addEventListener('unhandledrejection', function(e) {
       </div>
       <!-- FS1 (IP_PLANNER_MODES): plan construction mode. -->
       <div class="form-row">
-        <div class="form-group"><label>Plan style
-          <span class="info-icon" data-popover="planpop-mode" tabindex="0" role="button" aria-label="What do the plan styles mean?" title="Plan styles explained">?</span></label>
+        <div class="form-group"><label>Stile di piano
+          <span class="info-icon" data-popover="planpop-mode" tabindex="0" role="button" aria-label="What do the plan styles mean?" title="Stile di pianos explained">?</span></label>
           <select id="plan-mode" onchange="onPlanModeChange()">
             <option value="auto" selected>Automatico (variato)</option>
             <option value="fixed_core">Core fisso (ripetibile)</option>
@@ -2637,11 +2637,11 @@ window.addEventListener('unhandledrejection', function(e) {
       </div>
       <!-- v2.3.0: intensity mix for the selected template — typical % for the
            presets, an editable split for Custom; the realized mix replaces it
-           after you generate. Shown only when Plan style = Template. -->
+           after you generate. Shown only when Stile di piano = Template. -->
       <div id="plan-dist-readout" style="font-size:11px;color:var(--text2);margin:-2px 0 8px;"></div>
       <div id="plan-custom-bands" style="display:none;margin:0 0 10px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);">
-        <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Custom intensity split
-          <span style="font-weight:400;color:var(--text2);">— how to split your hard/intensity work (easy/Z2 volume stays science-based). Targets; the realized mix shows after you generate.</span>
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Suddivisione intensità personalizzata
+          <span style="font-weight:400;color:var(--text2);">— come suddividere il lavoro intenso/intensità (il volume facile/Z2 resta basato sulla scienza). Obiettivi; il realized mix shows after you generate.</span>
         </div>
         <div class="form-row" style="gap:8px;flex-wrap:wrap;">
           <div class="form-group"><label style="font-size:11px;">Tempo / Sweet-Spot %</label>
@@ -2664,21 +2664,22 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="form-row" id="plan-entry-block">
         <div class="form-group" style="flex:1 1 100%;">
           <label id="plan-backdate-box" style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);font-size:14px;font-weight:600;">
-            <input type="checkbox" id="plan-backdate-on" onchange="onBackdateToggle()" style="width:17px;height:17px;cursor:pointer;"> I&rsquo;ve been training already
+            <input type="checkbox" id="plan-backdate-on" onchange="onBackdateToggle()" style="width:17px;height:17px;cursor:pointer;"> Ho già iniziato ad allenarmi
             <span style="font-size:11px;font-weight:400;color:var(--text3);">— start this plan mid-way, not from week&nbsp;1</span>
           </label>
         </div>
         <div class="form-group" id="plan-backdate-wrap" style="display:none;flex:1 1 100%;margin-top:6px;">
           <div style="display:flex;gap:12px;margin-bottom:4px;">
             <label style="font-size:12px;display:flex;align-items:center;gap:4px;">
-              <input type="radio" name="plan-entry-mode" value="date" checked onchange="onEntryModeChange()"> I know my start date</label>
+              <input type="radio" name="plan-entry-mode" value="date" checked onchange="onEntryModeChange()"> Conosco la data di inizio</label>
             <label style="font-size:12px;display:flex;align-items:center;gap:4px;">
-              <input type="radio" name="plan-entry-mode" value="scan" onchange="onEntryModeChange()"> Find my week from recent rides</label>
+              <input type="radio" name="plan-entry-mode" value="scan" onchange="onEntryModeChange()"> Trova la mia settimana dalle uscite recenti</label>
           </div>
           <div id="entry-date-arm">
-            <label>Allenamento dal</label>
+            <label>Mi allenerò dal</label>
             <input type="date" id="plan-sdate" onchange="onEntrySdateEdited()">
             <span id="entry-recognized-note" style="display:none;font-size:10px;color:var(--text3);margin-left:6px;">posizionata dalle tue uscite</span>
+            <div id="entry-startdate-note" style="display:none;font-size:12px;color:var(--accent);font-weight:600;margin-top:6px;"></div>
           </div>
           <div id="entry-scan-arm" style="display:none;">
             <button type="button" id="entry-scan-btn" class="btn btn-sm" onclick="scanEntryRides()">Scansiona le mie uscite</button>
@@ -2689,7 +2690,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <!-- 3.4.2 M5 §3 — continuous: the entry path (scan + backdate) dead-ends
            by design, so the block above greys out and this note says why.
            Sibling of the block so the opacity dim can't grey the note too. -->
-      <div id="plan-entry-note" style="display:none;font-size:11px;color:var(--text2);margin:0 0 10px;">Continuous plans place themselves — your recent rides and readiness are read automatically, every day.</div>
+      <div id="plan-entry-note" style="display:none;font-size:11px;color:var(--text2);margin:0 0 10px;">I piani continui si posizionano da soli — le tue uscite recenti e la readiness sono lette automaticamente, every day.</div>
       <div id="plan-event-fields">
         <div class="form-row">
           <!-- v1.8.9 Bug 8 — oninput syncs to plan-weeks via _syncPlanDateToWeeks(). -->
@@ -2800,7 +2801,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;" data-tip="Distribuzione intensità (TID). Modello polarizzato 80/0/20: ~80% facile (Z1-Z2), 0% soglia moderata (Z3, 'trappola moderata'), ~20% duro (Z4-Z5). Stöggl & Sperlich 2014 (PMID 24550842); Seiler 2006.">Distribuzione intensità</h4><canvas id="ps-chart-intensity" height="160"></canvas><div style="font-size:10px;color:var(--text3);margin-top:4px;">Stöggl & Sperlich 2014 — POL 80/0/20 target</div></div>
         <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;" data-tip="Indice di polarizzazione (Treff PI) = log10((Z1+Z2)/Z3 × Z5+/Z3). PI > 2.0 classifica come polarizzato. Treff et al. 2019 (Front Physiol).">Indice di polarizzazione</h4><canvas id="ps-chart-pol" height="160"></canvas><div style="font-size:10px;color:var(--text3);margin-top:4px;">Treff et al. 2019 — PI > 2.0 polarized</div></div>
         <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Adesione per fase</h4><canvas id="ps-chart-compliance" height="160"></canvas></div>
-        <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Mean-max curve · start vs end (4w)</h4><canvas id="ps-chart-meanmax" height="160"></canvas></div>
+        <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Curva mean-max · inizio vs fine (4 settimane)</h4><canvas id="ps-chart-meanmax" height="160"></canvas></div>
         <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Hooper composite trend</h4><canvas id="ps-chart-hooper" height="160"></canvas><div style="font-size:10px;color:var(--text3);margin-top:4px;">Hooper & Mackinnon 1995</div></div>
         <div class="card" style="margin:0;"><h4 style="margin:0 0 8px 0;font-size:13px;">Trend di decoupling</h4><canvas id="ps-chart-decoupling" height="160"></canvas></div>
       </div>
@@ -13085,7 +13086,27 @@ function onEntrySdateEdited() {
   _setEntryRecognized(false);  // user overrode the recognizer → "declared"
   window._entryArm = null;     // L4-UX 5: a typed date is the user's own, not a stored re-arm
   _validateEntrySdate();       // v4.4: inline runway check (start must precede event)
+  _renderEntryStartDateNote();  // PCC: riepilogo "Mi allenerò dal [data]"
   refreshPlanPreview();
+}
+
+// PCC — mostra chiaramente che il piano parte dalla data scelta e copre le
+// settimane necessarie (fino all'evento se presente, altrimenti la durata stimata).
+function _renderEntryStartDateNote() {
+  const sd = $('plan-sdate');
+  const note = $('entry-startdate-note');
+  if (!sd || !note) return;
+  if (!sd.value) { note.style.display = 'none'; return; }
+  const ev = $('plan-edate');
+  const parts = ['Il piano partirà dal <b>' + sd.value + '</b>'];
+  if (ev && ev.value) {
+    const nWeeks = Math.max(1, Math.round((new Date(ev.value) - new Date(sd.value)) / 604800000));
+    parts.push('e coprirà <b>' + nWeeks + ' settimane</b> fino all’evento del ' + ev.value + '.');
+  } else {
+    parts.push('e si estenderà per le settimane necessarie (piano continuo).');
+  }
+  note.innerHTML = parts.join(' ');
+  note.style.display = 'block';
 }
 
 async function scanEntryRides() {
@@ -14136,7 +14157,7 @@ function onCustomBandsInput() {
   }
 }
 // Drives the % readout + custom editor off the TEMPLATE selector (only when
-// Plan style = Template). Custom → editable split; presets → typical mix.
+// Stile di piano = Template). Custom → editable split; presets → typical mix.
 function onTemplateChange() {
   const mode = ($('plan-mode')||{}).value || 'auto';
   const tmpl = ($('plan-template')||{}).value || '';
@@ -14219,7 +14240,7 @@ async function generatePlan(opts) {
     custom_bands: ((($('plan-mode')||{}).value === 'template') && (($('plan-template')||{}).value === 'custom'))
       ? getCustomBands() : undefined,
     // v3.1.0 MODE 1 — backdated start ("I've been training already").
-    start_date: ((($('plan-backdate-on')||{}).checked) && $('plan-sdate') && $('plan-sdate').value)
+    start_date: ($('plan-sdate') && $('plan-sdate').value)
       ? $('plan-sdate').value : null,
     // v3.2.0 phase-split editor — sent ONLY when custom AND ≠ recommendation
     // (A3); undefined otherwise so the payload stays byte-identical.
@@ -16516,7 +16537,7 @@ function openOverviewDay(weekIdx, dayIdx, dayStr) {
 }
 
 // IP-2: round-trip the SAVED plan config back into the form. Previously the
-// form had no populate path, so Plan style / Intensity model / Block
+// form had no populate path, so Stile di piano / Intensity model / Block
 // periodization / availability always reset to defaults on revisit — a
 // fixed-core plan showed "Automatic" ("I didn't see the toggle"). Now the form
 // mirrors what the current plan actually uses.
@@ -16550,7 +16571,7 @@ function populatePlanFormFromGoal(goal) {
   setVal('plan-mode', goal.plan_mode || 'auto');
   if (goal.template_id) setVal('plan-template', goal.template_id);
   // v2.3.0: a custom plan round-trips as template_id=custom — present it as
-  // Plan style → Template → Custom and restore the split.
+  // Stile di piano → Template → Custom and restore the split.
   if ((goal.template_id || '') === 'custom' || (goal.distribution || '') === 'custom') {
     setVal('plan-mode', 'template');
     setVal('plan-template', 'custom');
