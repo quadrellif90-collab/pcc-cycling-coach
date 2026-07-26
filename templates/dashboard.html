@@ -1705,6 +1705,12 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 </div>
 
+<!-- v5.2 banner-manager: campanella per banner in eccesso -->
+<div id="banner-bell" style="display:none;margin:8px 0 4px;">
+  <button onclick="toggleBannerOverflow()" style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--text2);display:inline-flex;align-items:center;gap:6px;">
+    <span>&#128276;</span><span id="banner-bell-count">0</span><span>avvisi</span>
+  </button>
+</div>
 <!-- Intervals.icu sync-health banner (auto-hides when sync is healthy).
      Populated by loadSyncBanner() from /api/sync/status, polled every 60s.
      Dismissable per session via sessionStorage('icu-banner-dismissed'). -->
@@ -4327,6 +4333,48 @@ function onboardingGoto(goto){
 }
 function onboardingGotoFirst(){ var d=window.__onboarding; var f=d&&d.gaps&&d.gaps[0]; onboardingGoto(f?f.goto:'settings'); }
 function dismissOnboarding(){ sessionStorage.setItem('onboarding-dismissed','1'); var b=document.getElementById('onboarding-banner'); if(b) b.style.display='none'; }
+
+// ===== v5.2 banner manager: mostra max 2 banner, il resto nella campanella =====
+var BANNER_PRIORITY=['onboarding-banner','icu-migrate-banner','update-banner','readiness-action-banner','ftp-rise-banner','eftp-auto-banner','icu-sync-banner'];
+var BANNER_MAX=2, _bannerOverflowOpen=false;
+function _bannerIsShown(el){ return el && el.style.display!=='none' && el.dataset.bmForced!=='hidden'; }
+var _bmBusy=false;
+function refreshBannerManager(){
+  if(_bmBusy) return; _bmBusy=true;
+  try{
+  var bell=document.getElementById('banner-bell'); if(!bell){ _bmBusy=false; return; }
+  // raccogli banner attualmente "accesi" dalla loro logica (display!=none), in ordine priorita
+  var active=[];
+  BANNER_PRIORITY.forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    // consideriamo "vorrebbe mostrarsi" se non e stato forzato da noi e non ha display none originale
+    if(el.dataset.bmWants==='1') active.push(el);
+  });
+  var overflow=active.slice(BANNER_MAX);
+  active.slice(0,BANNER_MAX).forEach(function(el){ el.style.display=el.dataset.bmDisplay||'block'; el.dataset.bmForced=''; });
+  overflow.forEach(function(el){ if(!_bannerOverflowOpen){ el.style.display='none'; el.dataset.bmForced='hidden'; } else { el.style.display=el.dataset.bmDisplay||'block'; el.dataset.bmForced=''; } });
+  if(overflow.length>0){ bell.style.display='block'; var c=document.getElementById('banner-bell-count'); if(c) c.textContent=overflow.length; }
+  else { bell.style.display='none'; }
+  } finally { _bmBusy=false; }
+}
+function toggleBannerOverflow(){ _bannerOverflowOpen=!_bannerOverflowOpen; refreshBannerManager(); }
+// Observer: quando un banner cambia display (per la sua logica), registriamo l'intento e riordiniamo.
+function _initBannerManager(){
+  BANNER_PRIORITY.forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    // salva il display "naturale" e traccia l'intento della logica del banner
+    var mo=new MutationObserver(function(){
+      var vis=el.style.display!=='none';
+      if(vis && el.dataset.bmForced!=='hidden'){ el.dataset.bmWants='1'; el.dataset.bmDisplay=el.style.display||'block'; }
+      if(el.style.display==='none' && el.dataset.bmForced!=='hidden'){ el.dataset.bmWants='0'; }
+      refreshBannerManager();
+    });
+    mo.observe(el,{attributes:true,attributeFilter:['style']});
+    if(el.style.display!=='none'){ el.dataset.bmWants='1'; el.dataset.bmDisplay=el.style.display||'block'; }
+  });
+  refreshBannerManager();
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(_initBannerManager, 1600); });
 
 // ===== v5.2 whats-new =====
 var WHATSNEW_ITEMS=[
