@@ -22515,6 +22515,54 @@ function initHintTooltips() {
 }
 document.addEventListener('DOMContentLoaded', initHintTooltips);
 
+// ===== v5.2 glossario: tooltip "?" sulle sigle gergali =====
+var PCC_GLOSSARY={
+ 'CTL':'Chronic Training Load — fitness a lungo termine (media esponenziale del TSS su ~42 giorni).',
+ 'ATL':'Acute Training Load — fatica recente (media esponenziale del TSS su ~7 giorni).',
+ 'TSB':'Training Stress Balance = CTL - ATL. Positivo = fresco, negativo = affaticato.',
+ 'TSS':'Training Stress Score — carico di una singola sessione (intensita x durata).',
+ 'FTP':'Functional Threshold Power — potenza sostenibile ~1 ora. Base delle zone.',
+ 'eFTP':'FTP stimata da intervals.icu sui tuoi dati recenti.',
+ 'W/kg':'Watt per chilogrammo — potenza rapportata al peso.',
+ 'VO2max':'Massimo consumo di ossigeno — tetto della capacita aerobica.',
+ 'VLamax':'Massimo tasso di produzione di lattato — potenza glicolitica.',
+ 'DFA a1':'Detrended Fluctuation Analysis alpha-1 — indice HRV intra-sforzo per le soglie.',
+ 'DFA α1':'Detrended Fluctuation Analysis alpha-1 — indice HRV intra-sforzo per le soglie.',
+ 'rMSSD':'Metrica HRV a riposo — variabilita battito-battito, indice di recupero.',
+ 'ACWR':'Acute:Chronic Workload Ratio — rischio: ideale ~0.8-1.3.',
+ 'Ramp':'Variazione settimanale della CTL — quanto sta salendo il carico.',
+ 'Monotony':'Monotonia di Foster — quanto e uniforme il carico giornaliero (alta = rischio).',
+ 'RHR':'Resting Heart Rate — frequenza cardiaca a riposo.',
+ 'HRV':'Heart Rate Variability — variabilita cardiaca, indice di recupero.'
+};
+function _glossTip(text){
+  var t=(text||'').trim();
+  if(PCC_GLOSSARY[t]) return PCC_GLOSSARY[t];
+  // match sigla iniziale tipo "HRV (30%)"
+  var m=t.match(/^([A-Za-zα/]+)/); 
+  if(m && PCC_GLOSSARY[m[1]]) return PCC_GLOSSARY[m[1]];
+  return null;
+}
+function applyGlossaryTooltips(root){
+  try{
+    root=root||document;
+    // KPI label brevi (span/div con solo la sigla)
+    root.querySelectorAll('span,div,label,th').forEach(function(el){
+      if(el.children.length>0) return;               // solo foglie testuali
+      if(el.dataset.glossDone) return;
+      var tip=_glossTip(el.textContent);
+      if(tip){
+        el.dataset.glossDone='1';
+        el.setAttribute('data-tip',tip);
+        el.classList.add('hint');
+        el.style.cursor='help';
+        el.style.borderBottom='1px dotted var(--text3)';
+      }
+    });
+  }catch(_){}
+}
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ applyGlossaryTooltips(); }, 2000); });
+
 // ═══ PCC — Card drag (riordina) + resize (resize:both CSS nativo) + persist per profilo ═══
 (function(){
   const PROFILE_KEY = () => 'pcc-layout:' + (window.__ACTIVE_PROFILE_ID || 'default');
