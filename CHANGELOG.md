@@ -1,5 +1,27 @@
 # Changelog
 
+## v5.2.1 — Migliorie UX per il cliente finale (2026-07-26)
+
+Pacchetto di 15 migliorie di usabilità/lavoro, tutte verificate (syntax check + browser 0 errori JS), senza cambiare la logica di pianificazione.
+
+**Onboarding & chiarezza**
+- Banner di setup + checklist first-run (4 passi): avvisa se manca peso/FTP/FC max → niente più KPI NaN silenziosi.
+- Tab "Novità" con le 12 funzioni v5.2 (cliccabili verso la sezione), versione dinamica da `/api/version`.
+- Tooltip glossario su 13 sigle KPI (CTL/ATL/TSB/TSS/FTP/eFTP/W·kg/VO2max/VLamax/DFA α1/rMSSD/ACWR/Ramp/Monotony/HRV/HRV).
+- Empty-state azionabile nelle "Attività recenti" (invito a importare il primo FIT).
+
+**Workflow meno rumoroso**
+- Banner manager: max 2 banner visibili, i rimanenti in una campanella con contatore.
+- Scorciatoie da tastiera + pannello aiuto (`⌨ ?`): `G` Genera piano · `I` Importa FIT · `T` tema · `P` Push ICU · `?` pannello · `Esc` chiudi.
+- Stati di caricamento (spinner + disabilitato) su Genera piano / Push ICU / Inietta multi.
+- Messaggi di errore in linguaggio cliente (UAC, rete, ICU, 4xx/5xx) al posto di stringhe grezze/alert.
+
+**Controllo & recupero**
+- "⤺ Disposizione" per ripristinare l'ordine originale delle card riordinabili.
+- Ricerca/filtro nelle attività recenti.
+- Conferma in italiano su azioni distruttive (reset zone/HR, eliminazione uscita).
+- Scheda principale `PRESENTAZIONE.md` allineata al prodotto.
+
 ## v5.2.0 — Release stabile: Design System Pro + 12 funzioni (2026-07-26)
 
 Release stabile che consolida le beta.1 e beta.2. Rispetto alle beta non cambia codice: porta lo stesso set di funzioni e la stessa UI professionale in una versione definitiva (consigliata al posto delle beta).
