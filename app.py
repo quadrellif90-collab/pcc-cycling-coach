@@ -5509,6 +5509,62 @@ def api_activities():
         raise
 
 
+# PCC 5.x — Activity classification + RPE (JOIN-style "did the ride match?").
+# These are VIEWS over the planner's rematch engine + real activity history.
+@app.post("/api/activity/rpe")
+async def api_activity_rpe(request: Request):
+    try:
+        body = await request.json()
+        ride_id = body.get("ride_id") or ""
+        rpe = float(body.get("rpe"))
+        note = body.get("note", "") or ""
+        if not ride_id:
+            return JSONResponse({"error": "ride_id required"}, 400)
+        from training_planner import PLAN_DIR
+        from activity_insights import save_rpe
+        prof_dir = Path(PLAN_DIR)
+        entry = save_rpe(prof_dir, ride_id, rpe, note)
+        return {"ok": True, "ride_id": ride_id, "rpe": entry["rpe"]}
+    except (ValueError, TypeError) as e:
+        return JSONResponse({"error": str(e)}, 400)
+    except Exception as e:  # noqa: BLE001
+        _log.exception("activity rpe failed")
+        return JSONResponse({"detail": "rpe failed"}, 500)
+
+
+@app.get("/api/activity-insights")
+def api_activity_insights(days: int = Query(14, ge=1, le=365)):
+    try:
+        from training_planner import PLAN_DIR
+        from activity_insights import build_activity_insights
+        from profile_manager import ProfileManager
+        pm = ProfileManager.get()
+        prof_dir = Path(PLAN_DIR)
+        ftp = float(pm.ftp) if getattr(pm, "ftp", None) else None
+        # recent activities (reuse the same source as /api/activities)
+        activities = api_activities() if callable(api_activities) else []
+        if not isinstance(activities, list):
+            activities = []
+        # current plan
+        plan_path = _plan_dir() / "current_plan.json"
+        plan = {}
+        if plan_path.exists():
+            try:
+                plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            except Exception:
+                plan = {}
+        rows = build_activity_insights(activities, plan, prof_dir, ftp, days=days)
+        unplanned = [r for r in rows if r.get("unplanned")]
+        return {
+            "days": days,
+            "activities": rows,
+            "n_unplanned": len(unplanned),
+            "method": "IF-band classification + rematch_week (single engine)",
+        }
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e), "activities": [], "n_unplanned": 0}
+
+
 # v1.3.3 — Banister τ defaults for the three Kontro 2026 components.
 # CP slow / W' fast / Pmax mid — Fig. S2 single-athlete illustrative values.
 # These are NOT population-fit; they are the same defaults the README and

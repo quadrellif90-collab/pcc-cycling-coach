@@ -2184,6 +2184,16 @@ window.addEventListener('unhandledrejection', function(e) {
   <!-- Current Metrics Banner -->
   <div id="plan-metrics-banner" style="display:flex;gap:16px;margin-bottom:12px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text2);flex-wrap:wrap;"></div>
 
+  <!-- PCC 5.x — Attività & RPE (JOIN-style view). Backed by
+       /api/activity-insights; reuses the planner's rematch engine + RPE log. -->
+  <div class="card" style="margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3>Attività &amp; RPE <span style="font-size:10px;font-weight:400;color:var(--text3);">— classificazione + ri-pianifica</span></h3>
+      <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="replanFromInsights()">Ri-pianifica</button>
+    </div>
+    <div id="activity-insights" style="font-size:12px;color:var(--text2);margin-top:8px;">Caricamento…</div>
+  </div>
+
   <!-- P4.2 (v3.0.0) — plan-drift chip. Server computes drift (live CTL vs the
        plan's generation snapshot, threshold 15%) into plan_json.ctl_drift;
        this chip is render-only and offers the EXISTING Regenerate action —
@@ -15889,6 +15899,7 @@ async function loadPlan() {
     await renderPlanJSON(d.plan_json);
     try { populatePlanFormFromGoal(d.plan_json.goal); } catch (_) {}
     try { renderPlanDriftChip(d.plan_json.ctl_drift); } catch (_) {}
+    try { if (typeof loadActivityInsights === 'function') loadActivityInsights(); } catch (_) {}
   }
   if (d.plan) {
     // Also render markdown below as fallback/reference
@@ -15906,6 +15917,71 @@ async function loadPlan() {
   } else if (!d.plan_json) {
     $('plan-content').innerHTML = '<div class="card"><p style="color:var(--text2)">No plan generated yet. Use the form above or run:<br><code>python3 training_planner.py --goal event --event-date 2026-07-15</code></p></div>';
   }
+}
+
+// PCC 5.x — Activity insights (classification + RPE -> re-plan view).
+async function loadActivityInsights() {
+  const host = document.getElementById('activity-insights');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/activity-insights');
+    if (!res.ok) { host.textContent = 'Attività non disponibili.'; return; }
+    const d = await res.json();
+    if (d.error) { host.textContent = 'Dati insufficienti.'; return; }
+    const rows = d.activities || [];
+    if (!rows.length) {
+      host.innerHTML = '<div style="color:var(--text3);">Nessuna attività recente. Carica i .fit per abilitare classificazione + RPE.</div>';
+      return;
+    }
+    const badge = (s) => {
+      if (s === 'done') return '<span style="color:var(--green);">✓ fatto</span>';
+      if (s === 'unplanned') return '<span style="color:var(--yellow);">⚠ non pianificato</span>';
+      if (s === 'no_match') return '<span style="color:var(--red);">✗ non corrisponde</span>';
+      if (s === 'missed') return '<span style="color:var(--red);">✗ saltato</span>';
+      if (s === 'ambiguous') return '<span style="color:var(--text3);">~ ambiguo</span>';
+      return '<span style="color:var(--text3);">' + (s || '—') + '</span>';
+    };
+    const html = rows.map(r => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;">
+        <span style="min-width:64px;color:var(--text3);">${esc(r.date || '')}</span>
+        <span style="flex:1;margin:0 6px;">${esc(r.name || r.protocol || 'Attività')}</span>
+        <span style="color:var(--text2);">${esc(r.protocol || '')}</span>
+        <span style="margin:0 6px;">${badge(r.match_status)}</span>
+        <span style="display:flex;align-items:center;gap:4px;">
+          <input type="number" min="0" max="10" step="0.5" value="${r.rpe != null ? r.rpe : ''}"
+                 placeholder="RPE" data-ride="${esc(r.id || '')}" id="rpe-${esc(r.id || '')}"
+                 onchange="saveRpe('${esc(r.id || '')}')"
+                 style="width:46px;font-size:10px;padding:2px 4px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;" />
+        </span>
+      </div>`).join('');
+    const banner = d.n_unplanned ? `<div style="font-size:11px;color:var(--yellow);margin-bottom:6px;">${d.n_unplanned} attività non pianificate rilevate — usa "Ri-pianifica".</div>` : '';
+    host.innerHTML = banner + html +
+      '<div style="font-size:10px;color:var(--text3);margin-top:6px;">Inserisci RPE (0-10) per ogni uscita; il motore di rematch aggiorna lo stato.</div>';
+  } catch (e) { host.textContent = 'Errore attività.'; }
+}
+
+async function saveRpe(rideId) {
+  const inp = document.getElementById('rpe-' + rideId);
+  if (!inp || !rideId) return;
+  const v = parseFloat(inp.value);
+  if (isNaN(v)) return;
+  try {
+    await fetch('/api/activity/rpe', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ride_id: rideId, rpe: v})
+    });
+    showToast('RPE ' + v + ' salvato', 2000, 'success');
+  } catch (e) { showToast('RPE non salvato', 2000, 'error'); }
+}
+
+async function replanFromInsights() {
+  try {
+    const res = await fetch('/api/plan/rematch?apply=1', {method:'POST'});
+    const d = await res.json();
+    showToast('Ri-pianificato: ' + (d.changed != null ? d.changed + ' sessioni aggiornate' : 'nessuna variazione'), 3000, 'success');
+    if (typeof loadPlan === 'function') loadPlan();
+    if (typeof loadActivityInsights === 'function') loadActivityInsights();
+  } catch (e) { showToast('Ri-pianificazione fallita', 3000, 'error'); }
 }
 
 // P4.2 (v3.0.0) — plan-drift chip render (client is render-ONLY: the server
