@@ -1,5 +1,16 @@
 # Changelog
 
+## v5.2.3 — Fix pianificatore "tutto riposo" + i18n + flusso data (2026-07-26)
+
+Tre interventi segnalati dal cliente.
+
+**1. Fix pianificatore (bug critico)** — con dati storici inconsistenti (es. uscite senza `weight_kg` → TSS=0 → CTL collassa al seed) il volume settimanale veniva azzerato e quasi tutti i giorni diventavano "Rest" (piano "tutto riposo", niente Z2).
+- Aggiunto un **floor al CTL** (`< 25` → 40) in `generate_phases`: la base Z2 parte reale invece di azzerarsi. Verificato: `tss_target` 31→255, Z2 1→32 su 13 settimane. Il log `EVENT=ctl_floor_applied` traccia quando scatta.
+
+**2. Traduzioni** — 19 frasi residue in inglese portate in italiano (setup/piano/labels: "Workout Shuffle", "Plan style", "Mi allenerò dal", "Senza data di fine…", "Curva mean-max…", ecc.).
+
+**3. Flusso data di inizio** — reso esplicito "Mi allenerò dal [data]": `start_date` inviato se presente (anche senza spuntare "ho già iniziato"), e riepilogo dinamico "Il piano partirà dal [data] e coprirà N settimane fino all'evento".
+
 ## v5.2.2 — Fix mojibake nome app (installer) (2026-07-26)
 
 Correzione a caldo del nome dell'applicazione mostrato **dopo l'installazione** (collegamenti Start Menu/Desktop, voce "Disinstalla programma" e nome dell'installer).
