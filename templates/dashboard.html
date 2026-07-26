@@ -3140,6 +3140,13 @@ window.addEventListener('unhandledrejection', function(e) {
 
 <!-- ═══ ALIMENTAZIONE (PCC — scheda dedicata) ═══════════════════════════ -->
 <div class="section" id="sec-nutrition">
+  <!-- PCC 5.x — Metabolic decoder (INSCYD-style lab->training view). Backed by
+       /api/metabolic-profile; single source of truth = power-duration curve. -->
+  <div class="card" style="margin-bottom:12px;">
+    <h3>Profilo metabolico <span style="font-size:10px;font-weight:400;color:var(--text3);">— stima da power-duration (non lab)</span></h3>
+    <div id="metabolic-profile" style="font-size:13px;color:var(--text2);">Caricamento…</div>
+    <div id="metabolic-assumptions" style="font-size:10px;color:var(--text3);margin-top:8px;"></div>
+  </div>
   <!-- Sorgente dieta -->
   <div class="card" style="margin-bottom:12px;">
     <h3>Alimentazione — sorgente e import</h3>
@@ -7442,6 +7449,7 @@ async function loadNutrition() {
     const goal = ($('nutri-goal') && $('nutri-goal').value) || 'maintain';
     const res = await fetch(`/api/nutrition-full?goal_type=${encodeURIComponent(goal)}`);
     if (!res.ok) return;
+    loadMetabolicProfile();
     const p = await res.json();
     const m = p.macros || {};
     const lc = p.load_compensation || {};
@@ -7467,6 +7475,37 @@ async function loadNutrition() {
       sh.innerHTML = `<div style="font-size:10px;color:var(--text3);">Dosi su ${p.bodyweight_kg} kg · ${esc((p.profile_used||{}).sex||'')}</div>` + (sup || '<i>nessuno</i>');
     }
   } catch (e) { /* non bloccare */ }
+}
+
+// PCC 5.x — Metabolic decoder view (INSCYD-style). Backed by /api/metabolic-profile.
+async function loadMetabolicProfile() {
+  const host = document.getElementById('metabolic-profile');
+  const assum = document.getElementById('metabolic-assumptions');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/metabolic-profile');
+    if (!res.ok) { host.textContent = 'Profilo metabolico non disponibile.'; return; }
+    const d = await res.json();
+    if (d.error) { host.textContent = 'Dati insufficienti per la stima.'; return; }
+    const vo2 = d.vo2max_ml_kg_min, vla = d.vlamax_mmol_l_s, fat = d.fatmax_w;
+    if (vo2 == null && vla == null && fat == null) {
+      host.innerHTML = '<span style="color:var(--text3);">Nessun dato di potenza nel profilo — carica alcune attività (.fit) per stimare il profilo metabolico.</span>';
+      return;
+    }
+    host.innerHTML = `
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+        <div><b style="font-size:18px;color:var(--accent);">${vo2 != null ? vo2 : '—'}</b> <span style="font-size:10px;color:var(--text3);">VO₂max ml/kg/min</span></div>
+        <div><b style="font-size:18px;color:var(--accent);">${vla != null ? vla : '—'}</b> <span style="font-size:10px;color:var(--text3);">VLamax mmol/L/s</span></div>
+        <div><b style="font-size:18px;color:var(--accent);">${fat != null ? fat + ' W' : '—'}</b> <span style="font-size:10px;color:var(--text3);">FatMax (~${d.fatmax_pct_ftp || 58}% FTP)</span></div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);">
+        CP <b>${d.cp_w ?? '—'}</b> W · W′ <b>${(d.w_prime_j != null) ? Math.round(d.w_prime_j/1000) + ' kJ' : '—'}</b> · FTP <b>${d.ftp_w ?? '—'}</b> W
+        ${d.n_rides != null ? '· ' + d.n_rides + ' attività (90g)' : ''}
+      </div>`;
+    if (assum && Array.isArray(d.assumptions)) {
+      assum.innerHTML = '⚠️ ' + d.assumptions.slice(0, 2).map(a => esc(a)).join(' · ');
+    }
+  } catch (e) { host.textContent = 'Errore profilo metabolico.'; }
 }
 
 // PCC — Nutrizione AUTO: l'app decide il carico da piano + ICU

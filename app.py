@@ -4623,6 +4623,30 @@ def api_my_push_plan():
     return {"pushed": pushed, "errors": errors, "athlete": aid}
 
 
+@app.get("/api/metabolic-profile")
+def api_metabolic_profile(window_days: int = Query(90, ge=7, le=3650)):
+    try:
+        from power_curve import aggregate_power_curve
+        from metabolic_decoder import decode_metabolic_profile, profile_to_dict
+        from profile_manager import ProfileManager
+        curve = aggregate_power_curve(None, window_days=window_days)
+        best_efforts = {int(p["duration_s"]): int(p["watts"])
+                         for p in curve.get("rider_curve", []) if "duration_s" in p and "watts" in p}
+        bw = float(curve.get("weight_kg") or (ProfileManager.get()._athlete or {}).get("weight_kg") or 72.0)
+        prof = decode_metabolic_profile(
+            best_efforts, bw,
+            cp_w=curve.get("cp_w"), w_prime_j=curve.get("wprime_j"),
+            ftp_w=curve.get("current_ftp"),
+        )
+        out = profile_to_dict(prof)
+        out["window_days"] = window_days
+        out["n_rides"] = curve.get("n_rides")
+        out["best_efforts_used"] = best_efforts
+        return out
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e), "method": "field power-duration (non lab)"}
+
+
 @app.get("/api/readiness")
 def api_readiness(subjective: float = Query(None)):
     training = cached("training", get_today_metrics)
