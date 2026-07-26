@@ -1710,6 +1710,17 @@ window.addEventListener('unhandledrejection', function(e) {
      Dismissable per session via sessionStorage('icu-banner-dismissed'). -->
 <div id="icu-sync-banner" style="display:none;margin:8px 0 12px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.4;"></div>
 
+<!-- v5.2 onboarding banner -->
+<div id="onboarding-banner" style="display:none;margin:8px 0 12px;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.5;background:rgba(16,185,129,0.12);border:1px solid var(--accent);color:var(--text);">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-weight:700;">Completa il setup per sbloccare tutti i calcoli</span>
+    <span id="onboarding-progress" style="font-size:12px;color:var(--text2);"></span>
+    <span style="flex:1;"></span>
+    <button class="btn btn-sm" onclick="onboardingGotoFirst()">Inizia</button>
+    <button class="btn btn-sm" style="margin-left:4px;" onclick="dismissOnboarding()">Piu tardi</button>
+  </div>
+  <div id="onboarding-steps" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;"></div>
+</div>
 <!-- v1.0.2 IMPL-BANNER: update-check banner (GitHub Releases API poll).
      Populated by loadUpdateCheck() from /api/update/check (cached 6h server-side).
      Dismissable per-version via localStorage('update-banner-dismissed-<latest>'). -->
@@ -1744,6 +1755,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="tab" data-tab="nutrition">Alimentazione</div>
   <div class="tab" data-tab="bia">Composizione</div>
   <div class="tab" data-tab="settings">Impostazioni</div>
+  <div class="tab" data-tab="whatsnew" title="Novita di PCC 5.2">Novita</div>
 </div><!-- /sidebar-tabs -->
 
 <div class="main-content">
@@ -1767,6 +1779,13 @@ window.addEventListener('unhandledrejection', function(e) {
       </div>
       <div id="home-fitness-sparkline" style="flex:1;min-width:220px;max-width:520px;"></div>
     </div>
+  </div>
+
+  <!-- v5.2 first-run checklist -->
+  <div id="first-run-checklist" class="card" style="margin-bottom:12px;display:none;">
+    <h3 style="margin:0 0 4px;">Benvenuto in PCC - 4 passi per iniziare</h3>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Completa questi passi per sbloccare pianificazione, chiusura del loop e sincronizzazione.</div>
+    <div id="first-run-steps" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;"></div>
   </div>
 
   <!-- Event Countdown + eFTP Drift -->
@@ -4160,6 +4179,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(t => {
                        else loadCourses();
                        if (typeof loadWorldCards === 'function') loadWorldCards();
                      },
+                     home:()=>{ if (typeof loadOnboarding === 'function') loadOnboarding(); },
                      picker:()=>{ if (typeof loadRoutePickerRegionChips === 'function') loadRoutePickerRegionChips(); },
                      plan:async()=>{
                        // v1.8.25 — ONE visible "catching up your plan" sequence on
@@ -4186,7 +4206,8 @@ document.querySelectorAll('.tab[data-tab]').forEach(t => {
                      analysis:()=>{ if (typeof loadAnalysisTab === 'function') loadAnalysisTab(); },
                      dfa:()=>{ if (typeof loadDfaTab === 'function') loadDfaTab(); },
                      nutrition:()=>{ if (typeof loadNutriPlan === 'function') { loadNutriPlan(); renderNutriCompare(); } },
-                     bia:()=>{ if (typeof loadBIAHistory === 'function') loadBIAHistory(); }};
+                     bia:()=>{ if (typeof loadBIAHistory === 'function') loadBIAHistory(); },
+                     whatsnew:()=>{ if (typeof loadWhatsNew === 'function') loadWhatsNew(); }};
     if (loaders[tab]) loaders[tab]();
   });
 });
@@ -4245,6 +4266,90 @@ function showToast(msg, duration=3000, kind=null) {
     setTimeout(() => { try { t.remove(); } catch(_) {} }, 250);
   }, duration);
 }
+
+// ===== v5.2 client-friendly errors =====
+function normalizeErr(e){
+  if(!e) return 'Si e verificato un errore imprevisto.';
+  var s=(typeof e==='string')?e:(e.message||e.error||String(e)); s=String(s);
+  if(/740|privileg|elevat/i.test(s)) return 'Richiesti privilegi di amministratore. Riavvia PCC come amministratore o installa manualmente l aggiornamento.';
+  if(/network|ECONN|timeout|getaddrinfo|Failed to fetch/i.test(s)) return 'Nessuna connessione di rete. Controlla la connessione e riprova.';
+  if(/(intervals\.icu|ICU)/i.test(s) && /401|403|unauthor|token/i.test(s)) return 'Connessione a Intervals.icu non valida. Riconnetti in Impostazioni.';
+  if(/401|403|unauthor/i.test(s)) return 'Non autorizzato. Effettua di nuovo l accesso.';
+  if(/404|not found/i.test(s)) return 'Risorsa non trovata. Ricarica la pagina.';
+  if(/500|Internal Server/i.test(s)) return 'Errore interno del server. Riprova tra poco.';
+  s=s.replace(/https?:\/\/\S+/g,'').trim(); if(s.length>180) s=s.slice(0,177)+'...';
+  return s||'Si e verificato un errore imprevisto.';
+}
+function showClientError(e,title){ showToast((title?title+' ':'')+normalizeErr(e),6000,'error'); }
+
+// ===== v5.2 tab switch helper =====
+function gotoTab(t){ var el=document.querySelector('.tab[data-tab="'+t+'"]'); if(el) el.click(); }
+
+// ===== v5.2 onboarding =====
+async function loadOnboarding(){
+  try{
+    var r=await fetch('/api/onboarding/status'); if(!r.ok) return;
+    var d=await r.json(); window.__onboarding=d;
+    var banner=document.getElementById('onboarding-banner');
+    var steps=document.getElementById('onboarding-steps');
+    var prog=document.getElementById('onboarding-progress');
+    var fr=document.getElementById('first-run-checklist');
+    var frSteps=document.getElementById('first-run-steps');
+    if(banner && steps){
+      if(sessionStorage.getItem('onboarding-dismissed')){ banner.style.display='none'; }
+      else{
+        var nDone=(d.done||[]).length, nTot=nDone+(d.gaps||[]).length;
+        if(prog) prog.textContent='('+nDone+'/'+nTot+' completati)';
+        steps.innerHTML=(d.gaps||[]).map(function(g){
+          return '<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer;" onclick="onboardingGoto(\''+g.goto+'\')">'+esc(g.label)+'</span>';
+        }).join('') || '<span style="font-size:12px;color:var(--green);">Setup completo!</span>';
+        banner.style.display=(d.gaps && d.gaps.length)?'block':'none';
+      }
+    }
+    if(fr && frSteps){
+      if(d.first_run || (d.gaps && d.gaps.length)){
+        var items=[['profile','Completa il profilo','settings'],['activities','Importa la prima uscita (FIT)','import'],['plan','Genera il primo piano','plan'],['icu','Collega Intervals.icu','settings']];
+        var doneIds={}; (d.done||[]).forEach(function(x){ doneIds[x.id]=1; });
+        frSteps.innerHTML=items.map(function(it){
+          var ok=doneIds[it[0]];
+          return '<div onclick="onboardingGoto(\''+it[2]+'\')" style="border:1px solid '+(ok?'var(--green)':'var(--border)')+';border-radius:10px;padding:12px;cursor:pointer;background:'+(ok?'rgba(34,197,94,0.08)':'var(--surface2)')+';"><div style="font-size:20px;">'+(ok?'OK':'-')+'</div><div style="font-size:13px;font-weight:600;margin-top:6px;">'+esc(it[1])+'</div><div style="font-size:11px;color:var(--text3);margin-top:4px;">'+(ok?'Fatto':'Da fare')+'</div></div>';
+        }).join('');
+        fr.style.display='block';
+      } else { fr.style.display='none'; }
+    }
+  }catch(_){}
+}
+function onboardingGoto(goto){
+  sessionStorage.setItem('onboarding-dismissed','1');
+  var map={settings:'settings',import:'home',plan:'plan',home:'home'};
+  gotoTab(map[goto]||'home');
+  if(goto==='import'){ setTimeout(function(){ try{ openImportFitPicker(); }catch(_){}} ,400); }
+}
+function onboardingGotoFirst(){ var d=window.__onboarding; var f=d&&d.gaps&&d.gaps[0]; onboardingGoto(f?f.goto:'settings'); }
+function dismissOnboarding(){ sessionStorage.setItem('onboarding-dismissed','1'); var b=document.getElementById('onboarding-banner'); if(b) b.style.display='none'; }
+
+// ===== v5.2 whats-new =====
+var WHATSNEW_ITEMS=[
+ ['#1','Semaforo fatica','Segnale di fatica composito nel readiness.','home'],
+ ['#2','FTP continuo','Stima FTP ad ogni uscita.','analysis'],
+ ['#3','Decoder metabolico','VO2max / VLamax / FatMax da power-duration + peso.','analysis'],
+ ['#4','Modelli CP multipli','Monod 2-param + Morton 3-param + Progression Levels.','analysis'],
+ ['#5','Classificazione & RPE','Tipo sessione da IF + RPE atleta + replan.','home'],
+ ['#6','Import lab test','Parser CPET / INSCYD da PDF.','settings'],
+ ['#7','Grafici personalizzati','Metriche derivate da formula sicura.','analysis'],
+ ['#8','Asimmetrie pedalata','L-R / torque effectiveness / pedal smoothness.','analysis'],
+ ['A','Field-test FTP','Stima FTP da 20min / ramp / 4x8min / 4x4min.','analysis'],
+ ['B','Export bundle','ZIP portabile: profilo + metriche + backup.','settings'],
+ ['C','Calendario .ics','Feed webcal per Google / Outlook / Apple.','plan'],
+ ['D','Infortunio -> auto-riposo','Blocco infortunio/malattia che rimodula il piano.','plan']
+];
+function loadWhatsNew(){
+  var grid=document.getElementById('whatsnew-grid'); if(!grid) return;
+  grid.innerHTML=WHATSNEW_ITEMS.map(function(it){
+    return '<div onclick="gotoTab(\''+it[3]+'\')" style="border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;background:var(--surface2);"><div style="display:flex;align-items:center;gap:8px;"><span style="font-weight:800;color:var(--accent);font-size:13px;">'+it[0]+'</span><span style="font-weight:700;font-size:14px;">'+esc(it[1])+'</span></div><div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.45;">'+esc(it[2])+'</div></div>';
+  }).join('');
+}
+
 
 // ═══ v1.0.3 IMPL-UI: (i) info-popover handler ═════════════════════════════
 // Single delegated handler for any element with [data-popover]. Click toggles
@@ -22398,6 +22503,7 @@ document.addEventListener('DOMContentLoaded', initHintTooltips);
 })();
 
 // Footer link injection — runs once on DOMContentLoaded so it always exists.
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ if(typeof loadOnboarding==='function') loadOnboarding(); }catch(_){}} ,1200); });
 document.addEventListener('DOMContentLoaded', function() {
   if (document.getElementById('diag-footer-link')) return;
   const container = document.querySelector('.container') || document.body;
@@ -22408,6 +22514,12 @@ document.addEventListener('DOMContentLoaded', function() {
   container.appendChild(footer);
 });
 </script>
+<div class="section" id="sec-whatsnew">
+  <h2 style="margin:0 0 4px;">Novita di PCC 5.2</h2>
+  <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">12 nuove funzioni + interfaccia Design System Pro. Ogni funzione e una vista sul motore unico di pianificazione.</div>
+  <div id="whatsnew-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;"></div>
+</div>
+
 </div><!-- /main-content -->
 </div><!-- /app-shell -->
 </body>

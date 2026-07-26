@@ -9793,6 +9793,83 @@ def api_version():
     }
 
 
+@app.get("/api/onboarding/status")
+def api_onboarding_status():
+    """Stato di completamento del setup — alimenta il banner profilo (#1)
+    e la first-run checklist (#2). Non lancia nulla di pesante: legge il
+    profilo attivo, conta le attivita', controlla il piano e lo stato ICU.
+
+    Ritorna gap[] (cosa manca) + done[] (cosa e' pronto) + first_run
+    (vero se nessun profilo e' mai stato completato).
+    """
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    ath = getattr(pm, "_athlete", {}) or {}
+
+    # --- campi profilo obbligatori per calcoli sensati ---
+    required = {
+        "weight_kg": "peso corporeo",
+        "ftp": "FTP",
+        "max_hr": "FC massima",
+    }
+    missing_profile = [label for k, label in required.items()
+                       if not ath.get(k) and not getattr(pm, k, None)]
+    # ftp puo' essere in pm.ftp anche se non in _athlete
+    if not missing_profile and not getattr(pm, "ftp", None):
+        missing_profile.append("FTP")
+
+    # --- attivita' importate ---
+    try:
+        acts = query_activities(limit=1)
+        has_activities = bool(acts)
+    except Exception:
+        has_activities = False
+
+    # --- piano generato ---
+    plan_path = _plan_dir() / "current_plan.json"
+    has_plan = plan_path.exists()
+
+    # --- Intervals.icu collegato ---
+    env = getattr(pm, "_env", {}) or {}
+    icu_linked = bool((env.get("ICU_ATHLETE_ID") or "").strip()
+                      or (env.get("ICU_API_KEY") or "").strip())
+
+    gaps = []
+    if missing_profile:
+        gaps.append({"id": "profile", "label": "Completa il profilo",
+                     "detail": "Mancano: " + ", ".join(missing_profile),
+                     "goto": "settings"})
+    if not has_activities:
+        gaps.append({"id": "activities", "label": "Importa la prima uscita (FIT)",
+                     "detail": "Serve almeno un FIT per chiudere il loop.",
+                     "goto": "import"})
+    if not has_plan:
+        gaps.append({"id": "plan", "label": "Genera il primo piano",
+                     "detail": "Crea un piano di 4-6 settimane.",
+                     "goto": "plan"})
+    if not icu_linked:
+        gaps.append({"id": "icu", "label": "Collega Intervals.icu",
+                     "detail": "Sincronizza pesi/uscite automaticamente.",
+                     "goto": "settings"})
+
+    done = []
+    for gid, label in [("profile", "Profilo"), ("activities", "Prima uscita"),
+                      ("plan", "Piano"), ("icu", "Intervals.icu")]:
+        if not any(g["id"] == gid for g in gaps):
+            done.append({"id": gid, "label": label})
+
+    first_run = not (has_activities or has_plan)
+    return {
+        "first_run": first_run,
+        "gaps": gaps,
+        "done": done,
+        "missing_profile_fields": missing_profile,
+        "has_activities": has_activities,
+        "has_plan": has_plan,
+        "icu_linked": icu_linked,
+    }
+
+
 @app.get("/api/migrations/last-run-result")
 def api_migrations_last_run_result():
     """Return the v1.0.2 startup migration-check result.
