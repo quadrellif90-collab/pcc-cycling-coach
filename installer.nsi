@@ -31,6 +31,9 @@ RequestExecutionLevel admin
 InstallDirRegKey HKLM "Software\PCC" "InstallDir"
 
 Section "Install"
+  ; Chiude PCC se in esecuzione (altrimenti l'EXE lockato non viene sostituito
+  ; e l'auto-update silenzioso lascia la versione vecchia).
+  ExecWait 'taskkill /F /IM "PCC.exe" /T'
   SetOutPath "$INSTDIR"
   ; I file dell'app (EXE + dipendenze bundle da PyInstaller) vanno qui.
   File /r "dist\PCC\*.*"
