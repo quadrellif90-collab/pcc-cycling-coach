@@ -7,9 +7,9 @@
 ; nome completo) invece di mostrarli come mojibake (â€") nel nome app/collegamenti.
 Unicode true
 
-!define APPNAME "PCC"
-!define APPNAMEFULL "PCC - Adaptive Cycling Intelligence"
-!define PUBLISHER "PCC"
+!define APPNAME "PCC Pro"
+!define APPNAMEFULL "PCC Pro — Adaptive Cycling Intelligence"
+!define PUBLISHER "PCC Pro"
 ; VERSION è passata dal CI come /DVERSION=X.Y.Z
 ; Default di sicurezza se compilato a mano senza /D.
 !ifndef VERSION
