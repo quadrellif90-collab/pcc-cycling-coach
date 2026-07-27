@@ -5560,12 +5560,19 @@ async def api_plan_daily_sync(request: Request):
     except Exception as e:
         logging.getLogger(__name__).warning("daily-sync reforecast failed: %s", e)
 
-    # 2) auto_adjust (HRV/TSB -> Hooper). Costruisce una Request fittizia.
+    # 2) auto_adjust (HRV/TSB -> Hooper). Costruisce una Request fittizia
+    # minimale compatibile con _get_json_body (usa .json()).
     class _FakeReq:
+        def __init__(self, payload):
+            self._payload = payload
+            self.url = type("U", (), {"path": "/api/plan/daily-sync"})()
+        async def json(self):
+            return self._payload
         async def body(self):
-            return json.dumps({"scope": "today", "dry_run": False}).encode()
+            import json as _json
+            return _json.dumps(self._payload).encode()
     try:
-        await api_plan_auto_adjust(_FakeReq())
+        await api_plan_auto_adjust(_FakeReq({"scope": "today", "dry_run": False}))
     except Exception as e:
         logging.getLogger(__name__).warning("daily-sync auto_adjust failed: %s", e)
 
@@ -14052,8 +14059,8 @@ async def api_profile_put(request: Request):
             if send:
                 httpx.put(f"https://intervals.icu/api/v1/athlete/{aid}",
                           headers=hdr, json=send, timeout=15)
-            if icu_data.get("BodyWeightKg") and not pm._athlete.get("weight"):
-                pm.save_athlete({"weight": float(icu_data["BodyWeightKg"])})
+            if icu_data.get("BodyWeightKg") and not pm._athlete.get("weight_kg"):
+                pm.save_athlete({"weight_kg": float(icu_data["BodyWeightKg"])})
             icu_msg = "sincronizzato con intervals.icu"
         except Exception as e:
             icu_msg = f"salvato localmente; sync ICU non riuscita: {type(e).__name__}"
@@ -14718,6 +14725,32 @@ async def api_mark_unavailable(request: Request):
         unavailable = plan.get("unavailable_periods", [])
         unavailable.append(period)
         plan["unavailable_periods"] = unavailable
+
+        # (B) APPLICA SUBITO il periodo al piano corrente: i giorni nel range
+        # diventano REST (come fa generate_plan). Senza questo, il periodo
+        # restava solo nei metadati e l'utente non vedeva i giorni liberi.
+        try:
+            lo = date.fromisoformat(str(period["start"])[:10])
+            hi = date.fromisoformat(str(period["end"])[:10])
+            for w in plan.get("weeks", []):
+                for s in w.get("sessions", []):
+                    d = s.get("day") or s.get("date")
+                    if not d:
+                        continue
+                    try:
+                        sd = date.fromisoformat(str(d)[:10])
+                    except Exception:
+                        continue
+                    if lo <= sd <= hi:
+                        s["session_type"] = "rest"
+                        s["type"] = "rest"
+                        s["tss"] = 0
+                        s["zwo_file"] = ""
+                        s["zwo_name"] = ""
+                        s["description"] = "Rest (non disponibile)"
+                        s["name"] = "Rest (non disponibile)"
+        except Exception as _e:
+            logging.getLogger(__name__).warning("mark-unavailable apply failed: %s", _e)
 
         tp.atomic_write_plan(json_path, plan)
 
