@@ -4888,8 +4888,47 @@ def api_metabolic_profile(window_days: int = Query(90, ge=7, le=3650)):
             "score": _score,
         }
         return out
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return {"error": str(e), "method": "field power-duration (non lab)"}
+
+
+@app.get("/api/athlete/recommendations")
+def api_athlete_recommendations(window_days: int = Query(90, ge=7, le=3650)):
+    """Raccomandazioni intelligenti basate sul profilo metabolico."""
+    try:
+        from power_curve import aggregate_power_curve
+        from metabolic_decoder import decode_metabolic_profile
+        from profile_manager import ProfileManager
+        curve = aggregate_power_curve(None, window_days=window_days)
+        best_efforts = {int(p["duration_s"]): int(p["watts"]) for p in curve.get("rider_curve", []) if "duration_s" in p and "watts" in p}
+        bw = float(curve.get("weight_kg") or (ProfileManager.get()._athlete or {}).get("weight_kg") or 72.0)
+        prof = decode_metabolic_profile(best_efforts, bw, cp_w=curve.get("cp_w"), w_prime_j=curve.get("wprime_j"), ftp_w=curve.get("current_ftp"))
+        ftp = curve.get("current_ftp") or 0
+        wkg = round(ftp / max(bw, 1), 2) if ftp else 0
+        vo2max = prof.vo2max_ml_kg_min
+        fatmax = prof.fatmax_w
+        ctl = curve.get("current_ctl") or 0
+        n_rides = curve.get("n_rides") or 0
+        recs = []
+        if not best_efforts or not vo2max:
+            recs.append({"priority":1,"icon":"test","title":"FTP Test","desc":"Completa un FTP Test dalla home.","action":"gotoTab('profile')"})
+        elif not fatmax:
+            recs.append({"priority":2,"icon":"vo2","title":"Test VO2max","desc":"Hai FTP, fai test incrementale.","action":None})
+        if wkg > 0:
+            if wkg < 2.5:
+                recs.append({"priority":3,"icon":"base","title":"Base aerobica","desc":"W/kg basso. Focus Z2.","action":None})
+            elif wkg < 3.5 and not recs:
+                recs.append({"priority":3,"icon":"polarized","title":"Polarizzato","desc":"W/kg intermedio. Z2 + Z4-Z5.","action":None})
+            elif wkg >= 3.5:
+                recs.append({"priority":4,"icon":"threshold","title":"Soglia","desc":"Buon W/kg. Sweet spot.","action":None})
+        if ctl <= 0 and n_rides > 0:
+            recs.append({"priority":5,"icon":"consistency","title":"Consistenza","desc":"CTL basso. Allena regolare.","action":None})
+        if wkg >= 3.0:
+            recs.append({"priority":6,"icon":"nutrition","title":"Nutrizione","desc":"Vedi piano alimentazione.","action":"gotoTab('nutrition')"})
+        recs.sort(key=lambda r: r["priority"])
+        return {"ok": True, "recommendations": recs, "n_rides": n_rides, "wkg": wkg}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 @app.get("/api/readiness")
