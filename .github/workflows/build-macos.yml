@@ -1,4 +1,4 @@
-name: Build macOS PCC.dmg
+name: Build macOS PCC.app + PCC.dmg
 
 on:
   release:
@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to attach the dmg to (default: v4.0.0)"
+        description: "Release tag to attach the artifact to (e.g. v5.3.0)"
         required: false
-        default: "v4.0.0"
+        default: "v5.3.0"
 
 permissions:
   contents: write
@@ -17,8 +17,10 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - name: Checkout
+      - name: Checkout (branch pro)
         uses: actions/checkout@v4
+        with:
+          ref: pro
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -36,10 +38,16 @@ jobs:
       - name: Build PCC.app + PCC.dmg
         run: bash build_mac.sh
 
-      - name: Upload PCC.dmg to release
+      - name: Zip PCC.app (alternative to DMG, no Gatekeeper block on extract)
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent dist/PCC.app PCC-macos.zip
+          echo "Created PCC-macos.zip"
+
+      - name: Upload artifacts to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.event.release.tag_name || inputs.tag }}"
-          echo "Attaching PCC.dmg to release $TAG"
+          echo "Attaching Mac artifacts to release $TAG"
           gh release upload "$TAG" "PCC.dmg" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$TAG" "PCC-macos.zip" --repo "$GITHUB_REPOSITORY" --clobber

@@ -208,7 +208,7 @@ if sys.platform == "darwin":
     app = BUNDLE(
         coll,
         name=f"{app_name}.app",
-        icon="assets/pcc_logo.ico" if os.path.exists("assets/pcc_logo.ico") else None,
+        icon=("assets/icon.icns" if sys.platform == "darwin" and os.path.exists("assets/icon.icns") else "assets/pcc_logo.ico" if os.path.exists("assets/pcc_logo.ico") else None),
         bundle_identifier="com.pcc.cycling",
         info_plist={
             "CFBundleDisplayName": app_name,
