@@ -22864,9 +22864,11 @@ def dashboard(request: Request):
         pass
     # Otherwise → dashboard. active_profile_id feeds the per-profile
     # localStorage keys (AC2d) — rendered into an inline const.
-    return templates.TemplateResponse(
+    resp = templates.TemplateResponse(
         request=request, name="dashboard.html",
-        context={"active_profile_id": active_profile_id})
+        context={"active_profile_id": active_profile_id, "APP_VERSION": _VERSION})
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 
 if __name__ == "__main__":

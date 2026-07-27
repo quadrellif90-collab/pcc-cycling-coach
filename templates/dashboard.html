@@ -2,6 +2,9 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PCC Pro - Adaptive Cycling Intelligence</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
@@ -4370,6 +4373,21 @@ function toggleTheme() {
     const btn = document.getElementById('theme-toggle');
     if (btn) btn.textContent = '☀️';
   }
+})();
+
+// Cache-busting: ricarica se la versione serve non corrisponde
+(function() {
+  try {
+    const served = "{{ APP_VERSION }}";
+    const cached = _lsGet('app_version');
+    if (cached && cached !== served) {
+      // Versione cambiata: forza reload pulito
+      _lsSet('app_version', served);
+      window.location.reload(true);
+      return;
+    }
+    _lsSet('app_version', served);
+  } catch(_) {}
 })();
 
 // Tab navigation
