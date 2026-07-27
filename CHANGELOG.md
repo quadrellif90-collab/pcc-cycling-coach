@@ -1,45 +1,41 @@
 # Changelog
 
-## v5.3.0 — PCC Pro: Dashboard professionale, profilo metabolico interattivo, raccomandazioni IA (2026-07-27)
+## v5.2.5 — Auto-aggiornamento quotidiano, valutazione INSCYD, profilo metabolico (2026-07-27)
 
-**PCC Pro è un fork professionale di PCC con interfaccia moderna, grafici interattivi e raccomandazioni intelligenti.**
+**1. Daily-sync — piano si aggiorna da solo ogni giorno**
+- Nuovo endpoint `/api/plan/daily-sync`: esegue reforecast (ricalcolo su dati reali carico/riposo/HRV) + auto_adjust (TSB+HRV Hooper) + auto_recalc, ritorna un **diff sessione-per-sessione** dei cambiamenti.
+- Frontend: al caricamento chiama daily-sync e mostra un toast "Piano aggiornato automaticamente: <cambiamenti>" se ci sono modifiche.
+- PDF export gia' presente e verificato (`/api/export-plan-html` + stampa browser).
 
-### 1. UI Dashboard (TrainingPeaks-style)
-- **Training Status**: card visiva con CTL/TSB/ATL come semaforo (verde/giallo/rosso) + messaggio "In forma / Affaticato / Sovraccarico" e delta percentuale vs 7gg fa.
-- **Oggi**: ring di completamento, nome allenamento, data corrente.
-- **Carico 7gg**: bar chart comparativo previsto vs reale (da piano e attivita' ICU).
-- **Recupero**: HRV/sonno/HR con semaforo pronto/cauto/affaticato (da /api/readiness).
-- **Focus**: assessment in sospeso o conto alla rovescia per l'evento principale.
-- **TSS settimanale piano**: grafico a barre Chart.js nella dashboard (20 settimane).
+**2. Peso da intervals.icu automatico (A)**
+- Il peso atleta arriva automaticamente da ICU durante la sync (`athlete_metrics.metric='weight'`) e viene salvato come `weight_kg` nel profilo (chiave corretta, non piu' `weight`).
+- Risolto: prima la sync salvava `weight` invece di `weight_kg`, quindi il peso veniva ignorato e restava il default 70.
+- Verificato: `weight_kg=72.0`, FTP reale 243, warning "missing weight_kg" sparito.
 
-### 2. Grafici professionali (WKO5-style)
-- **Power Curve interattiva**: zoom con drag del mouse, doppio click per reset, confronto modelli CP/W'.
-- **Fitness & Form**: grafico CTL/TSB/ATL Chart.js con zoom tramite rotella del mouse + reset doppio click.
-- **Season Timeline**: barra orizzontale 12 mesi con fasi colorate (base/build/peak/taper/race), drag-and-drop, marker evento.
+**3. Periodi non disponibili applicati subito (B)**
+- `/api/plan/mark-unavailable` ora converte **subito** tutti i giorni del periodo in REST sul piano corrente (prima salvava solo i metadati). Verificato: 14/14 giorni → REST.
 
-### 3. Profilo Metabolico interattivo
-- **Radar animato**: Chart.js con animazione easeOutQuart 1.2s all'apertura del tab.
-- **Confronto ideale**: overlay tratteggiato automatico del profilo "ideale" per tipo atleta (Scalatore/Sprinter/Cronoman) dopo 1.5s.
-- **Progress tracker**: grafico CTL/TSB storico su 52 settimane.
-- **Badge metabolico**: icona tipo + barra di progresso percentuale + messaggio motivazionale.
+**4. Modifica interattiva verificata (C)**
+- `swap-type`, `dismiss-session`, `delete-session` funzionanti via endpoint. `move-session` vincolato alla stessa settimana ISO (by-design).
 
-### 4. Raccomandazioni intelligenti
-- Nuovo endpoint `/api/athlete/recommendations` che analizza profilo metabolico + dati ICU.
-- Suggerisce: test di valutazione, test VO2max, focus allenamento (base/polarizzato/soglia), consistenza, nutrizione.
-- Frontend: card "Prossimi Passi" nel tab Profilo con pulsanti azione.
+**5. Assessment-gating (stile INSCYD) — test di profilazione iniziale**
+- Se il CTL e' basso (≤40, piano non tarato su dati reali), `/api/plan/generate` inietta un **FTP Test di valutazione** nella settimana 1 con tipo scelto:
+  - ⚡ **Ramp Test** (default): 10-20 W/min step fino esaurimento
+  - 🎯 **FTP 20 min (Coggan)**: gold standard, 20' TT × 0.95
+  - 🏋️ **Test 2×8 min**: meno faticoso del 20'
+- L'utente puo' anche saltare la valutazione (`skip_assessment=true`) e generare il piano comunque.
+- Frontend: banner con 3 pulsanti di scelta + link "Salta valutazione e genera comunque".
 
-### 5. Mobile & PWA
-- Viewport meta per dispositivi mobili.
-- Theme-color e manifest PWA per installazione come app standalone.
-- Griglia responsive (auto-fit columns).
+**6. Classificazione atleta + radar Chart.js (Profilo Metabolico)**
+- Nuova tab **Profilo** nella sidebar con scheda metabolica (VO₂max, VLamax, FatMax, W/kg, FTP, CTL) e grafico radar Chart.js a 5 assi.
+- `/api/metabolic-profile` arricchito con:
+  - **Tipo atleta**: Scalatore / Sprinter / All-rounder / Cronoman / Intermedio / Amatoriale
+  - **Consiglio personalizzato**: focus allenamento basato sul punto debole
+  - **Score normalizzato 0-100** per ogni metrica
+  - Riferimenti scientifici: INSCYD, di Prampero 1986, Mader & Heck, Achten 2002
 
-### 6. Integrazione continua
-- Peso atleta automatico da wellness ICU (athlete_metrics).
-- Periodi non disponibili applicati immediatamente al piano (mark-unavailable).
-- Auto-aggiornamento quotidiano (daily-sync) con notifica cambiamenti.
-- 3 tipi di FTP test (Ramp / 20min Coggan / 2x8min) con scelta utente.
+**Nota:** Se non ci sono dati di potenza dalle uscite, le metriche metaboliche (VO₂max/VLamax/FatMax) restano in attesa del test di valutazione. Il tipo viene comunque classificato da FTP/Wkg.
 
----
 ## v5.2.4 — Fix self-update (chiusura reale + changelog) + i18n (2026-07-27)
 
 **1. Fix self-update (bug critico segnalato)** — "Aggiorna" non cambiava nulla.
