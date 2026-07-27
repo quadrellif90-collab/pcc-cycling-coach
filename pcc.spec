@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec for PCC — Adaptive Cycling Intelligence.
+PyInstaller spec for PCC Pro — Adaptive Cycling Intelligence.
 
 Build:
   macOS:   pyinstaller pcc.spec
@@ -222,7 +222,7 @@ if sys.platform == "darwin":
             # Mojave/Catalina support becomes a hard requirement.
             "LSMinimumSystemVersion": "11.0",
             "NSHighResolutionCapable": True,
-            "NSHumanReadableCopyright": "(c) 2026 PCC — Adaptive Cycling Intelligence (fork of PCC, Apache-2.0)",
+            "NSHumanReadableCopyright": "(c) 2026 PCC Pro — Adaptive Cycling Intelligence (fork of PCC, Apache-2.0)",
             # v4.0.0-alpha: Bluetooth usage key removed along with the BLE
             # subsystem -- PCC no longer scans or connects to any
             # trainer/HR device. Keeping the key would spuriously trigger

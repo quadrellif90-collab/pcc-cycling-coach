@@ -1,6 +1,6 @@
-# PCC — Performance Cycling Coach
+# PCC Pro — Performance Cycling Coach
 
-**Scheda principale del prodotto** · Versione **5.2.5** · Fork italiano di [Domestique](https://github.com/platypus45/domestique) (Apache-2.0)
+**Scheda principale del prodotto** · Versione **5.3.0** · Fork italiano di [Domestique](https://github.com/platypus45/domestique) (Apache-2.0)
 
 ---
 
