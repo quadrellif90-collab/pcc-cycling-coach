@@ -6,9 +6,9 @@
 
 > **PCC** (VELocità + ARCO di potenza): il nome evoca la *power-duration curve*, il cuore scientifico del pianificatore — la curva che descrive quanto riesci a produrre per quanto tempo. Il logo unisce quell'arco ascendente a una ruota, con il gradiente teal→amber della palette.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.2.4-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-PCC-orange)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.2.5-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-PCC-orange)
 
-Latest: **[v5.2.4 — Fix self-update (chiusura reale + changelog) + i18n](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.2.4)**
+Latest: **[v5.2.5 — Auto-aggiornamento quotidiano, valutazione INSCYD, profilo metabolico](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.2.5)**
 
 > ⚠️ **Fork italiano di PCC** (Apache-2.0, `platypus45`). Questa è una versione derivata: stessa architettura di pianificazione adattiva, ma con motore nutrizione/integrazione riscritto, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento. Il credito all'autore originale è in [`NOTICE`](NOTICE).
 

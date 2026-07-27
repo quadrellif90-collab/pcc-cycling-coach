@@ -1,5 +1,41 @@
 # Changelog
 
+## v5.2.5 — Auto-aggiornamento quotidiano, valutazione INSCYD, profilo metabolico (2026-07-27)
+
+**1. Daily-sync — piano si aggiorna da solo ogni giorno**
+- Nuovo endpoint `/api/plan/daily-sync`: esegue reforecast (ricalcolo su dati reali carico/riposo/HRV) + auto_adjust (TSB+HRV Hooper) + auto_recalc, ritorna un **diff sessione-per-sessione** dei cambiamenti.
+- Frontend: al caricamento chiama daily-sync e mostra un toast "Piano aggiornato automaticamente: <cambiamenti>" se ci sono modifiche.
+- PDF export gia' presente e verificato (`/api/export-plan-html` + stampa browser).
+
+**2. Peso da intervals.icu automatico (A)**
+- Il peso atleta arriva automaticamente da ICU durante la sync (`athlete_metrics.metric='weight'`) e viene salvato come `weight_kg` nel profilo (chiave corretta, non piu' `weight`).
+- Risolto: prima la sync salvava `weight` invece di `weight_kg`, quindi il peso veniva ignorato e restava il default 70.
+- Verificato: `weight_kg=72.0`, FTP reale 243, warning "missing weight_kg" sparito.
+
+**3. Periodi non disponibili applicati subito (B)**
+- `/api/plan/mark-unavailable` ora converte **subito** tutti i giorni del periodo in REST sul piano corrente (prima salvava solo i metadati). Verificato: 14/14 giorni → REST.
+
+**4. Modifica interattiva verificata (C)**
+- `swap-type`, `dismiss-session`, `delete-session` funzionanti via endpoint. `move-session` vincolato alla stessa settimana ISO (by-design).
+
+**5. Assessment-gating (stile INSCYD) — test di profilazione iniziale**
+- Se il CTL e' basso (≤40, piano non tarato su dati reali), `/api/plan/generate` inietta un **FTP Test di valutazione** nella settimana 1 con tipo scelto:
+  - ⚡ **Ramp Test** (default): 10-20 W/min step fino esaurimento
+  - 🎯 **FTP 20 min (Coggan)**: gold standard, 20' TT × 0.95
+  - 🏋️ **Test 2×8 min**: meno faticoso del 20'
+- L'utente puo' anche saltare la valutazione (`skip_assessment=true`) e generare il piano comunque.
+- Frontend: banner con 3 pulsanti di scelta + link "Salta valutazione e genera comunque".
+
+**6. Classificazione atleta + radar Chart.js (Profilo Metabolico)**
+- Nuova tab **Profilo** nella sidebar con scheda metabolica (VO₂max, VLamax, FatMax, W/kg, FTP, CTL) e grafico radar Chart.js a 5 assi.
+- `/api/metabolic-profile` arricchito con:
+  - **Tipo atleta**: Scalatore / Sprinter / All-rounder / Cronoman / Intermedio / Amatoriale
+  - **Consiglio personalizzato**: focus allenamento basato sul punto debole
+  - **Score normalizzato 0-100** per ogni metrica
+  - Riferimenti scientifici: INSCYD, di Prampero 1986, Mader & Heck, Achten 2002
+
+**Nota:** Se non ci sono dati di potenza dalle uscite, le metriche metaboliche (VO₂max/VLamax/FatMax) restano in attesa del test di valutazione. Il tipo viene comunque classificato da FTP/Wkg.
+
 ## v5.2.4 — Fix self-update (chiusura reale + changelog) + i18n (2026-07-27)
 
 **1. Fix self-update (bug critico segnalato)** — "Aggiorna" non cambiava nulla.
