@@ -120,7 +120,8 @@ def _diag_ring_snapshot(limit: int = 50, since_iso: str | None = None) -> list[d
     return items[:limit]
 
 from fastapi import FastAPI, File, Form, Request, Query, UploadFile, HTTPException, Body
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, RedirectResponse, PlainTextResponse, Response
+from starlette.background import BackgroundTask
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -10927,15 +10928,20 @@ async def api_self_update(request: Request):
             with open(dest, "wb") as f:
                 f.write(r.content)
         if plat == "win32" and fname.lower().endswith(".exe"):
-            # installer NSIS silenzioso; poi usciamo per liberare l'EXE.
-            # Su Windows il launcher silenzioso richiede i privilegi di admin
-            # (UAC): se mancano, Popen solleva OSError WinError 740. In quel
-            # caso NON ritorniamo un 500 criptico ma un payload pulito che la
-            # UI usa per mostrare "Esegui come amministratore" + link manuale.
+            # PCC self-update su Windows:
+            # 1) scarichiamo l'installer in temp;
+            # 2) scriviamo update.bat che attende che l'app si chiuda, esegue
+            #    l'installer silenzioso (/S, che sovrascrive l'EXE E ricrea
+            #    l'icona sul desktop) e poi RIAVVIA PCC.exe da Program Files;
+            # 3) lanciamo il .bat detached e chiudiamo DAVVERO l'app (os._exit)
+            #    cosi' l'EXE e' libero e l'installer puo' sovrascriverlo.
+            # L'installer NSIS /S richiede i privilegi di admin (UAC): se
+            # mancano, Popen sull'installer solleva OSError WinError 740 ->
+            # ritorniamo needs_admin + release_url per il download manuale.
             try:
+                # Probe admin: lancia l'installer direttamente; se non admin
+                # solleva WinError 740 prima ancora di toccare i file.
                 subprocess.Popen([dest, "/S"], shell=False)
-                return {"ok": True, "launched": True, "mode": "windows-installer",
-                        "msg": "Installer avviato. L'app si chiudera' per aggiornarsi."}
             except OSError as e:
                 needs_admin = (getattr(e, "winerror", None) == 740
                                or "740" in str(e) or "elevated" in str(e).lower())
@@ -10943,12 +10949,41 @@ async def api_self_update(request: Request):
                     "ok": False, "launched": False,
                     "needs_admin": bool(needs_admin),
                     "mode": "windows-installer-blocked",
+                    "release_url": info.get("release_url") or dl,
                     "manual_url": info.get("release_url") or dl,
-                    "error": ("Richiesti privilegi di amministratore per "
-                              "l'aggiornamento silenzioso. Esegui l'installer "
-                              "manualmente come amministratore oppure riavvia "
-                              "PCC come admin.") if needs_admin else str(e),
+                    "error": ("L'aggiornamento silenzioso richiede i privilegi di "
+                              "amministratore (Windows scrive in Program Files). "
+                              "Apri la release e installa PCC-Setup.exe come admin, "
+                              "oppure riavvia PCC come amministratore.")
+                             if needs_admin else str(e),
                 })
+            # Admin ok: prepara il batch di update (wait -> install -> restart).
+            prog = os.environ.get("ProgramFiles", r"C:\Program Files")
+            inst_dir = os.path.join(prog, "PCC")
+            exe_path = os.path.join(inst_dir, "PCC.exe")
+            bat = os.path.join(td, "update.bat")
+            try:
+                with open(bat, "w", encoding="utf-8") as bf:
+                    bf.write("@echo off\n")
+                    bf.write("timeout /t 4 /nobreak >nul\n")
+                    bf.write('"%s" /S\n' % dest.replace("/", "\\"))
+                    bf.write('if exist "%s" start "" "%s"\n' % (exe_path, exe_path))
+                DETACHED = 0x00000008
+                subprocess.Popen([bat], shell=True, creationflags=DETACHED)
+            except Exception as e:
+                return JSONResponse(status_code=200, content={
+                    "ok": False, "launched": False,
+                    "release_url": info.get("release_url") or dl,
+                    "manual_url": info.get("release_url") or dl,
+                    "error": "Impossibile avviare l'aggiornamento: " + str(e),
+                })
+            # Chiudiamo l'app DOPO aver inviato la risposta (BackgroundTask),
+            # cosi' l'EXE si libera e il batch (in attesa di 4s) puo' installare.
+            return JSONResponse(status_code=200, content={
+                "ok": True, "closing": True, "mode": "windows-installer",
+                "msg": "Aggiornamento in corso: l'app si chiude e riapre con la nuova versione.",
+                "release_url": info.get("release_url") or dl,
+            }, background=BackgroundTask(lambda: os._exit(0)))
         elif plat == "darwin" and fname.lower().endswith(".dmg"):
             # monta e copia l'app
             subprocess.Popen(["open", dest])

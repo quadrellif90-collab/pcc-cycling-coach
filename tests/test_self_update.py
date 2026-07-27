@@ -41,6 +41,8 @@ def test_self_update_no_asset_returns_400(monkeypatch):
         app_mod, "api_update_check",
         lambda force=0: {"download_url": None, "release_url": "x"},
     )
+    import os as _os
+    monkeypatch.setattr(_os, "_exit", lambda *a, **k: None)  # evita di uccidere il processo di test
     r = client.post("/api/self-update", json={})
     assert r.status_code == 400
     assert r.json().get("ok") is False
@@ -62,15 +64,18 @@ def test_self_update_windows_launches_installer(monkeypatch):
     )
     import httpx as _httpx
     monkeypatch.setattr(_httpx, "AsyncClient", _FakeAsyncClient)
-    captured = {}
-    monkeypatch.setattr(
-        subprocess, "Popen",
-        lambda args, shell=False: captured.setdefault("args", args) or None,
-    )
+    captured = []
+    def _fake_popen(args, shell=False, **kw):
+        captured.append(args)
+        return None
+    monkeypatch.setattr(subprocess, "Popen", _fake_popen)
+    import os as _os
+    monkeypatch.setattr(_os, "_exit", lambda *a, **k: None)  # evita di uccidere il processo di test
     r = client.post("/api/self-update", json={})
     assert r.status_code == 200
     body = r.json()
     assert body.get("ok") is True
+    assert body.get("closing") is True
     assert body.get("mode") == "windows-installer"
-    # deve aver lanciato l'installer silenzioso con /S
-    assert captured.get("args") == [captured["args"][0], "/S"]
+    # deve aver lanciato l'installer silenzioso con /S (probe admin) e poi il batch
+    assert any(isinstance(a, list) and a and isinstance(a[0], str) and a[0].endswith(".bat") for a in captured)

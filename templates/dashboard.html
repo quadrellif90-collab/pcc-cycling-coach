@@ -2720,7 +2720,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <div id="plan-bc-races" style="margin-top:4px;">
         <div style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Gare intermedie (B / C) — facoltative</div>
         <div id="plan-bc-rows"></div>
-        <button type="button" class="btn btn-sm" onclick="addBcRaceRow()">+ Add race</button>
+        <button type="button" class="btn btn-sm" onclick="addBcRaceRow()">+ Aggiungi gara</button>
       </div>
 
       <!-- Per-Day Availability Grid -->
@@ -2757,7 +2757,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <!-- v4.6.7 IMPL-SUM: summary modal trigger END -->
         <!-- IP-1: add a B/C race to the EXISTING plan → reschedules around it
              (taper in, recovery after) without a full regenerate. -->
-        <button class="btn" onclick="openAddRaceModal()" id="btn-add-race" title="Aggiungi una gara B/C al piano attuale — ripianifica intorno a essa (scarico in entrata, recupero dopo); data evento e lunghezza piano restano invariati.">+ Add race</button>
+        <button class="btn" onclick="openAddRaceModal()" id="btn-add-race" title="Aggiungi una gara B/C al piano attuale — ripianifica intorno a essa (scarico in entrata, recupero dopo); data evento e lunghezza piano restano invariati.">+ Aggiungi gara</button>
         <!-- v1.7.4 — Sync now exposed on the plan tab too. Same handler
              as the home-page button (syncNowAction posts to
              /api/rides/sync?force=1 → bypasses the 1h throttle). Without
@@ -3377,7 +3377,7 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
     <div id="power-curve-meta" style="font-size:11px;color:var(--text3);margin-top:6px;">Caricamento…</div>
     <div id="power-curve-backfill-toast" style="display:none;margin-top:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2);">
-      <span id="power-curve-backfill-msg">Backfilling rides from ICU history…</span>
+      <span id="power-curve-backfill-msg">Recupero uscite dallo storico ICU…</span>
       <div id="power-curve-backfill-progress" style="margin-top:4px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
         <div id="power-curve-backfill-bar" style="height:100%;width:0%;background:var(--accent);transition:width 0.4s;"></div>
       </div>
@@ -3692,7 +3692,7 @@ window.addEventListener('unhandledrejection', function(e) {
           <span style="color:var(--text3);">Z3 tempo</span><input type="number" id="hrr-z3l" style="width:70px;"><input type="number" id="hrr-z3h" style="width:70px;">
           <span style="color:var(--text3);">Z4 soglia</span><input type="number" id="hrr-z4l" style="width:70px;"><input type="number" id="hrr-z4h" style="width:70px;">
         </div>
-        <div style="margin-top:6px;font-size:10px;color:var(--text3);">Z5+ stays by-feel (RPE) — heart rate can't guide those. Saved with Save Settings.</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--text3);">Z5+ resta a sensazione (RPE) — la FC non può guidarle. Salvato con Salva impostazioni.</div>
         <button class="btn btn-sm" style="margin-top:6px;" onclick="resetHrRows()">Ripristina predefiniti</button>
       </div>
       <div class="form-row">
@@ -3708,7 +3708,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <div id="power-zones"></div>
       <h3 style="margin-top:16px;display:flex;align-items:center;gap:10px;">HR Zones
         <button class="btn btn-sm" id="hr-zones-edit" onclick="editZones('hr')">Modifica</button></h3>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Analysis zones (ride time-in-zone). Workout HR targets are edited under “Workout targets” on the left.</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Zone di analisi (tempo-in-zona dell'uscita). I target FC del workout si modificano sotto “Target workout” a sinistra.</div>
       <div id="hr-zones"></div>
       <h3 style="margin-top:16px;">Sincronizzazione dati</h3>
       <div id="sync-status" style="font-size:12px;color:var(--text2);margin-bottom:8px;">Caricamento...</div>
@@ -3844,7 +3844,7 @@ window.addEventListener('unhandledrejection', function(e) {
      delegated [data-popover] handler positions + toggles it. -->
 <div class="info-popover" id="calpush-info"><strong>Send to intervals.icu calendar</strong><br><br>Your head unit (Garmin, Wahoo, Hammerhead) and MyWhoosh <strong>auto-pull</strong> the workout — with its power or heart-rate targets — straight from your intervals.icu calendar. No file copy, no manual load: it appears on the day ready to ride, and lands in your intervals.icu training log.<br><br><strong>Libreria</strong> workouts you send stay until you delete them. <strong>Pianificato</strong> sessions stay in sync with your plan.</div>
 
-<!-- 3.4.3 owner fix — day-modal "Change this workout" (i) popovers. MUST be
+<!-- 3.4.3 owner fix — day-modal "Cambia questo workout" (i) popovers. MUST be
      body-level (siblings of the modal overlay), NOT inside a .section: the
      day modal also opens from the Home today-card, where #sec-plan is
      display:none — a popover parked in there gets .open added but renders
@@ -5084,7 +5084,7 @@ async function openWorkoutDetail(category, filename, meta, view) {
       ${zoneHtml}
       ${capHtml}
       ${d.description ? (hrCtx
-        ? `<details style="margin-top:12px;"><summary style="font-size:11px;color:var(--text3);cursor:pointer;">Power-based file details (targets shown in bpm above)</summary>
+        ? `<details style="margin-top:12px;"><summary style="font-size:11px;color:var(--text3);cursor:pointer;">Dettagli file basati su potenza (target mostrati in bpm sopra)</summary>
              <div style="margin-top:6px;font-size:12px;color:var(--text2);max-height:100px;overflow-y:auto;">${esc(fixZeroMin(d.description) || '').replace(/ \| /g, '<br>')}</div></details>`
         : `<div style="margin-top:12px;font-size:12px;color:var(--text2);max-height:100px;overflow-y:auto;">${esc(fixZeroMin(d.description) || '').replace(/ \| /g, '<br>')}</div>`) : ''}
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -6587,7 +6587,7 @@ async function loadPowerCurve(force=false) {
       clearTimeout(_pcPollTimer); _pcPollCount = 0;
     }
   } catch (e) {
-    if (meta) meta.innerHTML = '<span style="color:#f97316;">Power curve unavailable in this build.</span>';
+    if (meta) meta.innerHTML = '<span style="color:#f97316;">Curva di potenza non disponibile in questa versione.</span>';
     if (canvas && canvas.parentElement) {
       canvas.parentElement.title = 'feature not available in this build';
     }
@@ -6995,7 +6995,7 @@ function _fatigueUnfetchableNoteHtml(d) {
 function _fatigueFooterBarHtml(pct) {
   pct = Math.max(0, Math.min(100, Math.round(pct || 0)));
   return `<div class="backfill-bar fr-footer-bar" style="margin-top:8px;font-size:10px;color:var(--text3);">
-    Caching remaining power streams from intervals.icu… ${pct}%
+    Memorizzazione degli stream di potenza rimanenti da intervals.icu… ${pct}%
     <div style="height:4px;background:var(--surface2);border-radius:2px;margin-top:4px;overflow:hidden;">
       <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:2px;transition:width 0.6s ease;"></div></div>
   </div>`;
@@ -7023,12 +7023,12 @@ async function loadFatigueResistance(force=false) {
     const r = await fetch(url);
     if (!r.ok) {
       if (r.status === 404) {
-        body.innerHTML = '<div style="color:var(--text3);">Fatigue Resistance not available in this build.</div>';
+        body.innerHTML = '<div style="color:var(--text3);">Fatigue Resistance non disponibile in questa versione.</div>';
         return;
       }
       // W2B-G17 fix: surface 422 (invalid kj_threshold) distinctly.
       if (r.status === 422) {
-        body.innerHTML = '<div style="color:#f97316;">Invalid threshold — must be 1500 or 2000 kJ.</div>';
+        body.innerHTML = '<div style="color:#f97316;">Soglia non valida — deve essere 1500 o 2000 kJ.</div>';
         return;
       }
       throw new Error('HTTP ' + r.status);
@@ -7081,7 +7081,7 @@ async function loadFatigueResistance(force=false) {
     renderFatigueResistance(d);
     _fatigueResistanceLoaded = true;
   } catch (e) {
-    body.innerHTML = '<div style="color:#f97316;">Failed to load fatigue resistance data.</div>';
+    body.innerHTML = '<div style="color:#f97316;">Caricamento dati Fatigue Resistance fallito.</div>';
   } finally {
     _fatigueResistanceInflight = false;
     if (content) content.setAttribute('aria-busy', 'false');
@@ -7367,7 +7367,7 @@ async function loadTauFitPanel(forceRefresh = false) {
       </div>`;
   } catch (e) {
     console.error('tau-fits load failed', e);
-    container.innerHTML = '<div style="color:var(--text3);">Failed to load τ fit panel. See console.</div>';
+    container.innerHTML = '<div style="color:var(--text3);">Caricamento pannello τ fallito. Vedi console.</div>';
   }
 }
 
@@ -7827,7 +7827,7 @@ function renderCapabilityWidget(p) {
   if (!chartEl) return;
   const hist = (p.weekly_history || []);
   if (!hist.length) {
-    chartEl.innerHTML = `<div style="font-size:11px;color:var(--text3);padding:30px;text-align:center;">No ride history available yet — import FIT files or sync intervals.icu to populate the endurance build-up chart.</div>`;
+    chartEl.innerHTML = `<div style="font-size:11px;color:var(--text3);padding:30px;text-align:center;">Nessuna cronologia uscite disponibile — importa file FIT o sincronizza intervals.icu per popolare il grafico di base della resistenza.</div>`;
   } else {
     const W = 700, H = 200, PAD_L = 40, PAD_R = 16, PAD_T = 28, PAD_B = 36;
     const cw = W - PAD_L - PAD_R, ch = H - PAD_T - PAD_B;
@@ -7838,7 +7838,7 @@ function renderCapabilityWidget(p) {
     const xStep = cw / hist.length;
     let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:inherit;">`;
     // Title strip
-    svg += `<text x="${PAD_L}" y="14" font-size="11" font-weight="600" fill="var(--text)">Longest ride per week (last 12 weeks → today)</text>`;
+    svg += `<text x="${PAD_L}" y="14" font-size="11" font-weight="600" fill="var(--text)">Uscita più lunga per settimana (ultime 12 settimane → oggi)</text>`;
     svg += `<text x="${PAD_L+cw}" y="14" text-anchor="end" font-size="10" fill="var(--text3)">target: ${reqH.toFixed(1)}h ${reqH <= 1 ? '(short event)' : ''}</text>`;
     // Y axis
     svg += `<line x1="${PAD_L}" y1="${PAD_T}" x2="${PAD_L}" y2="${PAD_T+ch}" stroke="var(--text3)" stroke-width="0.5"/>`;
@@ -7881,7 +7881,7 @@ function renderCapabilityWidget(p) {
     svg += `<g font-size="9" fill="var(--text2)" transform="translate(${PAD_L},${PAD_T+ch+28})">`;
     svg += `<rect x="0" y="0" width="10" height="8" fill="#3b82f6" opacity="0.85"/><text x="14" y="7">below target</text>`;
     svg += `<rect x="100" y="0" width="10" height="8" fill="#22c55e"/><text x="114" y="7">at/above target</text>`;
-    svg += `<rect x="220" y="0" width="10" height="8" fill="var(--surface2)" opacity="0.4"/><text x="234" y="7">no ride that week</text>`;
+    svg += `<rect x="220" y="0" width="10" height="8" fill="var(--surface2)" opacity="0.4"/><text x="234" y="7">nessuna uscita quella settimana</text>`;
     svg += `<line x1="360" y1="4" x2="380" y2="4" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3"/><text x="384" y="7">target</text>`;
     svg += `</g>`;
     svg += `</svg>`;
@@ -8077,7 +8077,7 @@ async function loadHome() {
         `<div id="sleep-today-note" style="font-size:10px;font-style:italic;color:var(--text3);margin-top:6px;">⏳ Italic values are from your last synced day (${_dLbl(_staleAsof)}) — today's usually land mid-morning from intervals.icu.</div>`);
     } else if (_noData) {
       $('sleep-metrics').insertAdjacentHTML('afterend',
-        `<div id="sleep-today-note" style="font-size:10px;color:var(--text3);margin-top:6px;">No sleep or HRV yet — connect a Garmin/Oura/Whoop source in intervals.icu and it'll show here.</div>`);
+        `<div id="sleep-today-note" style="font-size:10px;color:var(--text3);margin-top:6px;">Né sonno né HRV ancora — collega una fonte Garmin/Oura/Whoop in intervals.icu e compariranno qui.</div>`);
     }
 
     // HRV & RHR sparklines from wellness data (last 14 days)
@@ -9177,11 +9177,11 @@ async function loadHomeSnapshotDfa(_activitiesUnused) {
   const host = document.getElementById('home-snapshot-dfa');
   if (!host) return;
   host.style.display = 'block';
-  host.innerHTML = '<span style="color:var(--text3);">DFA α1 — loading…</span>';
+  host.innerHTML = '<span style="color:var(--text3);">DFA α1 — caricamento…</span>';
   try {
     const r = await fetch('/api/profile/dfa-alpha1');
     if (!r.ok) {
-      host.innerHTML = '<span style="color:var(--text3);">DFA α1 — unavailable</span>';
+      host.innerHTML = '<span style="color:var(--text3);">DFA α1 — non disponibile</span>';
       return;
     }
     const d = await r.json();
@@ -9268,14 +9268,14 @@ async function loadDfaTab() {
   const aggHost = document.getElementById('dfa-aggregate-host');
   const perHost = document.getElementById('dfa-perride-host');
   if (!aggHost || !perHost) return;
-  if (status) status.innerHTML = '<span style="color:var(--text3);font-size:12px;">Loading DFA data…</span>';
+  if (status) status.innerHTML = '<span style="color:var(--text3);font-size:12px;">Caricamento dati DFA…</span>';
   // v2.1.1 — paint a real loading screen into the tab body immediately (the
   // fetch + any server-side DFA compute can take a moment), so opening the DFA
   // tab never shows a blank/stale panel. The fetch runs in the background and
   // the spinner is replaced when it lands.
   const _dfaSpinner = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:48px 16px;color:var(--text3);">
       <span style="width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:pg-redraw-spin 0.8s linear infinite;"></span>
-      <span style="font-size:13px;">Loading DFA α1 analysis…</span>
+      <span style="font-size:13px;">Caricamento analisi DFA α1…</span>
     </div>`;
   aggHost.innerHTML = _dfaSpinner;
   perHost.innerHTML = '';
@@ -9285,7 +9285,7 @@ async function loadDfaTab() {
     if (!r.ok) { if (status) status.innerHTML = '<span style="color:var(--red);font-size:12px;">Failed to load DFA data ('+r.status+')</span>'; return; }
     d = await r.json();
   } catch (e) {
-    if (status) status.innerHTML = '<span style="color:var(--red);font-size:12px;">Network error loading DFA data</span>';
+    if (status) status.innerHTML = '<span style="color:var(--red);font-size:12px;">Errore di rete nel caricamento dati DFA</span>';
     return;
   }
   _dfaTabData = d;
@@ -9585,7 +9585,7 @@ async function loadLastWeekFeedback() {
 
     const calloutHtml = overreach
       ? `<div style="margin-top:8px;padding:8px 10px;background:rgba(234,88,12,0.10);border:1px solid var(--orange);border-radius:6px;font-size:12px;color:var(--orange);">
-           <b>⚠ Overreach last week.</b> ${reasons.length ? esc(reasons.join(' &middot; ')) : ''}<br>
+           <b>⚠ Sovraccarico la scorsa settimana.</b> ${reasons.length ? esc(reasons.join(' &middot; ')) : ''}<br>
            <span style="color:var(--text2);">That's why readiness is below 5 today. Use <b>Apply tier-down</b> on the Readiness card above to drop today's hard session by one tier so the rest of the week stays consistent.</span>
          </div>`
       : (adherence >= 70 && adherence <= 110
@@ -10823,7 +10823,7 @@ async function openRideDetail(rideId) {
           <span>🏁 Mark as race</span>
           <span id="race-toggle-status-${escJs(_activityId)}" style="font-size:11px;color:var(--text3);"></span>
         </label>`
-      : `<span style="font-size:11px;color:var(--text3);">Race tagging unavailable — ride not in activity cache.</span>`;
+      : `<span style="font-size:11px;color:var(--text3);">Tag gara non disponibile — uscita non nella cache attività.</span>`;
 
     // Action bar — Race toggle + Download FIT + Delete
     const rideIdEnc = encodeURIComponent(ride.id);
@@ -11084,7 +11084,7 @@ async function loadWorkouts() {
     const wkBody = $('wk-body');
     if (wkBody) wkBody.innerHTML =
       '<tr><td colspan="6" style="padding:18px 12px;">' +
-        '<div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-align:center;">Loading workout library…</div>' +
+        '<div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-align:center;">Caricamento libreria workout…</div>' +
         '<div class="lbar indeterminate"><div class="lbar-fill lbar-striped"></div></div>' +
       '</td></tr>';
     await _ensureLibSurfaceData();
@@ -11213,7 +11213,7 @@ function renderLibrary(data) {
   if (!filtered.length) {
     // v4.2.0 IMPL-LIBRARY: empty-state message + Clear filters button.
     $('wk-body').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">
-      <div style="margin-bottom:8px;">No workouts match these filters. Try widening the duration range or clearing the type filter.</div>
+      <div style="margin-bottom:8px;">Nessun workout corrisponde ai filtri. Prova ad ampliare l'intervallo durata o azzerare il filtro tipo.</div>
       <button class="btn btn-sm" onclick="clearLibFilters()">Clear filters</button>
     </td></tr>`;
     return;
@@ -11909,7 +11909,7 @@ async function runRoutePicker() {
       credentials: 'same-origin',
     });
     if (!res.ok) {
-      $('route-picker-result').innerHTML = `<div class="card" style="color:var(--red);padding:16px;" title="HTTP ${res.status}">Couldn't reach the route server — try again in a moment.</div>`;
+      $('route-picker-result').innerHTML = `<div class="card" style="color:var(--red);padding:16px;" title="HTTP ${res.status}">Impossibile raggiungere il server percorsi — riprova tra un momento.</div>`;
       return;
     }
     const data = await res.json();
@@ -11939,7 +11939,7 @@ async function runRoutePicker() {
     }
     renderRoutePickerResults(data);
   } catch (e) {
-    $('route-picker-result').innerHTML = `<div class="card" style="color:var(--red);padding:16px;" title="${esc(e.message || e)}">Couldn't reach the route server. Please try again.</div>`;
+    $('route-picker-result').innerHTML = `<div class="card" style="color:var(--red);padding:16px;" title="${esc(e.message || e)}">Impossibile raggiungere il server percorsi. Riprova.</div>`;
   } finally {
     _pickerInFlight = false;
   }
@@ -12159,7 +12159,7 @@ function renderRoutePickerResults(data) {
     if (hint && hint.would_match > 0) {
       const label = _EMPTY_DROP_LABELS[hint.filter] || hint.filter;
       el.innerHTML = `<div class="card" style="text-align:center;padding:24px;">
-        <div style="font-size:15px;font-weight:600;margin-bottom:6px;">No routes match all your filters.</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Nessun percorso corrisponde a tutti i filtri.</div>
         <div style="color:var(--text2);font-size:13px;margin-bottom:14px;">
           Drop <em>${esc(label)}</em> and you'd see <strong>${hint.would_match}</strong> route${hint.would_match === 1 ? '' : 's'}.
         </div>
@@ -13308,7 +13308,7 @@ function _renderEntryScan() {
 
   html += `<div class="entry-card-actions" style="display:flex;gap:10px;align-items:center;margin-top:10px;">
     <button type="button" id="entry-card-generate" class="btn btn-primary" style="font-size:12px;" onclick="entryCardGenerate()">Generate &mdash; start at week ${X}</button>
-    <a href="#" style="font-size:11px;color:var(--accent);font-weight:600;" onclick="useEntryDateInstead(); return false;">Use a date instead</a>
+    <a href="#" style="font-size:11px;color:var(--accent);font-weight:600;" onclick="useEntryDateInstead(); return false;">Usa una data</a>
   </div>`;
 
   html += `</div>`;
@@ -15334,8 +15334,8 @@ async function loadCalendar() {
     const host = document.getElementById('calendar') || document.getElementById('plan-calendar');
     if (host) {
       host.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text2);">' +
-        '<div style="font-size:14px;margin-bottom:8px;">Plan file is unreadable.</div>' +
-        '<div style="font-size:12px;color:var(--text3);">Open the Plan tab and click <b>Generate</b> to recover.</div>' +
+        '<div style="font-size:14px;margin-bottom:8px;">File piano illeggibile.</div>' +
+        '<div style="font-size:12px;color:var(--text3);">Apri la scheda Piano e clicca <b>Generate</b> to recover.</div>' +
         '</div>';
     }
     return;
@@ -15443,7 +15443,7 @@ function renderCalendarEmpty() {
   if (!rows) return;
   rows.innerHTML = `
     <div class="cal-empty">
-      <div class="cal-empty-msg">No plan generated yet</div>
+      <div class="cal-empty-msg">Nessun piano generato ancora</div>
       <button class="btn btn-primary" onclick="generatePlan()" style="font-size:12px;">Generate plan</button>
     </div>`;
 }
@@ -16657,7 +16657,7 @@ function openAddRaceModal() {
   ov.onclick = () => ov.remove();
   ov.innerHTML = `
     <div class="card" style="max-width:440px;width:90%;margin:0;" onclick="event.stopPropagation()">
-      <h3 style="margin-top:0;">Add a race</h3>
+      <h3 style="margin-top:0;">Aggiungi una gara</h3>
       <p style="font-size:12px;color:var(--text2);line-height:1.5;">Reshapes your plan around the race — an easy taper into it and recovery after. Your A-event date and plan length don't change.</p>
       <div class="form-row">
         <div class="form-group"><label>Data</label><input type="date" id="ar-date" min="${today}" value="${today}"></div>
@@ -16754,10 +16754,10 @@ async function loadPlan() {
       .replace(/\*(.+?)\*/g, '<em style="color:var(--text2)">$1</em>')
       .replace(/\n\n/g, '<br><br>')
       .replace(/\n/g, '<br>');
-    $('plan-content').innerHTML = `<details><summary style="cursor:pointer;color:var(--text2);font-size:12px;margin-top:8px;">Raw Plan (Markdown)</summary>
+    $('plan-content').innerHTML = `<details><summary style="cursor:pointer;color:var(--text2);font-size:12px;margin-top:8px;">Piano grezzo (Markdown)</summary>
       <div class="card" style="max-height:500px;overflow-y:auto;font-size:13px;line-height:1.6;margin-top:8px;">${html}</div></details>`;
   } else if (!d.plan_json) {
-    $('plan-content').innerHTML = '<div class="card"><p style="color:var(--text2)">No plan generated yet. Use the form above or run:<br><code>python3 training_planner.py --goal event --event-date 2026-07-15</code></p></div>';
+    $('plan-content').innerHTML = '<div class="card"><p style="color:var(--text2)">Nessun piano generato ancora. Usa il modulo sopra o esegui:<br><code>python3 training_planner.py --goal event --event-date 2026-07-15</code></p></div>';
   }
 }
 
@@ -17174,7 +17174,7 @@ function showMarkUnavailable() {
   const todayStr = new Date().toLocaleDateString('en-CA');
   const nextWeek = new Date(Date.now() + 7*86400000).toLocaleDateString('en-CA');
   openModal(`
-    <h2>Mark Unavailable Period</h2>
+    <h2>Segna periodo non disponibile</h2>
     <div class="form-row" style="margin:16px 0;">
       <div class="form-group"><label>Start Date</label><input type="date" id="mu-start" value="${todayStr}"></div>
       <div class="form-group"><label>End Date</label><input type="date" id="mu-end" value="${nextWeek}"></div>
@@ -17189,8 +17189,8 @@ function showMarkUnavailable() {
       </div>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">
-      Holiday: CTL decays slowly (~25 TSS/day from walking).<br>
-      Injury/illness: CTL decays fully (0 TSS/day). Recovery ramp required on return.
+      Ferie: CTL decresce lentamente (~25 TSS/giorno camminando).<br>
+      Infortunio/malattia: CTL decresce completamente (0 TSS/giorno). Rampa di recupero necessaria al rientro.
     </div>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-primary" onclick="submitMarkUnavailable()">Save & Regenerate Plan</button>
@@ -17372,7 +17372,7 @@ async function loadSettings() {
 // ── Customizable zones (Edit button on Power/HR Zones) ───────────────────
 // Prefilled from the current zones (auto from FTP/LTHR, or already-custom);
 // edited boundaries POST to /api/settings/zones and are honored app-wide via
-// _power_zones / _hr_zones. "Reset to auto" clears the custom override.
+// _power_zones / _hr_zones. "Reimposta su automatico" clears the custom override.
 function editZones(kind) {
   const data = (window._zonesData && window._zonesData[kind]) || [];
   const unit = kind === 'power' ? 'W' : 'bpm';
@@ -17391,7 +17391,7 @@ function editZones(kind) {
     <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-sm btn-primary" onclick="saveZones('${kind}')">Save zones</button>
       <button class="btn btn-sm" onclick="loadSettings()">Annulla</button>
-      <button class="btn btn-sm" onclick="resetZones('${kind}')" title="Ripristina i valori automatici da FTP/LTHR">Reset to auto</button>
+      <button class="btn btn-sm" onclick="resetZones('${kind}')" title="Ripristina i valori automatici da FTP/LTHR">Reimposta su automatico</button>
     </div>`;
 }
 async function saveZones(kind) {
@@ -17560,7 +17560,7 @@ function maybeShowEftpAutoBanner(settings) {
   if (!changedAt || !priorFtp) {
     // Still show a minimal banner if we don't have the date stamp.
     banner.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-      <div>Your FTP was auto-updated from ICU eFTP to <b>${esc(String(settings.ftp))}W</b>.</div>
+      <div>Il tuo FTP è stato aggiornato automaticamente da eFTP ICU a <b>${esc(String(settings.ftp))}W</b>.</div>
       <div style="display:flex;gap:8px;"><button class="btn btn-sm" onclick="dismissEftpAutoBanner()">Ignora</button></div>
     </div>`;
     banner.style.display = 'block';
@@ -17572,7 +17572,7 @@ function maybeShowEftpAutoBanner(settings) {
   if (hoursSince > 48) { banner.style.display = 'none'; return; }
   // Build banner. Revert is only offered within the first 48h.
   banner.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-    <div>Your FTP was auto-updated from ICU eFTP: <b>${esc(String(priorFtp))}W &rarr; ${esc(String(settings.ftp))}W</b>.
+    <div>Il tuo FTP è stato aggiornato automaticamente da eFTP ICU: <b>${esc(String(priorFtp))}W &rarr; ${esc(String(settings.ftp))}W</b>.
       <span style="color:var(--text3);font-size:11px;">(${Math.round(hoursSince)}h ago)</span>
     </div>
     <div style="display:flex;gap:8px;">
@@ -18413,7 +18413,7 @@ function showMorningForm() {
         style="padding:5px 12px;font-size:11px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;">
         Submit
       </button>
-      <span style="font-size:9px;color:var(--text3);">HRV, sleep, HR sync automatically — these 4 inputs are the only metrics your watch can't capture.</span>
+      <span style="font-size:9px;color:var(--text3);">HRV, sonno e FC si sincronizzano automaticamente — questi 4 input sono gli unici parametri che l'orologio non può catturare.</span>
     </div>`;
 }
 
@@ -18587,7 +18587,7 @@ function _continuousCountdownHtml(week, planWeeks, todayStr) {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;">
       <div>
         <h3 style="margin-bottom:4px;">Continuous training</h3>
-        <div style="font-size:13px;color:var(--text2);">No end date — the plan extends itself every week.</div>
+        <div style="font-size:13px;color:var(--text2);">Nessuna data di fine — il piano si estende ogni settimana.</div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:11px;color:${deloadCol};font-weight:700;text-transform:uppercase;">${esc(deloadLine)}</div>
@@ -18867,7 +18867,7 @@ async function loadWeeklyCalendar() {
 
   } catch(e) {
     console.warn('Weekly calendar failed:', e);
-    $('weekly-calendar').innerHTML = '<div style="text-align:center;font-size:11px;color:var(--text3);padding:8px;">Weekly plan unavailable</div>';
+    $('weekly-calendar').innerHTML = '<div style="text-align:center;font-size:11px;color:var(--text3);padding:8px;">Piano settimanale non disponibile</div>';
   }
 }
 
@@ -19110,7 +19110,7 @@ function _renderWeeklyRollup(s, EXPOSURE_META) {
     expoHtml = `
       <div class="wr-row">
         <div class="wr-label">Exposure</div>
-        <div class="wr-expo-bar" style="justify-content:center;align-items:center;font-size:10px;color:var(--text3);">No activity this week yet</div>
+        <div class="wr-expo-bar" style="justify-content:center;align-items:center;font-size:10px;color:var(--text3);">Ancora nessuna attività questa settimana</div>
       </div>`;
   } else {
     // Combined legend: "LOW 245m planned / 328m actual" per band.
@@ -19181,7 +19181,7 @@ function openMissedSessionsModal() {
   };
   let body;
   if (!list.length) {
-    body = `<div style="color:var(--text2);font-size:13px;">No missed sessions — you're on top of the plan.</div>`;
+    body = `<div style="color:var(--text2);font-size:13px;">Nessuna sessione mancata — sei in linea col piano.</div>`;
   } else {
     body = list.map(m => {
       const label = SESSION_LONG[m.session_type] || (m.session_type || '').toUpperCase();
@@ -19286,9 +19286,9 @@ async function loadTodaySession() {
         _el.innerHTML = hasPlan
           ? `<div style="font-size:13px;color:var(--text2);padding:8px 0;">Rest day &mdash; no session scheduled today. Enjoy the recovery.</div>`
           : `<div style="text-align:center;padding:14px 8px;">
-              <div style="font-size:14px;font-weight:600;margin-bottom:4px;">No training plan yet</div>
+              <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Ancora nessun piano di allenamento</div>
               <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Build one from your goal and available time &mdash; it then adapts to your rides automatically.</div>
-              <button class="btn btn-primary" onclick="goToPlanBuilder()">Create your first training plan</button>
+              <button class="btn btn-primary" onclick="goToPlanBuilder()">Crea il tuo primo piano di allenamento</button>
             </div>`;
       }
       return;
@@ -19306,7 +19306,7 @@ async function loadTodaySession() {
         `<div style="font-size:20px;font-weight:800;margin-bottom:4px;color:var(--amber,#f59e0b);">🏁 ${esc(String(r.priority || 'A'))} RACE</div>
          <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${esc(r.name || 'Race')}</div>
          <div style="font-size:12px;color:var(--text2);">${km}${cl}${eh}</div>
-         <div style="font-size:11px;color:var(--text3);margin-top:8px;">Race day — taper's done. Go ride it.</div>`;
+         <div style="font-size:11px;color:var(--text3);margin-top:8px;">Giorno di gara — taper completato. Vai a pedalare.</div>`;
       el.style.cursor = 'pointer';
       el.onclick = () => openTodayRich();
       return;
@@ -19384,7 +19384,7 @@ async function loadTodaySession() {
     // View Plan link — jumps to the plan grid for context.
     html += `<div style="margin-top:6px;font-size:11px;">
       <a href="javascript:void(0)" onclick="event.stopPropagation();jumpToPlanGrid()"
-         style="color:var(--accent);text-decoration:none;">View plan ↗</a>
+         style="color:var(--accent);text-decoration:none;">Vedi piano ↗</a>
     </div>`;
 
     // Store today session data for click handler
@@ -19427,7 +19427,7 @@ async function loadTodaySession() {
         const _ftp = window._athleteFtp || 250;
         const _blocks = buildPowerBlocks(_prevSrc.session_type, _prevSrc.duration_min, _ftp, null);
         _fillBlocksPreview(renderPowerBlocksSVG(_blocks, _ftp) +
-          `<div style="font-size:9px;color:var(--text2);margin-top:2px;">Approximate shape — ride to the zone targets above.</div>`);
+          `<div style="font-size:9px;color:var(--text2);margin-top:2px;">Forma approssimativa — pedala sui target di zona sopra.</div>`);
       } catch (_) {}
     }
     // P2.3 — retest nudge banner (its own host, outside the clickable hero).
@@ -19473,7 +19473,7 @@ function _deloadAdvanceChipHtml(d) {
   const da = d && d.deload_advance;
   if (!da || da.reverted || !da.reason) return '';
   return `<div class="deload-advance-chip" style="font-size:11px;padding:6px 8px;background:rgba(168,85,247,0.1);border-radius:6px;color:var(--purple);margin-bottom:8px;">
-    🛏 <b>Recovery week pulled forward</b> — <span style="color:var(--text2);">${esc(String(da.reason))}</span>
+    🛏 <b>Settimana di recupero anticipata</b> — <span style="color:var(--text2);">${esc(String(da.reason))}</span>
     <a href="javascript:void(0)" onclick="event.stopPropagation();revertDeloadAdvance()"
        style="color:var(--accent);margin-left:6px;text-decoration:none;">Ripristina</a>
   </div>`;
@@ -19696,7 +19696,7 @@ function openTodaySessionDetail() {
   const hr = d.hr_target || {};
   const pw = d.power_target || {};
 
-  let html = `<h2>Today's Session: ${(adj.session_type || '').toUpperCase().replace('_',' ')}</h2>`;
+  let html = `<h2>Sessione di oggi: ${(adj.session_type || '').toUpperCase().replace('_',' ')}</h2>`;
   html += `<div style="font-size:14px;color:var(--text2);margin:12px 0;">${esc(fixZeroMin(adj.description) || '')}</div>`;
 
   // Targets grid
@@ -19705,9 +19705,9 @@ function openTodaySessionDetail() {
   html += `<div class="metric"><div class="mv">${adj.tss_estimate}</div><div class="ml">TSS Target</div></div>`;
   // hr target_mode (red-team F3): converter-consistent chip; watts suppressed.
   if (hr.rpe) html += `<div class="metric"><div class="mv" style="color:var(--red);">RPE ${esc(hr.rpe)}</div><div class="ml">Sforzo (a sensazione)</div></div>`;
-  else if (hr.ceiling_only && hr.high) html += `<div class="metric"><div class="mv" style="color:var(--red);">≤${hr.high}</div><div class="ml">Target FC (bpm)</div></div>`;
-  else if (hr.low) html += `<div class="metric"><div class="mv" style="color:var(--red);">${hr.low}–${hr.high}</div><div class="ml">Target FC (bpm)</div></div>`;
-  if (pw.low && !pw.suppressed && d.target_mode !== 'hr') html += `<div class="metric"><div class="mv" style="color:var(--accent);">${pw.low}–${pw.high}</div><div class="ml">Power Target (W)</div></div>`;
+  else if (hr.ceiling_only && hr.high) html += `<div class="metric"><div class="mv" style="color:var(--red);">≤${hr.high}</div><div class="ml">FC target (bpm)</div></div>`;
+  else if (hr.low) html += `<div class="metric"><div class="mv" style="color:var(--red);">${hr.low}–${hr.high}</div><div class="ml">FC target (bpm)</div></div>`;
+  if (pw.low && !pw.suppressed && d.target_mode !== 'hr') html += `<div class="metric"><div class="mv" style="color:var(--accent);">${pw.low}–${pw.high}</div><div class="ml">Potenza target (W)</div></div>`;
   html += `<div class="metric"><div class="mv">${d.readiness ? Math.round(d.readiness) : '—'}</div><div class="ml">Readiness</div></div>`;
   html += '</div>';
 
@@ -19730,7 +19730,7 @@ function openTodaySessionDetail() {
         <button class="btn btn-primary" onclick="downloadFIT('${escJs(adj.session_type || 'z2')}', ${adj.duration_min || 60}, '${escJs(adj.zwo_file.replace(/\.zwo$/i, ''))}', '${escJs(adj.zwo_file)}', 'hr')">Scarica FIT (target FC)</button>
         <button class="btn" disabled style="opacity:0.4;cursor:not-allowed;" title="ZWO è un formato solo potenza — non può codificare target di frequenza cardiaca. Solo FIT porta i tuoi range bpm.">ZWO — can't encode HR</button></div>`;
     } else {
-      html += `<div style="margin-top:12px;"><button class="btn btn-primary" onclick="downloadZwoFile('${escJs(adj.zwo_file)}')">Download ZWO Workout</button></div>`;
+      html += `<div style="margin-top:12px;"><button class="btn btn-primary" onclick="downloadZwoFile('${escJs(adj.zwo_file)}')">Scarica workout ZWO</button></div>`;
     }
   }
 
@@ -20392,7 +20392,7 @@ async function openDayWorkout(sessionIdx) {
   // v4.1.0 U8: per-session rematch button. Calls /api/plan/preview-redraw
   // first (FIX-SERVER P6) and animates the new workout inline; falls back to
   // the week-level classifier rematch if re-draw isn't available yet.
-  // 3.4.2 M6 §6 — rider-verb action IA: ONE "Change this workout" cluster.
+  // 3.4.2 M6 §6 — rider-verb action IA: ONE "Cambia questo workout" cluster.
   // Renames only — same handlers/endpoints as before. "Make it easier
   // today" = the EXISTING readiness tier-down apply, shown only where the
   // endpoint can act (today + a type the intensity ladder can drop:
@@ -20407,7 +20407,7 @@ async function openDayWorkout(sessionIdx) {
   const _canEase = _isTodaySession && curStatus !== 'dismissed'
     && ['sprint', 'vo2max', 'threshold', 'overunder', 'sweetspot', 'tempo'].includes(type);
   html += `<div style="margin-top:12px;">
-    <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Change this workout</div>
+    <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Cambia questo workout</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button class="btn" onclick="rematchDaySession('${session.day}')" style="font-size:12px;">&#x21bb; Swap workout — same type, different session</button><span class="info-icon" data-popover="planpop-rematch" tabindex="0" role="button" aria-label="What does &quot;Swap workout&quot; do?" title="Sostituisce con un'altra seduta dello stesso tipo e durata.">i</span>
       <button class="btn" onclick="swapTypeOpen('${session.day}')" style="font-size:12px;">&#x21c4; Change training type (VO2, tempo, &hellip;)</button><span class="info-icon" data-popover="planpop-swaptype" tabindex="0" role="button" aria-label="What does &quot;Change training type&quot; do?" title="Scegli un tipo di allenamento diverso per questo giorno.">i</span>
@@ -20420,7 +20420,7 @@ async function openDayWorkout(sessionIdx) {
   if (curStatus === 'dismissed') {
     html += `<div style="margin-top:12px;"><button class="btn" onclick="undismissSession('${session.day}');closeModal()">Un-dismiss (restore to pending)</button></div>`;
   } else {
-    html += `<div style="margin-top:12px;"><button class="btn" style="font-size:11px;color:var(--text3);" onclick="dismissSession('${session.day}');closeModal()">${_isTodaySession ? 'Skip today' : 'Skip this day'}</button><span style="font-size:10px;color:var(--text3);margin-left:8px;">the week re-fits around it — nothing piles up</span></div>`;
+    html += `<div style="margin-top:12px;"><button class="btn" style="font-size:11px;color:var(--text3);" onclick="dismissSession('${session.day}');closeModal()">${_isTodaySession ? 'Salta oggi' : 'Salta questo giorno'}</button><span style="font-size:10px;color:var(--text3);margin-left:8px;">the week re-fits around it — nothing piles up</span></div>`;
   }
 
   openModal(html);
@@ -20444,7 +20444,7 @@ function ftpTestChooserHtml(sessionIdx, day, currentType) {
     </div>`;
   };
   return `<div style="margin:4px 0 14px;">
-    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;">Choose your FTP test</div>
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;">Scegli il tuo test FTP</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       ${card('ramp', RAMP_SVG, 'Ramp test', 'Power steps up ~20 W every minute until you can\'t hold on; FTP = 75% of your best minute.', 'Quick (~20 min). Pacing is easy — just hold each step to failure.', 'Leans on your anaerobic system near the top, so punchy riders read HIGH. Measures your aerobic ceiling, not threshold directly.')}
       ${card('coggan_20min', TT_SVG, '20-minute test', 'A 5-min all-out effort drains your sprint reserve, then a 20-min max effort; FTP = 95% of the 20-min average.', 'More accurate for threshold — the depletion effort keeps anaerobic inflation out.', 'Longer (~60 min). Pacing is HARD — go too hard early and you fade, reading LOW.')}
@@ -20478,7 +20478,7 @@ function swapTypeOpen(day) {
     ['vo2max','VO2max'],['sprint','Sprint']];
   const durs = [30,45,60,90,120];
   el.innerHTML = `<div style="padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);">
-    <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Swap to a different training type</div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Cambia tipo di allenamento</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
       <select id="swap-type-${day}" style="font-size:12px;">${types.map(t=>`<option value="${t[0]}">${t[1]}</option>`).join('')}</select>
       <select id="swap-dur-${day}" style="font-size:12px;">${durs.map(d=>`<option value="${d}"${d===60?' selected':''}>${d} min</option>`).join('')}</select>
@@ -20737,7 +20737,7 @@ async function _rematchAccept(day) {
       // (e.g. _calData not yet populated, day not found, modal closed).
       if (resultEl) {
         resultEl.innerHTML = `<div style="border:1px solid var(--green);background:rgba(34,197,94,0.10);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text);">
-          <strong style="color:var(--green);">✓ Plan updated</strong>
+          <strong style="color:var(--green);">✓ Piano aggiornato</strong>
           &middot; ${esc(String(c.zwo_name || c.zwo_file))}
           &middot; ${n} session${n === 1 ? '' : 's'} reflowed
           <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -21313,7 +21313,7 @@ async function loadBodyPerf() {
       ${vo2Vals.length >= 2 ? miniSparklineSVG(vo2Vals, 80, 24, 'var(--orange)') : ''}</div>`;
 
     html += '</div>';
-    if (!wVals.length && !fVals.length && !vo2Vals.length) html = '<div style="font-size:12px;color:var(--text3);">Save settings to start tracking history</div>';
+    if (!wVals.length && !fVals.length && !vo2Vals.length) html = '<div style="font-size:12px;color:var(--text3);">Salva impostazioni per iniziare a tracciare la cronologia</div>';
     try { $('body-perf-card').innerHTML = html; }
     catch (eR) {
       try { window._diagFrontendError('E_FRONTEND_BODY_PERF_RENDER', {msg: String(eR && eR.message || eR)}); } catch(_) {}
@@ -21370,7 +21370,7 @@ async function loadMetricHistory() {
         ${sparklineSVG(fData.map(d=>d.value), 300, 50, 'var(--green)')}</div>`;
     }
     h += '</div>';
-    if (wData.length < 2 && fData.length < 2) h = '<div style="font-size:12px;color:var(--text3);">Save settings or log metrics to build history</div>';
+    if (wData.length < 2 && fData.length < 2) h = '<div style="font-size:12px;color:var(--text3);">Salva impostazioni o registra metriche per costruire cronologia</div>';
     $('metric-history-charts').innerHTML = h;
   } catch(e) {
     $('metric-history-charts').innerHTML = '<div style="color:var(--text3)">No history data yet</div>';
@@ -21448,7 +21448,7 @@ async function loadSyncBanner() {
       bg = 'rgba(234,179,8,0.10)'; border = 'rgba(234,179,8,0.35)'; fg = '#a16207';
       const lastErr = (s.last_error || '').toString().slice(0, 140);
       html = `Sync having trouble (${s.consecutive_failures} failures). ` +
-             (lastErr ? `<span style="opacity:0.8;">Last error: ${lastErr}</span>` : '');
+             (lastErr ? `<span style="opacity:0.8;">Ultimo errore: ${lastErr}</span>` : '');
     } else {
       el.style.display = 'none';
       return;
@@ -21592,10 +21592,12 @@ async function loadUpdateCheck(force) {
           'will all be preserved across this update.</div>' +
           '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
             // v1.8.11 — must include target="_blank" + rel="noopener noreferrer".
-            '<a href="' + safeDownload + '" download="' + safeAsset + '" ' +
-              'target="_blank" rel="noopener noreferrer" ' +
+            // PCC — al posto del download diretto dell'EXE, portiamo l'utente
+            // alla pagina della release (dove ci sono le note di rilascio /
+            // changelog) invece di scaricare il file grezzo.
+            '<a href="' + safeRelease + '" target="_blank" rel="noopener noreferrer" ' +
               'style="display:inline-block;padding:6px 12px;border-radius:6px;background:#3b82f6;' +
-              'border:1px solid #3b82f6;color:#fff;text-decoration:none;font-size:12px;">Download</a>' +
+              'border:1px solid #3b82f6;color:#fff;text-decoration:none;font-size:12px;">Vedi la release &rarr;</a>' +
             // PCC 5.1 — auto-update attivo: scarica + installa silenzioso.
             '<button onclick="applySelfUpdate()" ' +
               'style="display:inline-block;padding:6px 12px;border-radius:6px;background:#f5a623;' +
@@ -21630,10 +21632,21 @@ async function applySelfUpdate() {
     const r = await fetch('/api/self-update', { method: 'POST' });
     const j = await r.json().catch(() => ({}));
     if (j && j.ok) {
-      showToast('Aggiornamento avviato: l\'app si riavvierà con la nuova versione.', 5000);
-      setTimeout(() => { try { window.close(); } catch (_) {} }, 2500);
+      // Il backend chiude DAVVERO l'app (os._exit) dopo aver risposto, così
+      // l'EXE si libera e l'installer silenzioso può sovrascrivere + ricreare
+      // l'icona. Non serve window.close qui.
+      showToast('Aggiornamento in corso: l’app si chiude e riapre con la nuova versione.', 6000);
+    } else if (j && j.needs_admin) {
+      // Windows: serve admin per scrivere in Program Files. Mostra le note di
+      // rilascio + link alla release per il download manuale (non solo errore).
+      const rel = j.release_url || j.manual_url || '#';
+      showToast('Serve amministratore: apri la release e installa PCC-Setup.exe come admin.', 8000);
+      if (rel && rel !== '#') { setTimeout(() => window.open(rel, '_blank', 'noopener'), 400); }
+      if (btn) { btn.disabled = false; btn.textContent = 'Aggiorna ora'; }
     } else {
-      showToast('Auto-aggiornamento non riuscito: ' + (j.error || 'errore'), 5000);
+      const rel = j && (j.release_url || j.manual_url);
+      showToast('Auto-aggiornamento non riuscito: ' + (j.error || 'errore') +
+                (rel ? ' — vedi la release per il download manuale.' : ''), 8000);
       if (btn) { btn.disabled = false; btn.textContent = 'Aggiorna ora'; }
     }
   } catch (e) {
@@ -22039,7 +22052,7 @@ async function openActivityModal(rideId) {
         window._activityModalCache.delete(firstKey);
       }
     } catch (e) {
-      content.innerHTML = `<div style="color:var(--red);padding:20px;">Network error loading activity<div style="margin-top:8px;"><button class="btn" onclick="closeActivityModal()">Chiudi</button></div></div>`;
+      content.innerHTML = `<div style="color:var(--red);padding:20px;">Errore di rete nel caricamento attività<div style="margin-top:8px;"><button class="btn" onclick="closeActivityModal()">Chiudi</button></div></div>`;
       return;
     }
   }
@@ -22281,7 +22294,7 @@ function renderActivityModal(p) {
     // Fallback placeholder so user knows zones are missing, not just hidden.
     html += `<div style="margin-bottom:14px;background:var(--surface2);border:1px dashed var(--border);border-radius:8px;padding:10px;">
       <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Zone di potenza (tempo in zona)</div>
-      <div style="font-size:12px;color:var(--text2);">⚠ No zone data for this ride</div>
+      <div style="font-size:12px;color:var(--text2);">⚠ Nessun dato zona per questa uscita</div>
       <div style="font-size:10px;color:var(--text3);margin-top:2px;">(older ICU activity or HR-only ride)</div>
     </div>`;
   }
@@ -22319,7 +22332,7 @@ function renderActivityModal(p) {
   } else {
     html += `<div style="margin-bottom:14px;background:var(--surface2);border:1px dashed var(--border);border-radius:8px;padding:10px;">
       <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Zone FC (tempo in zona)</div>
-      <div style="font-size:12px;color:var(--text2);">⚠ No HR zone data for this ride</div>
+      <div style="font-size:12px;color:var(--text2);">⚠ Nessun dato zona FC per questa uscita</div>
       <div style="font-size:10px;color:var(--text3);margin-top:2px;">(no HR zones configured or power-only ride)</div>
     </div>`;
   }
@@ -22384,7 +22397,7 @@ function renderActivityModal(p) {
     // Fallback placeholder so user knows intervals are missing, not just hidden.
     html += `<div style="background:var(--surface2);border:1px dashed var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">
       <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Intervals</div>
-      <div style="font-size:12px;color:var(--text2);">⚠ No interval data for this ride</div>
+      <div style="font-size:12px;color:var(--text2);">⚠ Nessun dato intervalli per questa uscita</div>
       <div style="font-size:10px;color:var(--text3);margin-top:2px;">(older ICU activity or unstructured ride)</div>
     </div>`;
   }
