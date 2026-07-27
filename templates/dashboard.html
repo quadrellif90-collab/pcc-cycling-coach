@@ -2913,6 +2913,15 @@ window.addEventListener('unhandledrejection', function(e) {
           const seen = (function(){ try { return localStorage.getItem('summary_shown_' + planId); } catch (_) { return null; } })();
           if (!seen) showProgrammeSummary(planId);
         }
+        // Fase prodotto — auto-aggiornamento quotidiano: al caricamento
+        // ricalcola il piano su carico/riposo/HRV e mostra i cambiamenti.
+        try {
+          const dr = await fetch('/api/plan/daily-sync', { method: 'POST' });
+          const dj = await dr.json().catch(() => ({}));
+          if (dj && dj.ok && dj.changes && dj.changes.length) {
+            showDailySyncNotice(dj.changes);
+          }
+        } catch (_) {}
       } catch (_) {}
     }, 1500);
   });
@@ -4278,6 +4287,18 @@ function showToast(msg, duration=3000, kind=null) {
 }
 
 // ===== v5.2 client-friendly errors =====
+function showDailySyncNotice(changes) {
+  // Fase prodotto — notifica dei cambiamenti dal daily-sync automatico.
+  if (!changes || !changes.length) return;
+  const lines = changes.slice(0, 6).map(c => {
+    const d = (c.date || '').slice(5);  // MM-DD
+    return `• ${d}: ${c.from} → ${c.to}` + (c.tss_from !== c.tss_to ? ` (TSS ${c.tss_from}→${c.tss_to})` : '');
+  });
+  if (changes.length > lines.length) lines.push(`…e altri ${changes.length - lines.length} giorni`);
+  const msg = 'Piano aggiornato automaticamente (carico/riposo/HRV):\n' + lines.join('\n');
+  showToast(msg, 9000);
+}
+
 function normalizeErr(e){
   if(!e) return 'Si e verificato un errore imprevisto.';
   var s=(typeof e==='string')?e:(e.message||e.error||String(e)); s=String(s);

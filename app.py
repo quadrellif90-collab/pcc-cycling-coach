@@ -5527,6 +5527,94 @@ async def api_plan_auto_adjust(request: Request):
     }
 
 
+
+@app.post("/api/plan/daily-sync")
+async def api_plan_daily_sync(request: Request):
+    """Fase prodotto — auto-aggiornamento quotidiano del piano.
+
+    Esegue in sequenza (tutto gia' esistente):
+      1) reforecast  — ricalcola il piano sui dati reali (carico/riposo/HRV se
+         presenti in ICU o wellness);
+      2) auto_adjust — applica TSB+HRV via Hooper (riposo/HRV bassa -> oggi
+         piu' facile o riposo);
+      3) auto_recalc — se >7 giorni dall'ultimo ricalcolo.
+    Confronta il piano prima/dopo e ritorna un DIFF leggibile + lo salva.
+    Il frontend lo chiama all'avvio e mostra una notifica se ci sono cambiamenti.
+    """
+    json_path = _plan_dir() / "current_plan.json"
+    if not json_path.exists():
+        return {"ok": True, "ran": False, "reason": "no_plan", "changes": []}
+
+    def _snapshot():
+        try:
+            with open(json_path, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    before = _snapshot()
+
+    # 1) reforecast (ricalcolo su dati reali)
+    try:
+        await api_plan_reforecast()
+    except Exception as e:
+        logging.getLogger(__name__).warning("daily-sync reforecast failed: %s", e)
+
+    # 2) auto_adjust (HRV/TSB -> Hooper). Costruisce una Request fittizia.
+    class _FakeReq:
+        async def body(self):
+            return json.dumps({"scope": "today", "dry_run": False}).encode()
+    try:
+        await api_plan_auto_adjust(_FakeReq())
+    except Exception as e:
+        logging.getLogger(__name__).warning("daily-sync auto_adjust failed: %s", e)
+
+    # 3) auto_recalc se >7gg (e' sync, ma lo chiamiamo comunque)
+    try:
+        api_plan_auto_recalc()
+    except Exception as e:
+        logging.getLogger(__name__).warning("daily-sync auto_recalc failed: %s", e)
+
+    after = _snapshot()
+
+    # DIFF sessione-per-sessione (per giorno)
+    def _index(plan):
+        idx = {}
+        for w in plan.get("weeks", []):
+            for s in w.get("sessions", []):
+                d = s.get("day") or s.get("date")
+                if d:
+                    idx[d] = s
+        return idx
+
+    bi = _index(before)
+    ai = _index(after)
+    changes = []
+    all_days = sorted(set(bi) | set(ai))
+    for d in all_days:
+        b = bi.get(d); a = ai.get(d)
+        bt = (b or {}).get("session_type") or (b or {}).get("type") or "—"
+        at = (a or {}).get("session_type") or (a or {}).get("type") or "—"
+        bts = (b or {}).get("tss") or 0
+        ats = (a or {}).get("tss") or 0
+        if bt != at or bts != ats:
+            changes.append({
+                "date": d,
+                "from": bt, "to": at,
+                "tss_from": bts, "tss_to": ats,
+            })
+    return {
+        "ok": True,
+        "ran": True,
+        "changes": changes,
+        "changed_count": len(changes),
+        "hrv_source": "icu_or_wellness",
+        "note": ("Piano aggiornato in automatico in base a carico/riposo/HRV."
+                 if changes else "Nessun cambiamento oggi (dati HRV/riposo mancanti o piano gia' ottimale)."),
+    }
+
+
+
 @app.post("/api/wellness/import-hrv4training")
 async def api_wellness_import_hrv4training(file: UploadFile = File(...)):
     """v1.1.0 IMPL-HRV-RECOVERY — HRV4Training CSV import (PATCH G16).
