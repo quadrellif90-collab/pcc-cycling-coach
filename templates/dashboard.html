@@ -9,29 +9,27 @@
   <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/png" href="/static/favicon.png?v=3">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<script src="/static/vendor/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg: #0a0e14; --surface: #131a24; --surface2: #1a2332; --border: #2d3f52;
-  /* --card was referenced by .info-popover + 3 others but never defined →
-     var(--card) resolved to nothing → transparent popovers, text bleeding
-     through (settings-tab help was unreadable). Opaque elevated surface. */
-  --card: #1a2332;
-  --text: #e6edf3; --text2: #b8c8d8; --text3: #8a9bb0;
-  /* PCC palette — teal/cyan (primary) + amber (secondary). Homage to PCC
-     kept via NOTICE; visual identity distinct. */
-  --accent: #14b8a6; --accent2: #f59e0b;
+  --bg: #0a0a0f; --surface: #15151c; --surface2: #1e1e28; --border: #2e2e3a;
+  /* Card surface opaque (settings-tab help was unreadable with transparent). */
+  --card: #1e1e28;
+  --text: #f0f0f5; --text2: #c0c0d0; --text3: #808090;
+  /* PCC Pro RACING palette — rosso primario + arancio secondario (energia, velocità). */
+  --accent: #ef4444; --accent2: #f97316;
   --green: #22c55e; --yellow: #eab308; --orange: #f97316; --red: #ef4444; --purple: #a855f7;
-  --z1: #64748b; --z2: #14b8a6; --z3: #22c55e; --z4: #eab308; --z5: #f97316; --z6: #ef4444; --z7: #e2e8f0;
+  --z1: #64748b; --z2: #ef4444; --z3: #22c55e; --z4: #eab308; --z5: #f97316; --z6: #ef4444; --z7: #e2e8f0;
   --radius: 10px;
 }
 [data-theme="light"] {
-  --bg: #f1f5f9; --surface: #ffffff; --surface2: #f8fafc; --border: #e2e8f0;
-  --card: #ffffff;  /* opaque — see dark-theme note */
-  --text: #1e293b; --text2: #475569; --text3: #64748b;
-  --accent: #0d9488; --accent2: #d97706;
+  --bg: #fafafa; --surface: #ffffff; --surface2: #f5f5f7; --border: #e0e0e5;
+  --card: #ffffff;
+  --text: #1a1a1f; --text2: #4a4a55; --text3: #808090;
+  --accent: #dc2626; --accent2: #ea580c;
 }
   --green: #16a34a; --yellow: #ca8a04; --orange: #ea580c; --red: #dc2626; --purple: #9333ea;
-  --z1: #94a3b8; --z2: #0d9488; --z3: #16a34a; --z4: #ca8a04; --z5: #ea580c; --z6: #dc2626; --z7: #475569;
+  --z1: #94a3b8; --z2: #dc2626; --z3: #16a34a; --z4: #ca8a04; --z5: #ea580c; --z6: #dc2626; --z7: #475569;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -1722,37 +1720,6 @@ window.addEventListener('unhandledrejection', function(e) {
 <div id="icu-sync-banner" style="display:none;margin:8px 0 12px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.4;"></div>
 
 <!-- v5.2 assessment banner: scelta test di valutazione (stile INSCYD) -->
-<div id="assessment-banner" style="display:none;margin:8px 0 12px;padding:14px 16px;border-radius:10px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.4);">
-  <div style="margin-bottom:8px;">
-    <b style="color:var(--accent);">🧪 Piano preliminare — scegli un test di valutazione</b>
-    <div id="assessment-banner-msg" style="font-size:13px;color:var(--text2);margin-top:4px;"></div>
-  </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-    <button onclick="chooseAssessmentTest('ramp')" style="background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.5);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">
-      ⚡ Ramp Test<br><span style="font-size:11px;color:var(--text2);">10-20 W/min step fino esaurimento</span>
-    </button>
-    <button onclick="chooseAssessmentTest('20min')" style="background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.5);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">
-      🎯 FTP 20 min (Coggan)<br><span style="font-size:11px;color:var(--text2);">Gold standard: 20' TT × 0.95</span>
-    </button>
-    <button onclick="chooseAssessmentTest('8min')" style="background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.5);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">
-      🏋️ Test 2×8 min<br><span style="font-size:11px;color:var(--text2);">Meno faticoso del 20'</span>
-    </button>
-  </div>
-  <div style="margin-top:10px;font-size:12px;">
-    <a href="#" onclick="skipAssessment();return false;" style="color:var(--text3);text-decoration:underline;">Salta valutazione e genera il piano comunque</a>
-    <span style="color:var(--text3);margin:0 6px;">·</span>
-    <a href="#" onclick="dismissAssessmentBanner();return false;" style="color:var(--text3);">Chiudi</a>
-  </div>
-</div>
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span style="font-weight:700;">Completa il setup per sbloccare tutti i calcoli</span>
-    <span id="onboarding-progress" style="font-size:12px;color:var(--text2);"></span>
-    <span style="flex:1;"></span>
-    <button class="btn btn-sm" onclick="onboardingGotoFirst()">Inizia</button>
-    <button class="btn btn-sm" style="margin-left:4px;" onclick="dismissOnboarding()">Piu tardi</button>
-  </div>
-  <div id="onboarding-steps" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;"></div>
-</div>
 <!-- v1.0.2 IMPL-BANNER: update-check banner (GitHub Releases API poll).
      Populated by loadUpdateCheck() from /api/update/check (cached 6h server-side).
      Dismissable per-version via localStorage('update-banner-dismissed-<latest>'). -->
@@ -1794,6 +1761,38 @@ window.addEventListener('unhandledrejection', function(e) {
 <div class="main-content">
 <!-- ═══ HOME ═══════════════════════════════════════════════════════════════ -->
 <div class="section active" id="sec-home">
+<div id="assessment-banner" style="display:none;margin:8px 0 12px;padding:14px 16px;border-radius:10px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.4);">
+  <div style="margin-bottom:8px;">
+    <b style="color:var(--accent);">🧪 Piano preliminare — scegli un test di valutazione</b>
+    <div id="assessment-banner-msg" style="font-size:13px;color:var(--text2);margin-top:4px;"></div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+    <button onclick="chooseAssessmentTest('ramp')" style="background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.5);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">
+      ⚡ Ramp Test<br><span style="font-size:11px;color:var(--text2);">10-20 W/min step fino esaurimento</span>
+    </button>
+    <button onclick="chooseAssessmentTest('20min')" style="background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.5);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">
+      🎯 FTP 20 min (Coggan)<br><span style="font-size:11px;color:var(--text2);">Gold standard: 20' TT × 0.95</span>
+    </button>
+    <button onclick="chooseAssessmentTest('8min')" style="background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.5);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">
+      🏋️ Test 2×8 min<br><span style="font-size:11px;color:var(--text2);">Meno faticoso del 20'</span>
+    </button>
+  </div>
+  <div style="margin-top:10px;font-size:12px;">
+    <a href="#" onclick="skipAssessment();return false;" style="color:var(--text3);text-decoration:underline;">Salta valutazione e genera il piano comunque</a>
+    <span style="color:var(--text3);margin:0 6px;">·</span>
+    <a href="#" onclick="dismissAssessmentBanner();return false;" style="color:var(--text3);">Chiudi</a>
+  </div>
+</div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-weight:700;">Completa il setup per sbloccare tutti i calcoli</span>
+    <span id="onboarding-progress" style="font-size:12px;color:var(--text2);"></span>
+    <span style="flex:1;"></span>
+    <button class="btn btn-sm" onclick="onboardingGotoFirst()">Inizia</button>
+    <button class="btn btn-sm" style="margin-left:4px;" onclick="dismissOnboarding()">Piu tardi</button>
+  </div>
+  <div id="onboarding-steps" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;"></div>
+</div>
+
   <!-- PCC Pro Dashboard -->
   <div id="pro-dashboard-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px;">
     <div class="card" style="padding:14px;">
@@ -4595,7 +4594,7 @@ async function loadOnboarding(){
     var fr=document.getElementById('first-run-checklist');
     var frSteps=document.getElementById('first-run-steps');
     if(banner && steps){
-      if(sessionStorage.getItem('onboarding-dismissed')){ banner.style.display='none'; }
+      if(localStorage.getItem('onboarding-dismissed')){ banner.style.display='none'; }
       else{
         var nDone=(d.done||[]).length, nTot=nDone+(d.gaps||[]).length;
         if(prog) prog.textContent='('+nDone+'/'+nTot+' completati)';
@@ -4619,13 +4618,13 @@ async function loadOnboarding(){
   }catch(_){}
 }
 function onboardingGoto(goto){
-  sessionStorage.setItem('onboarding-dismissed','1');
+  localStorage.setItem('onboarding-dismissed','1');
   var map={settings:'settings',import:'home',plan:'plan',home:'home'};
   gotoTab(map[goto]||'home');
   if(goto==='import'){ setTimeout(function(){ try{ openImportFitPicker(); }catch(_){}} ,400); }
 }
 function onboardingGotoFirst(){ var d=window.__onboarding; var f=d&&d.gaps&&d.gaps[0]; onboardingGoto(f?f.goto:'settings'); }
-function dismissOnboarding(){ sessionStorage.setItem('onboarding-dismissed','1'); var b=document.getElementById('onboarding-banner'); if(b) b.style.display='none'; }
+function dismissOnboarding(){ localStorage.setItem('onboarding-dismissed','1'); var b=document.getElementById('onboarding-banner'); if(b) b.style.display='none'; }
 
 // ===== v5.2 banner manager: mostra max 2 banner, il resto nella campanella =====
 var BANNER_PRIORITY=['onboarding-banner','icu-migrate-banner','update-banner','readiness-action-banner','ftp-rise-banner','eftp-auto-banner','icu-sync-banner'];
@@ -23139,14 +23138,14 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   if (!home) return;
   const cards = home.querySelectorAll('.card');
   if (!cards.length) return;
-  // ripristina ordine salvato
+  // ripristina ordine salvato (usa il parent diretto di ogni card)
   try {
     const saved = JSON.parse(localStorage.getItem(PROFILE_KEY()) || '[]');
     if (saved.length) {
       const order = {};
       saved.forEach((id, i) => order[id] = i);
       const sorted = [...cards].sort((a,b) => (order[a.id||a.dataset.card]||999) - (order[b.id||b.dataset.card]||999));
-      sorted.forEach(c => home.appendChild(c));
+      sorted.forEach(c => { if (c.parentNode) c.parentNode.appendChild(c); });
     }
   } catch(e){}
   // drag handle + pointer events
@@ -23165,25 +23164,30 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       card.classList.add('dragging');
       placeholder = document.createElement('div');
       placeholder.style.cssText = 'height:4px;background:var(--accent);border-radius:2px;margin:4px 0;';
-      card.parentNode.insertBefore(placeholder, card.nextSibling);
+      const parent = card.parentNode;
+      if (parent) parent.insertBefore(placeholder, card.nextSibling);
       handle.setPointerCapture(e.pointerId);
       e.preventDefault();
     });
     handle.addEventListener('pointermove', e => {
       if (!dragging) return;
-      const siblings = [...home.querySelectorAll('.card:not(.dragging):not(.card-drag)')];
+      const parent = card.parentNode;
+      if (!parent) return;
+      const siblings = [...parent.querySelectorAll('.card:not(.dragging):not(.card-drag)')];
       let insertBefore = null;
       for (const s of siblings) {
         const r = s.getBoundingClientRect();
         if (e.clientY < r.top + r.height / 2) { insertBefore = s; break; }
       }
-      if (insertBefore) home.insertBefore(placeholder, insertBefore);
-      else home.appendChild(placeholder);
+      if (insertBefore && insertBefore.parentNode === parent) parent.insertBefore(placeholder, insertBefore);
+      else if (!insertBefore && placeholder.parentNode !== parent) parent.appendChild(placeholder);
+      else if (!insertBefore) parent.appendChild(placeholder);
     });
     handle.addEventListener('pointerup', () => {
       if (!dragging) return;
-      if (placeholder && placeholder.parentNode) {
-        home.insertBefore(dragging, placeholder);
+      const parent = card.parentNode;
+      if (placeholder && placeholder.parentNode && parent) {
+        parent.insertBefore(dragging, placeholder);
         placeholder.remove();
       }
       dragging.classList.remove('dragging');
