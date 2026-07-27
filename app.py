@@ -14489,33 +14489,45 @@ async def api_plan_generate(request: Request):
         # FTP/CTL reali, poi il piano si aggiorna automaticamente
         # (daily-sync/reforecast) dopo la sync ICU. Chi parte da zero/basso
         # fa il test iniziale; chi ha CTL > 40 (dati reali) non lo vede.
+        # L'utente puo' scegliere il tipo di test (ramp/20min/8min) e puo'
+        # disabilitare il test con skip_assessment (genera il piano comunque).
         try:
             _ctl = (plan_dict.get("ctl_snapshot") or {}).get("current_ctl")
-            if _ctl is not None and _ctl <= 40:
+            _skip = bool(body.get("skip_assessment"))
+            if _ctl is not None and _ctl <= 40 and not _skip:
                 _w0 = plan_dict.get("weeks", [])[0] if plan_dict.get("weeks") else None
                 if _w0 is not None:
-                    _ft = None
-                    import glob as _glob
-                    for _f in _glob.glob(str(WORKOUT_DIR / "ftp_test_*.zwo")):
-                        _ft = os.path.basename(_f); break
+                    _kind = str(body.get("assessment_test") or "ramp").lower()
+                    _zwo_map = {
+                        "ramp": "ftp_test_ramp.zwo",
+                        "20min": "ftp_test_coggan_20min.zwo",
+                        "8min": "ftp_test_2x8min_60min.zwo",
+                    }
+                    _ft = _zwo_map.get(_kind, "ftp_test_ramp.zwo")
+                    if not os.path.exists(WORKOUT_DIR / _ft):
+                        # fallback al primo ftp_test disponibile
+                        for _f in sorted(os.listdir(WORKOUT_DIR)):
+                            if _f.startswith("ftp_test_") and _f.endswith(".zwo"):
+                                _ft = _f; break
+                    _labels = {"ramp": "Ramp Test", "20min": "FTP Test 20 min (Coggan)", "8min": "FTP Test 2x8 min"}
                     _w0.setdefault("sessions", []).append({
                         "day": _w0.get("start"),
                         "session_type": "ftp_test",
                         "type": "ftp_test",
-                        "name": "FTP Test (valutazione)",
+                        "name": f"{_labels.get(_kind, 'FTP Test')} (valutazione)",
                         "duration_min": 60,
                         "tss": 0,
                         "zwo_file": _ft or "",
                         "zwo_name": _ft or "",
                         "description": "Test di valutazione FTP: completalo per tarare il piano sulle tue capacita' reali. Il piano si aggiornera' automaticamente dopo la sync ICU.",
-                        "protocol": "Ramp test o 20-min test",
+                        "protocol": _kind,
                         "assessment": True,
                     })
                     plan_dict["assessment"] = {
                         "pending": True,
-                        "test": "ftp_test",
+                        "test": _kind,
                         "week": 1,
-                        "message": "Piano preliminare: completa il FTP Test (settimana 1) per tararlo sulle tue capacita' reali. Dopo la sync ICU il piano si aggiorna automaticamente.",
+                        "message": "Piano preliminare: completa il " + _labels.get(_kind, "FTP Test") + " (settimana 1) per tararlo sulle tue capacita' reali. Dopo la sync ICU il piano si aggiorna automaticamente. Puoi anche generare il piano senza test dalle impostazioni.",
                     }
         except Exception as _ae:
             logging.getLogger(__name__).warning("assessment-gate failed: %s", _ae)
