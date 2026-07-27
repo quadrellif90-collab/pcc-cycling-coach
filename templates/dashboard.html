@@ -4662,17 +4662,18 @@ function loadWhatsNew(){
 
 // ── Scheda Profilo (metabolic profile + radar) ──
 let _profileChart = null;
+
 async function loadProfileTab() {
   try {
     const res = await fetch('/api/metabolic-profile?window_days=90');
     if (!res.ok) return;
     const d = await res.json();
     const c = d.classification || {};
-    document.getElementById('profile-type-badge').textContent = c.type || '—';
+    document.getElementById('profile-type-badge').textContent = c.type || '\u2014';
     document.getElementById('profile-focus').textContent = c.focus || 'Completa il test di valutazione per il profilo completo.';
     const set = (id, val, unit) => {
       const el = document.getElementById(id);
-      if (el) el.textContent = val != null ? val + (unit || '') : '—';
+      if (el) el.textContent = val != null ? val + (unit || '') : '\u2014';
     };
     set('p-vo2max', d.vo2max_ml_kg_min != null ? Math.round(d.vo2max_ml_kg_min) : null, ' ml/kg/min');
     set('p-vlamax', d.vlamax_mmol_l_s != null ? d.vlamax_mmol_l_s.toFixed(2) : null, ' mmol/l/s');
@@ -4680,86 +4681,139 @@ async function loadProfileTab() {
     set('p-wkg', c.wkg != null ? c.wkg.toFixed(2) : null, ' W/kg');
     set('p-ftp', d.ftp_w || null, ' W');
     set('p-ctl', d.ctl_snapshot && d.ctl_snapshot.current_ctl != null ? Math.round(d.ctl_snapshot.current_ctl) : null);
+
+    // Radar chart — animato + confronto profilo ideale
     const canvas = document.getElementById('profile-radar');
     if (!canvas || typeof Chart === 'undefined') return;
-    if (_profileChart) { try { _profileChart.destroy(); } catch(_) {} _profileChart = null; }
+    if (window._proRadar) { try { window._proRadar.destroy(); } catch(_) {} }
     const score = c.score || {};
-    _profileChart = new Chart(canvas, {
+    const type = (c.type || '').toLowerCase();
+    // Profilo ideale per tipo
+    const idealProfiles = {
+      'scalatore': { vo2max:85, vlamax:50, fatmax:80, wkg:85, ctl:75 },
+      'sprinter':  { vo2max:50, vlamax:85, fatmax:30, wkg:75, ctl:60 },
+      'cronoman':  { vo2max:80, vlamax:45, fatmax:70, wkg:80, ctl:80 },
+      'all.ounder':{ vo2max:75, vlamax:65, fatmax:65, wkg:70, ctl:70 },
+      'elite':     { vo2max:95, vlamax:40, fatmax:85, wkg:95, ctl:90 },
+      'avanzato':  { vo2max:80, vlamax:55, fatmax:70, wkg:75, ctl:70 },
+    };
+    let ideal = null;
+    for (const [k, v] of Object.entries(idealProfiles)) {
+      if (type.includes(k)) { ideal = v; break; }
+    }
+
+    window._proRadar = new Chart(canvas, {
       type: 'radar',
       data: {
-        labels: ['VO₂max', 'VLamax', 'FatMax', 'W/kg', 'CTL'],
+        labels: ['VO\u2082max', 'VLamax', 'FatMax', 'W/kg', 'CTL'],
         datasets: [{
-          label: 'Profilo attuale',
+          label: 'Il tuo profilo',
           data: [score.vo2max||0, score.vlamax||0, score.fatmax||0, score.wkg||0, score.ctl||0],
-          backgroundColor: 'rgba(59,130,246,0.2)',
+          backgroundColor: 'rgba(59,130,246,0.25)',
           borderColor: '#3b82f6',
           borderWidth: 2,
           pointBackgroundColor: '#3b82f6',
+          pointRadius: 4,
         }]
       },
       options: {
         responsive: false,
-        plugins: { legend: { display: false } },
-        scales: { r: { min: 0, max: 100, ticks: { stepSize: 20, color: 'var(--text3)', backdropColor: 'transparent' }, pointLabels: { color: 'var(--text)', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.08)' }, angleLines: { color: 'rgba(255,255,255,0.08)' } } }
+        plugins: {
+          legend: { display: true, position: 'bottom', labels: { color: 'var(--text2)', font: { size: 10 }, boxWidth: 12, padding: 8 } },
+        },
+        scales: {
+          r: { min: 0, max: 100, ticks: { stepSize: 20, color: 'var(--text3)', backdropColor: 'transparent' },
+            pointLabels: { color: 'var(--text)', font: { size: 11 } },
+            grid: { color: 'rgba(255,255,255,0.08)' }, angleLines: { color: 'rgba(255,255,255,0.08)' },
+          }
+        },
+        animation: { duration: 1200, easing: 'easeOutQuart' },
       }
     });
+    // Attendi animazione poi aggiungi overlay ideale
+    setTimeout(() => {
+      if (!ideal || !window._proRadar) return;
+      window._proRadar.data.datasets.push({
+        label: 'Profilo ideale (' + (c.type || '') + ')',
+        data: [ideal.vo2max, ideal.vlamax, ideal.fatmax, ideal.wkg, ideal.ctl],
+        backgroundColor: 'rgba(251,191,36,0.1)',
+        borderColor: '#fbbf24',
+        borderWidth: 1,
+        borderDash: [5, 5],
+        pointBackgroundColor: '#fbbf24',
+        pointRadius: 3,
+      });
+      window._proRadar.update();
+    }, 1500);
+
+    // Progress chart: W/kg history from wellness + ps curve
+    _loadProfileProgress();
   } catch(e) { /* silenzioso */ }
 }
 
-
-// ═══ v1.0.3 IMPL-UI: (i) info-popover handler ═════════════════════════════
-// Single delegated handler for any element with [data-popover]. Click toggles
-// the matching .info-popover; one open at a time; outside-click closes it.
-// Pairs with the .info-icon CSS at the top of the file.
-(function initInfoPopovers() {
-  let _activePopId = null;
-  function closeActive() {
-    if (!_activePopId) return;
-    const el = document.getElementById(_activePopId);
-    if (el) el.classList.remove('open');
-    _activePopId = null;
-  }
-  function openAt(icon, popId) {
-    const pop = document.getElementById(popId);
-    if (!pop) return;
-    closeActive();
-    // Position the popover just below+right of the icon.
-    const r = icon.getBoundingClientRect();
-    pop.style.top = (window.scrollY + r.bottom + 6) + 'px';
-    pop.style.left = Math.max(8, Math.min(
-      window.scrollX + r.left,
-      window.scrollX + window.innerWidth - 380
-    )) + 'px';
-    pop.classList.add('open');
-    _activePopId = popId;
-  }
-  document.addEventListener('click', (e) => {
-    const icon = e.target.closest && e.target.closest('[data-popover]');
-    if (icon) {
-      e.preventDefault();
-      e.stopPropagation();
-      const popId = icon.getAttribute('data-popover');
-      if (_activePopId === popId) { closeActive(); return; }
-      openAt(icon, popId);
+// Progress tracker: W/kg e CTL nel tempo
+let _proProgChart = null;
+async function _loadProfileProgress() {
+  const container = document.getElementById('profile-history');
+  if (!container) return;
+  try {
+    const wr = await fetch('/api/wellness?days=365');
+    if (!wr.ok) return;
+    const w = await wr.json();
+    // Build CTL history from weekly snapshots
+    const labels = [], ctlData = [], tsbData = [];
+    const today = new Date();
+    if (w.weekly_ctl && Array.isArray(w.weekly_ctl)) {
+      for (const wk of w.weekly_ctl.slice(-52)) {
+        labels.push(wk.week_label || '');
+        ctlData.push(wk.ctl != null ? Math.round(wk.ctl) : null);
+        tsbData.push(wk.tsb != null ? Math.round(wk.tsb) : null);
+      }
+    }
+    if (labels.length < 3) {
+      container.innerHTML = '<div style="font-size:12px;color:var(--text3);">Dati insufficienti per la cronologia. Completa il test di valutazione e allena con regolarit\u00e0.</div>';
       return;
     }
-    // outside-click — close any open popover (but not when clicking inside one)
-    if (_activePopId) {
-      const active = document.getElementById(_activePopId);
-      if (active && !active.contains(e.target)) closeActive();
-    }
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeActive();
-  });
-})();
+    // Creazione canvas per progress chart
+    container.innerHTML = '<canvas id="pro-progress-canvas" width="600" height="180"></canvas>';
+    const cv = document.getElementById('pro-progress-canvas');
+    if (!cv || typeof Chart === 'undefined') return;
+    if (_proProgChart) { try { _proProgChart.destroy(); } catch(_) {} }
+    _proProgChart = new Chart(cv, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'CTL',
+          data: ctlData,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+        }, {
+          label: 'TSB',
+          data: tsbData,
+          borderColor: '#10b981',
+          borderDash: [4, 4],
+          tension: 0.3,
+          pointRadius: 0,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'top', labels: { color: 'var(--text2)', font: { size: 10 }, boxWidth: 12 } } },
+        scales: {
+          x: { ticks: { color: 'var(--text3)', font: { size: 9 }, maxTicksLimit: 8 }, grid: { display: false } },
+          y: { ticks: { color: 'var(--text3)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        },
+        animation: { duration: 800 },
+      }
+    });
+  } catch(e) { container.innerHTML = '<div style="font-size:12px;color:var(--text3);">Errore caricamento cronologia.</div>'; }
+}
 
-// ═══ calendar-push (2026-07-07): "Send to intervals.icu calendar" ══════════
-// Shared by the library workout-detail modal (user picks a date → a PERMANENT
-// manual entry) and the planner day modal (uses the session's own date). POSTs
-// to /api/calendar/push-workout, which ALWAYS returns HTTP 200 with a data dict
-// ({ok}/{needs_reconnect}/{needs_lthr}/{error}) — the toast branches on those
-// fields, no HTTP-status handling. Reuses showToast + escJs; no new deps.
 function _calLocalIso(dt) {
   // Local Y-M-D — NOT toISOString(), which is UTC and can slip a day near
   // midnight (a workout picked "tomorrow" must not land the wrong date).
