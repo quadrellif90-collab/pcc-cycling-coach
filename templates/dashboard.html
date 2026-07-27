@@ -1,14 +1,22 @@
 
-    const icons = {"scalatore":"⛰","sprinter":"⚡","cronoman":"⏱","all.ounder":"♻","elite":"☆","avanzato":"★","intermedio":"⚖"};
-    let icon = "⚙";
-    for(const[k,v] of Object.entries(icons)){if((c.type||'').toLowerCase().includes(k)){icon=v;break;}}
-    document.getElementById('metab-badge-icon').textContent = icon;
-    document.getElementById('metab-badge-title').textContent = c.type || '—';
-    const msgEl = document.getElementById('metab-badge-sub');
-    if(msgEl) msgEl.textContent = c.focus || '';
-    const scoreArr = Object.values(c.score||{});
-    const avg = scoreArr.length ? Math.round(scoreArr.reduce((a,b)=>a+b,0)/scoreArr.length) : 0;
-    const bar = document.getElementById('metab-badge-bar');
-    const pct = document.getElementById('metab-badge-pct');
-    if(bar) { bar.style.width = avg + '%'; }
-    if(pct) pct.textContent = avg > 0 ? avg + '% complessivo' : 'Completa il test';
+async function loadRecommendations() {
+  try {
+    const res = await fetch("/api/athlete/recommendations?window_days=90");
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d.ok || !d.recommendations || !d.recommendations.length) return;
+    const card = document.getElementById("recs-card");
+    const list = document.getElementById("recs-list");
+    if (card) card.style.display = "block";
+    if (list) {
+      list.innerHTML = d.recommendations.map(function(r) {
+        var icons = {test:"⚙",vo2:"♥",base:"⛰",polarized:"⚖",threshold:"⚡",consistency:"▶",nutrition:"★"};
+        return "<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:13px;">" +
+          "<span style="font-size:16px;">" + (icons[r.icon]||"▶") + "</span>" +
+          "<div style="flex:1;"><div style="font-weight:600;">" + r.title + "</div><div style="font-size:11px;color:var(--text2);">" + r.desc + "</div></div>" +
+          (r.action ? "<button onclick="try{" + r.action + "}catch(_){}" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Vai</button>" : "") +
+          "</div>";
+      }).join("");
+    }
+  } catch(e) {}
+}
