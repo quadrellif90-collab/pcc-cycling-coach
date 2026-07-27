@@ -1791,6 +1791,62 @@ window.addEventListener('unhandledrejection', function(e) {
 <div class="main-content">
 <!-- ═══ HOME ═══════════════════════════════════════════════════════════════ -->
 <div class="section active" id="sec-home">
+  <!-- === PCC Pro Dashboard === -->
+  <div id="pro-dashboard-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px;">
+
+    <div class="card" style="padding:14px;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Training Status</div>
+      <div id="pro-ts-status" style="font-size:13px;margin-top:2px;display:flex;align-items:center;gap:8px;">
+        <span id="pro-ts-dot" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--text3);"></span>
+        <span id="pro-ts-label" style="font-weight:600;">—</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:10px;text-align:center;">
+        <div><span style="font-size:10px;color:var(--text3);">CTL</span><br><span id="pro-ctl" style="font-size:18px;font-weight:700;color:var(--accent);">—</span></div>
+        <div><span style="font-size:10px;color:var(--text3);">TSB</span><br><span id="pro-tsb" style="font-size:18px;font-weight:700;color:var(--green);">—</span></div>
+        <div><span style="font-size:10px;color:var(--text3);">ATL</span><br><span id="pro-atl" style="font-size:18px;font-weight:700;color:var(--orange);">—</span></div>
+      </div>
+      <div id="pro-ts-msg" style="font-size:11px;color:var(--text2);margin-top:6px;"></div>
+    </div>
+
+    <div class="card" style="padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Oggi</span>
+        <span id="pro-today-date" style="font-size:10px;color:var(--text3);"></span>
+      </div>
+      <div id="pro-today-content" style="margin-top:8px;display:flex;align-items:center;gap:12px;">
+        <div id="pro-today-ring" style="width:48px;height:48px;border-radius:50%;border:3px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text2);flex-shrink:0;">—</div>
+        <div style="flex:1;">
+          <div id="pro-today-name" style="font-weight:600;font-size:14px;">—</div>
+          <div id="pro-today-detail" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Recupero</div>
+      <div id="pro-recovery-content" style="margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="pro-recovery-ring" style="display:flex;width:48px;height:48px;border-radius:50%;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:3px solid var(--border);flex-shrink:0;">—</span>
+          <div style="flex:1;">
+            <div id="pro-recovery-label" style="font-weight:600;font-size:14px;">—</div>
+            <div id="pro-recovery-detail" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:10px;text-align:center;font-size:11px;">
+          <div><span style="color:var(--text3);">HRV</span><br><span id="pro-hrv" style="font-weight:600;">—</span></div>
+          <div><span style="color:var(--text3);">Sonno</span><br><span id="pro-sleep" style="font-weight:600;">—</span></div>
+          <div><span style="color:var(--text3);">HR</span><br><span id="pro-rhr" style="font-weight:600;">—</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="pro-focus-bar" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);font-size:13px;">
+    <span id="pro-focus-icon" style="margin-right:6px;">❤</span>
+    <span id="pro-focus-text"></span>
+  </div>
+  <!-- === fine dashboard === -->
   <!-- P3.1 — compact Fitness & Form sparkline. The full chart card (+ energy-
        system / τ-fit / model-accuracy panels) and the Power Curve card moved
        to the Analysis tab; this strip keeps CTL/TSB glanceable on Home.
@@ -4302,7 +4358,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(t => {
                        else loadCourses();
                        if (typeof loadWorldCards === 'function') loadWorldCards();
                      },
-                     home:()=>{ if (typeof loadOnboarding === 'function') loadOnboarding(); },
+                     home:()=>{ if (typeof loadOnboarding === 'function') loadOnboarding(); if (typeof loadProDashboard === 'function') setTimeout(loadProDashboard, 150); },
                      picker:()=>{ if (typeof loadRoutePickerRegionChips === 'function') loadRoutePickerRegionChips(); },
                      plan:async()=>{
                        // v1.8.25 — ONE visible "catching up your plan" sequence on
@@ -8629,6 +8685,80 @@ async function loadDiet() {
 }
 
 // PCC — mostra/nasconde opzioni in base alla sorgente dieta
+// ── PCC Pro Dashboard ──
+async function loadProDashboard() {
+  try {
+    const wr = await fetch('/api/wellness?days=42');
+    if (wr.ok) {
+      const w = await wr.json();
+      const ctl = w.ctl != null ? Math.round(w.ctl) : null;
+      const tsb = w.tsb != null ? Math.round(w.tsb) : null;
+      const atl = w.atl != null ? Math.round(w.atl) : null;
+      const sn = (id, v, col) => { const e = document.getElementById(id); if (e) { e.textContent = v != null ? v : '\u2014'; if (col && v != null) e.style.color = col; } };
+      sn('pro-ctl', ctl);
+      sn('pro-tsb', tsb, tsb > 5 ? 'var(--green)' : tsb < -10 ? 'var(--red)' : 'var(--orange)');
+      sn('pro-atl', atl);
+      const dot = document.getElementById('pro-ts-dot');
+      const label = document.getElementById('pro-ts-label');
+      const msg = document.getElementById('pro-ts-msg');
+      if (dot && tsb != null) {
+        if (tsb > 5) { dot.style.background = 'var(--green)'; label.textContent = 'Recuperato'; if(msg) msg.textContent = 'Sei in forma.'; }
+        else if (tsb > -5) { dot.style.background = 'var(--yellow)'; label.textContent = 'Equilibrato'; }
+        else if (tsb > -15) { dot.style.background = 'var(--orange)'; label.textContent = 'Affaticato'; if(msg) msg.textContent = 'Considera scarico.'; }
+        else { dot.style.background = 'var(--red)'; label.textContent = 'Sovraccarico'; if(msg) msg.textContent = 'Rischio overtraining.'; }
+      }
+    }
+    const td = document.getElementById('pro-today-date');
+    if (td) td.textContent = new Date().toLocaleDateString('it-IT', {weekday:'short', day:'numeric', month:'short'});
+    const v = document.getElementById('today-verdict');
+    const tn = document.getElementById('pro-today-name');
+    const tr = document.getElementById('pro-today-ring');
+    if (v && v.textContent.trim() && v.textContent.trim() !== 'Caricamento\u2026' && tn) {
+      tn.textContent = v.textContent.trim().slice(0, 40);
+      if (tr) { tr.textContent = '\u2713'; tr.style.borderColor = 'var(--green)'; tr.style.color = 'var(--green)'; }
+    }
+    try {
+      const rr = await fetch('/api/readiness');
+      if (rr.ok) {
+        const rd = await rr.json();
+        const sev = rd.severity || rd.fatigue_signal || '';
+        const ring = document.getElementById('pro-recovery-ring');
+        const lbl = document.getElementById('pro-recovery-label');
+        if (ring) {
+          if (sev === 'low') { ring.style.borderColor = 'var(--green)'; ring.textContent = '\u2713'; if(lbl) lbl.textContent = 'Pronto'; }
+          else if (sev === 'moderate') { ring.style.borderColor = 'var(--yellow)'; ring.textContent = '!'; if(lbl) lbl.textContent = 'Cauto'; }
+          else if (sev === 'high') { ring.style.borderColor = 'var(--red)'; ring.textContent = '\u26A0'; if(lbl) lbl.textContent = 'Affaticato'; }
+        }
+        const sh = (id, v, u) => { const e = document.getElementById(id); if(e) e.textContent = v != null ? v+(u||'') : '\u2014'; };
+        sh('pro-hrv', rd.ln_rmssd_7d != null ? rd.ln_rmssd_7d.toFixed(1) : null, ' ms');
+        sh('pro-sleep', rd.sleep_h != null ? rd.sleep_h.toFixed(1) : null, ' h');
+        sh('pro-rhr', rd.rhr != null ? Math.round(rd.rhr) : null, ' bpm');
+      }
+    } catch(_) {}
+    try {
+      const pr = await fetch('/api/plan');
+      if (pr.ok) {
+        const pd = await pr.json();
+        const a = pd && pd.plan_json && pd.plan_json.assessment;
+        const g = pd && pd.plan_json && pd.plan_json.goal;
+        const bar = document.getElementById('pro-focus-bar');
+        const txt = document.getElementById('pro-focus-text');
+        const ico = document.getElementById('pro-focus-icon');
+        if (bar && txt) {
+          if (a && a.pending) { bar.style.display = 'block'; ico.textContent = '\uD83E\uDDEA'; txt.textContent = a.message || 'Test in sospeso.'; }
+          else if (g && g.event_name) {
+            const eDate = g.event_date || g.target_date;
+            if (eDate) {
+              const days = Math.round((new Date(eDate) - new Date()) / 86400000);
+              if (days > 0 && days < 365) { bar.style.display = 'block'; ico.textContent = '\uD83C\uDFC1'; txt.textContent = g.event_name + ' tra ' + days + 'g.'; }
+            }
+          }
+        }
+      }
+    } catch(_) {}
+  } catch(e) { /* silent */ }
+}
+
 function onDietSourceChange() {
   const source = ($('diet-source') && $('diet-source').value) || 'app';
   const showGoal = (source === 'app' || source === 'macro' || source === 'micro' || source === 'extra');

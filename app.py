@@ -749,7 +749,7 @@ async def lifespan(app):
         except Exception as e:
             log.debug(f"db.stop_sync failed: {e}")
 
-app = FastAPI(title="PCC — Adaptive Cycling Intelligence", version=_VERSION, lifespan=lifespan)
+app = FastAPI(title="PCC Pro — Adaptive Cycling Intelligence", version=_VERSION, lifespan=lifespan)
 
 
 # Global exception handler — catches unhandled errors and logs them
