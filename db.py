@@ -835,6 +835,31 @@ def run_sync(days: int = 90) -> dict:
                  w_count, a_count, str(sync_exc)[:120])
         raise sync_exc
     log.info("EVENT=sync_done status=%s wellness=%d activities=%d", status, w_count, a_count)
+
+    # (A) Porta il peso da intervals.icu nel profilo in automatico durante la
+    # sync (prima veniva letto solo aprendo la scheda Profilo). Salva come
+    # weight_kg (chiave usata da tutto il sistema, non 'weight').
+    try:
+        from profile_manager import ProfileManager
+        import httpx as _httpx
+        pm = ProfileManager.get()
+        aid = getattr(pm, "icu_athlete_id", None) or ""
+        if aid:
+            try:
+                hdr = training._auth_header()
+            except Exception:
+                hdr = None
+            if hdr:
+                r = _httpx.get(f"https://intervals.icu/api/v1/athlete/{aid}",
+                               headers=hdr, timeout=15)
+                if r.status_code == 200:
+                    bw = r.json().get("BodyWeightKg")
+                    if bw and not pm._athlete.get("weight_kg"):
+                        pm.save_athlete({"weight_kg": float(bw)})
+                        log.info("EVENT=icu_weight_synced weight_kg=%s", bw)
+    except Exception as _we:
+        log.warning("icu weight sync skipped: %s", _we)
+
     return {"timestamp": ts, "wellness": w_count, "activities": a_count, "status": status, "error": error}
 
 
