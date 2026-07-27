@@ -189,6 +189,7 @@ exe = EXE(
     upx=True,
     console=False,  # no terminal window
     icon="assets/pcc_logo.ico",
+    uac_admin=True,  # PCC parte sempre come amministratore -> auto-update silenzioso funziona (scrive in Program Files)
 )
 
 coll = COLLECT(

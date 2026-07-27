@@ -20,9 +20,10 @@ non poteva sovrascriverlo. Ora:
 (stati di caricamento/errore, label, banner). Acronimi di dominio mantenuti in
 inglese (CTL, TSS, FTP, HRV, ZWO, FIT, DFA α1, RPE, LTHR, FC, eFTP, τ).
 
-**Nota:** l'aggiornamento silenzioso richiede che PCC giri come amministratore
-(Windows scrive in `Program Files`). Se avviato come utente normale, il banner
-porta alla release per installare manualmente `PCC-Setup.exe` come admin.
+**Nota:** PCC ora parte **sempre come amministratore** (manifest UAC
+`requireAdministrator` nell'EXE) — così l'aggiornamento silenzioso installa
+senza prompt UAC in `Program Files`. Se avviato da un contesto non admin
+(raro), il banner porta comunque alla release per l'installazione manuale.
 
 ## v5.2.3 — Fix pianificatore "tutto riposo" + i18n + flusso data (2026-07-26)
 
