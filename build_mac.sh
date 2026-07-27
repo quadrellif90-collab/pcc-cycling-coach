@@ -12,7 +12,7 @@ pip3 install -r requirements.txt pyinstaller
 mkdir -p assets
 
 # 3. Build with PyInstaller (ppc.spec produces dist/PPC.app)
-pyinstaller ppc.spec --clean --noconfirm
+pyinstaller pcc.spec --clean --noconfirm
 
 echo ""
 echo "=== Build complete ==="
@@ -23,7 +23,7 @@ if command -v create-dmg &> /dev/null; then
     echo "Creating DMG..."
     create-dmg \
         --volname "PPC" \
-        --volicon "assets/icon.icns" \
+        
         --window-pos 200 120 \
         --window-size 600 400 \
         --icon "PPC.app" 150 190 \

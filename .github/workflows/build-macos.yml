@@ -28,7 +28,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install create-dmg
-        run: brew install create-dmg
+        run: |
+          export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+          brew install create-dmg || echo "create-dmg non disponibile, si procede solo con zip"
 
       - name: Install dependencies
         run: |
@@ -37,6 +39,15 @@ jobs:
 
       - name: Build PCC.app + PCC.dmg
         run: bash build_mac.sh
+
+      - name: Create DMG (if create-dmg available)
+        run: |
+          export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+          if command -v create-dmg >/dev/null 2>&1; then
+            create-dmg --overwrite --volname "PCC" "PCC.dmg" "dist/PCC.app" || echo "DMG creation skipped"
+          else
+            echo "create-dmg missing, skipping DMG"
+          fi
 
       - name: Zip PCC.app (alternative to DMG, no Gatekeeper block on extract)
         run: |
