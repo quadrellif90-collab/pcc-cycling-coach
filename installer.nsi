@@ -8,7 +8,7 @@
 Unicode true
 
 !define APPNAME "PCC Pro"
-!define APPNAMEFULL "PCC Pro — Adaptive Cycling Intelligence"
+!define APPNAMEFULL "PCC Pro - Adaptive Cycling Intelligence"
 !define PUBLISHER "PCC Pro"
 ; VERSION è passata dal CI come /DVERSION=X.Y.Z
 ; Default di sicurezza se compilato a mano senza /D.
