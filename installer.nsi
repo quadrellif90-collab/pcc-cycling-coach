@@ -4,7 +4,7 @@
 ; sopravvivono senza migrazione).
 
 ; Build Unicode: gestisce correttamente i caratteri non-ASCII (es. em-dash "—" nel
-; nome completo) invece di mostrarli come mojibake (â€") nel nome app/collegamenti.
+; nome completo) invece di mostrarli come mojibake (em-dash) nel nome app/collegamenti.
 Unicode true
 
 !define APPNAME "PCC Pro"

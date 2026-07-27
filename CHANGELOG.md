@@ -76,7 +76,7 @@ Tre interventi segnalati dal cliente.
 
 Correzione a caldo del nome dell'applicazione mostrato **dopo l'installazione** (collegamenti Start Menu/Desktop, voce "Disinstalla programma" e nome dell'installer).
 
-- **Problema:** il nome completo `PCC — Adaptive Cycling Intelligence` conteneva un em-dash `—` (non-ASCII). NSIS compilato in modalità ANSI interpretava i 3 byte UTF-8 come cp1252, mostrando `PCC â€" Adaptive Cycling Intelligence` (due caratteri inutili).
+- **Problema:** il nome completo `PCC — Adaptive Cycling Intelligence` conteneva un em-dash `—` (non-ASCII). NSIS compilato in modalità ANSI interpretava l'UTF-8 come cp1252, mostrando `PCC ... Adaptive Cycling Intelligence` (mojibake) (due caratteri inutili).
 - **Fix:** aggiunto `Unicode true` all'header NSIS + sostituito l'em-dash con un trattino ASCII nel nome completo. Ora il nome appare corretto. La finestra dell'app resta `PCC` (impostato in `launcher.py`).
 - Build EXE/DMG invariati rispetto a v5.2.1; solo l'installer cambia.
 
