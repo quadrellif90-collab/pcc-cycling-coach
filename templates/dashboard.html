@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PCC — Adaptive Cycling Intelligence</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="manifest" href="/static/manifest.json">
 <link rel="icon" type="image/png" href="/static/favicon.png?v=3">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <style>
@@ -5698,6 +5701,57 @@ const _elevObserver = new IntersectionObserver((entries, observer) => {
 
 // ═══ FITNESS CHART (intervals.icu Conditie-style) ═════════════════════════
 
+function fitnessChartInteractive(data, containerId) {
+  if (!data || typeof Chart === 'undefined') return;
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  if (window._fitChart) { try { window._fitChart.destroy(); } catch(_) {} }
+  var labels = data.labels || [], ctl = data.ctl || [], tsb = data.tsb || [], atl = data.atl || [];
+  if (!labels.length) return;
+  el.innerHTML = '<canvas id="fitness-chart-zoom" width="600" height="200"></canvas>';
+  var cv = document.getElementById('fitness-chart-zoom');
+  if (!cv) return;
+  window._fitChart = new Chart(cv, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'CTL', data: ctl, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'ATL', data: atl, borderColor: '#f59e0b', tension: 0.3, pointRadius: 0 },
+        { label: 'TSB', data: tsb, borderColor: '#10b981', borderDash: [4,4], tension: 0.3, pointRadius: 0 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { color:'var(--text2)', font:{size:10}, boxWidth:12 } } },
+      scales: {
+        x: { ticks: {color:'var(--text3)', font:{size:9}, maxTicksLimit:12}, grid:{display:false} },
+        y: { ticks: {color:'var(--text3)', font:{size:9}}, grid:{color:'rgba(255,255,255,0.05)'} }
+      },
+      animation: { duration: 600 },
+    }
+  });
+  // Zoom via mouse wheel
+  cv.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    if (!window._fitChart) return;
+    var sc = window._fitChart.scales.x;
+    if (!sc || !sc.min || !sc.max) return;
+    var range = sc.max - sc.min, mid = (sc.max + sc.min) / 2;
+    var factor = e.deltaY > 0 ? 1.15 : 0.85;
+    var newRange = range * factor;
+    window._fitChart.options.scales.x.min = mid - newRange/2;
+    window._fitChart.options.scales.x.max = mid + newRange/2;
+    window._fitChart.update();
+  }, {passive:false});
+  // Double-click reset
+  cv.addEventListener('dblclick', function() {
+    if (!window._fitChart) return;
+    window._fitChart.options.scales.x.min = undefined;
+    window._fitChart.options.scales.x.max = undefined;
+    window._fitChart.update();
+  });
+}
 function fitnessChart(data, containerId) {
   const container = $(containerId);
   if (!data || data.length < 2) { container.innerHTML = '<div class="loading">Dati insufficienti</div>'; return; }
@@ -6801,6 +6855,38 @@ window.FEATURES.pr_detection = (typeof loadPRBadges === 'function' || true);
 // scaling (no date dimension). Backfill toast (PATCH G3) when n_rides<30.
 let _powerCurveData = null;
 let _powerCurveChart = null;
+let _pcZoomStack = [];
+let _pcDragStart = null;
+function _pcAddZoom() {
+  const canvas = document.getElementById('power-curve-chart');
+  if (!canvas) return;
+  canvas.style.cursor = 'crosshair';
+  canvas.onmousedown = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    _pcDragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+  canvas.onmouseup = function(e) {
+    if (!_pcDragStart || !_powerCurveChart) return;
+    const rect = canvas.getBoundingClientRect();
+    const x2 = e.clientX - rect.left, y2 = e.clientY - rect.top;
+    const x1 = _pcDragStart.x;
+    if (Math.abs(x2 - x1) < 5) { _pcDragStart = null; return; }
+    _pcZoomStack.push({ min: _powerCurveChart.scales.x.min, max: _powerCurveChart.scales.x.max });
+    _powerCurveChart.options.scales.x.min = Math.min(x1, x2);
+    _powerCurveChart.options.scales.x.max = Math.max(x1, x2);
+    _powerCurveChart.update();
+    _pcDragStart = null;
+  };
+  canvas.ondblclick = function() {
+    if (!_powerCurveChart) return;
+    if (_pcZoomStack.length) { var s = _pcZoomStack.pop(); _powerCurveChart.options.scales.x.min = s.min; _powerCurveChart.options.scales.x.max = s.max; }
+    else { _powerCurveChart.options.scales.x.min = undefined; _powerCurveChart.options.scales.x.max = undefined; }
+    _powerCurveChart.update();
+  };
+}
+// Hook into existing power curve loader
+var _origPcLoader = window.loadPowerCurve || null;
+window.loadPowerCurve = function() { if (_origPcLoader) _origPcLoader(); setTimeout(_pcAddZoom, 300); };
 let _powerCurveYAxis = 'watts';   // 'watts' | 'wkg' | 'pct_ftp'
 let _powerCurveWindow = 90;       // 30 / 90 / 180 / 365 / 'all'
 let _powerCurveBackfillSeen = false;
@@ -8733,6 +8819,31 @@ async function loadDiet() {
 
 // PCC — mostra/nasconde opzioni in base alla sorgente dieta
 function renderSeasonTimeline() {
+  const card=document.getElementById('season-timeline-card'), bars=document.getElementById('st-bars'), lbls=document.getElementById('st-labels'), evts=document.getElementById('st-events'), period=document.getElementById('st-period-label');
+  if (!card||!bars) return;
+  const plan=window._planData;
+  if (!plan||!plan.goal) {card.style.display='none';return;}
+  const g=plan.goal, phases=plan.phases||[], weeks=plan.weeks||[];
+  if (!phases.length&&!weeks.length) {card.style.display='none';return;}
+  card.style.display='block';
+  const startStr=weeks.length?(weeks[0].start||weeks[0].week_start||''):'';
+  const endStr=g.event_date||g.target_date||'';
+  if(!startStr){card.style.display='none';return;}
+  const start=new Date(startStr), end=endStr?new Date(endStr):new Date(start.getTime()+120*86400000);
+  const totalDays=Math.round((end-start)/86400000)||120;
+  if(totalDays<=0){card.style.display='none';return;}
+  const totalW=Math.ceil(totalDays/7);
+  period.textContent=startStr+' \u2192 '+end.toISOString().slice(0,10)+' ('+totalW+' sett)';
+  const colors={'base':'#3b82f6','build':'#f59e0b','peak':'#ef4444','taper':'#10b981','recovery':'#8b5cf6','race':'#ec4899'};
+  let html='', prevPct=0;
+  for(const ph of phases){const n=(ph.name||'').toLowerCase(), w=ph.weeks||0; if(w<=0)continue; const pct=Math.round(w/totalW*10000)/100;
+    // Drag-enabled phase bar
+    html+='<div draggable="true" ondragstart="event.dataTransfer.setData(\'text/phase\',\''+escape(n)+'\')" ondragover="event.preventDefault()" ondrop="alert(\'Sposta '+escape(n)+'? Funzione drag in sviluppo.\')" style="position:absolute;top:4px;left:'+prevPct+'%;width:'+pct+'%;height:24px;background:'+(colors[n]||'#6b7280')+';border-radius:4px;opacity:0.7;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,0.5);cursor:grab;">'+(ph.name||'').slice(0,8)+'</div>'; prevPct+=pct;}
+  const ml=[]; const cursor=new Date(start); while(cursor<=end){ml.push(cursor.toLocaleDateString('it-IT',{month:'short'}));cursor.setMonth(cursor.getMonth()+1);}
+  lbls.innerHTML=ml.map(m=>'<span style="flex:1;text-align:center;">'+m+'</span>').join('');
+  if(endStr&&g.event_name){const ep=Math.min(98,Math.round((end-start)/totalDays*100)); evts.innerHTML='<div style="position:absolute;top:32px;left:'+ep+'%;transform:translateX(-50%);"><div style="width:2px;height:30px;background:#ef4444;margin:0 auto;"></div><div style="font-size:9px;color:#ef4444;font-weight:600;text-align:center;white-space:nowrap;"> \u2605 '+(g.event_name||'').slice(0,20)+'</div></div>';}
+  bars.innerHTML=html;
+} {
   const card=document.getElementById('season-timeline-card'), bars=document.getElementById('st-bars'), lbls=document.getElementById('st-labels'), evts=document.getElementById('st-events'), period=document.getElementById('st-period-label');
   if (!card||!bars) return;
   const plan=window._planData;

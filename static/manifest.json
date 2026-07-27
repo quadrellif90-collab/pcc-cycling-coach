@@ -1,0 +1,21 @@
+{
+  "name": "PCC Pro",
+  "short_name": "PCC Pro",
+  "description": "Performance Cycling Coach - Allenamento polarizzato intelligente",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "/static/pcc_icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/pcc_icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
