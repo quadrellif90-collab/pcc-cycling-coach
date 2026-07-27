@@ -1,5 +1,29 @@
 # Changelog
 
+## v5.2.4 — Fix self-update (chiusura reale + changelog) + i18n (2026-07-27)
+
+**1. Fix self-update (bug critico segnalato)** — "Aggiorna" non cambiava nulla.
+Root cause: il backend lanciava l'installer silenzioso e ritornava subito
+**senza chiudere l'app**, così l'EXE restava in uso (file lock) e l'installer
+non poteva sovrascriverlo. Ora:
+- Windows: scrive `update.bat` (attende → `PCC-Setup.exe /S` che sovrascrive
+  l'EXE **e ricrea l'icona desktop** → riavvia `PCC.exe` da Program Files), lo
+  lancia detached e **chiude davvero l'app** (`os._exit`) dopo la risposta HTTP,
+  così l'EXE si libera e l'installer installa.
+- Se mancano i privilegi di admin (WinError 740): ritorna `needs_admin` +
+  `release_url` per il download manuale.
+- Frontend: il banner mostra **"Vedi la release →"** (changelog/note di
+  rilascio) invece del download diretto dell'EXE; `applySelfUpdate` gestisce
+  `needs_admin` (messaggio + apertura release) e `ok` (toast "chiusura/riavvio").
+
+**2. i18n** — ~69 frasi EN residue tradotte in italiano nei messaggi all'utente
+(stati di caricamento/errore, label, banner). Acronimi di dominio mantenuti in
+inglese (CTL, TSS, FTP, HRV, ZWO, FIT, DFA α1, RPE, LTHR, FC, eFTP, τ).
+
+**Nota:** l'aggiornamento silenzioso richiede che PCC giri come amministratore
+(Windows scrive in `Program Files`). Se avviato come utente normale, il banner
+porta alla release per installare manualmente `PCC-Setup.exe` come admin.
+
 ## v5.2.3 — Fix pianificatore "tutto riposo" + i18n + flusso data (2026-07-26)
 
 Tre interventi segnalati dal cliente.
