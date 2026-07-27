@@ -14483,6 +14483,43 @@ async def api_plan_generate(request: Request):
                 week_count=len(plan_dict.get("weeks", [])) if isinstance(plan_dict, dict) else 0,
             )
 
+        # (A) Assessment-gating: se il CTL e' basso (<= floor 40, cioe' il piano
+        # non e' tarato su dati reali di carico) inserisce un FTP Test
+        # (profilazione) nella settimana 1, come fa INSCYD: il test misura
+        # FTP/CTL reali, poi il piano si aggiorna automaticamente
+        # (daily-sync/reforecast) dopo la sync ICU. Chi parte da zero/basso
+        # fa il test iniziale; chi ha CTL > 40 (dati reali) non lo vede.
+        try:
+            _ctl = (plan_dict.get("ctl_snapshot") or {}).get("current_ctl")
+            if _ctl is not None and _ctl <= 40:
+                _w0 = plan_dict.get("weeks", [])[0] if plan_dict.get("weeks") else None
+                if _w0 is not None:
+                    _ft = None
+                    import glob as _glob
+                    for _f in _glob.glob(str(WORKOUT_DIR / "ftp_test_*.zwo")):
+                        _ft = os.path.basename(_f); break
+                    _w0.setdefault("sessions", []).append({
+                        "day": _w0.get("start"),
+                        "session_type": "ftp_test",
+                        "type": "ftp_test",
+                        "name": "FTP Test (valutazione)",
+                        "duration_min": 60,
+                        "tss": 0,
+                        "zwo_file": _ft or "",
+                        "zwo_name": _ft or "",
+                        "description": "Test di valutazione FTP: completalo per tarare il piano sulle tue capacita' reali. Il piano si aggiornera' automaticamente dopo la sync ICU.",
+                        "protocol": "Ramp test o 20-min test",
+                        "assessment": True,
+                    })
+                    plan_dict["assessment"] = {
+                        "pending": True,
+                        "test": "ftp_test",
+                        "week": 1,
+                        "message": "Piano preliminare: completa il FTP Test (settimana 1) per tararlo sulle tue capacita' reali. Dopo la sync ICU il piano si aggiorna automaticamente.",
+                    }
+        except Exception as _ae:
+            logging.getLogger(__name__).warning("assessment-gate failed: %s", _ae)
+
         resp = {"ok": True, "plan_json": plan_dict, "plan_file": str(plan_path)}
         if plan_dict.get("warning"):
             resp["warning"] = plan_dict["warning"]  # F4c: top-level for the UI
