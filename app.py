@@ -4830,6 +4830,63 @@ def api_metabolic_profile(window_days: int = Query(90, ge=7, le=3650)):
         out["window_days"] = window_days
         out["n_rides"] = curve.get("n_rides")
         out["best_efforts_used"] = best_efforts
+
+        # (A) Classificazione atleta stile INSCYD: tipo + consiglio
+        _v = out.get("vo2max_ml_kg_min")
+        _vl = out.get("vlamax_mmol_l_s")
+        _fm = out.get("fatmax_pct_ftp")
+        _wkg = round(out.get("ftp_w", 0) / max(bw, 1), 2) if out.get("ftp_w") else None
+        _type = "Non classificabile (mancano dati di potenza — completa il test di valutazione)"
+        _focus = "Completa il test di valutazione FTP per ottenere il profilo metabolico."
+        _score = {"vo2max": 0, "vlamax": 0, "fatmax": 0, "wkg": 0, "ctl": 0}
+
+        if _v and _wkg:
+            if _v > 50 and _wkg > 4.0:
+                _type = "Scalatore / Elite"
+                _focus = "Eccellente VO2max e rapporto potenza/peso. Lavora su soglia e potenza sostenuta."
+            elif _v > 45 and (_vl is not None and _vl < 0.4):
+                _type = "Scalatore / Aerobico"
+                _focus = "Alto VO2max, bassa glicolisi. Punta su Z2 prolungato e soglia per migliorare FatMax."
+            elif _vl is not None and _vl > 0.6 and _wkg < 3.5:
+                _type = "Sprinter / Classics"
+                _focus = "Alta potenza anaerobica. Lavora su VO2max e Z2 per ridurre VLamax e migliorare resistenza."
+            elif _vl is not None and _vl > 0.4 and _v > 45:
+                _type = "All-rounder"
+                _focus = "Profilo bilanciato. Identifica il punto debole tra VO2max e VLamax per specializzarti."
+            elif _v > 40 and _wkg > 3.0:
+                _type = "Cronoman / Resistance"
+                _focus = "Buona base aerobica. Lavora su soglia (+ sweet spot) e economia di pedalata."
+            else:
+                _type = "Intermedio"
+                _focus = "Base solida in costruzione. Continua con Z2 polarizzato + intervalli mirati."
+        elif _wkg:
+            if _wkg > 4.0:
+                _type = "Avanzato"
+                _focus = "Buon rapporto potenza/peso. Completare test FTP con power data per affinare il profilo."
+            elif _wkg > 3.0:
+                _type = "Intermedio"
+                _focus = "Base moderata. Completa il test di valutazione per ottenere il profilo metabolico completo."
+            else:
+                _type = "Amatoriale / Base"
+                _focus = "Inizio percorso. Completa il test di valutazione e segui il piano polarizzato per costruire la base."
+
+        # Normalizza score 0-100 per il radar
+        if _v:
+            _score["vo2max"] = min(100, max(0, int((_v - 25) / 45 * 100)))
+        if _vl is not None:
+            _score["vlamax"] = min(100, max(0, int((0.8 - _vl) / 0.7 * 100))) if _vl > 0.15 else 90
+        if _fm:
+            _score["fatmax"] = min(100, max(0, int(_fm * 2)))
+        if _wkg:
+            _score["wkg"] = min(100, max(0, int((_wkg - 1) / 5 * 100)))
+        _score["ctl"] = min(100, max(0, int((curve.get("current_ctl") or 0))))
+
+        out["classification"] = {
+            "type": _type,
+            "focus": _focus,
+            "wkg": _wkg,
+            "score": _score,
+        }
         return out
     except Exception as e:  # noqa: BLE001
         return {"error": str(e), "method": "field power-duration (non lab)"}

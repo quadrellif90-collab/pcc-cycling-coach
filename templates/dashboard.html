@@ -1785,7 +1785,8 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="tab" data-tab="bia">Composizione</div>
   <div class="tab" data-tab="settings">Impostazioni</div>
   <div class="tab" data-tab="whatsnew" title="Novita di PCC 5.2">Novita</div>
-</div><!-- /sidebar-tabs -->
+    <div class="tab" data-tab="profile">Profilo</div>
+  </div><!-- /sidebar-tabs -->
 
 <div class="main-content">
 <!-- ═══ HOME ═══════════════════════════════════════════════════════════════ -->
@@ -4329,7 +4330,9 @@ document.querySelectorAll('.tab[data-tab]').forEach(t => {
                      dfa:()=>{ if (typeof loadDfaTab === 'function') loadDfaTab(); },
                      nutrition:()=>{ if (typeof loadNutriPlan === 'function') { loadNutriPlan(); renderNutriCompare(); } },
                      bia:()=>{ if (typeof loadBIAHistory === 'function') loadBIAHistory(); },
-                     whatsnew:()=>{ if (typeof loadWhatsNew === 'function') loadWhatsNew(); }};
+                     whatsnew:()=>{ if (typeof loadWhatsNew === 'function') loadWhatsNew(); },
+                     profile:()=>{ if (typeof loadProfileTab === 'function') loadProfileTab(); }
+};
     if (loaders[tab]) loaders[tab]();
   });
 });
@@ -4598,6 +4601,53 @@ function loadWhatsNew(){
   grid.innerHTML=WHATSNEW_ITEMS.map(function(it){
     return '<div onclick="gotoTab(\''+it[3]+'\')" style="border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;background:var(--surface2);"><div style="display:flex;align-items:center;gap:8px;"><span style="font-weight:800;color:var(--accent);font-size:13px;">'+it[0]+'</span><span style="font-weight:700;font-size:14px;">'+esc(it[1])+'</span></div><div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.45;">'+esc(it[2])+'</div></div>';
   }).join('');
+}
+
+
+// ── Scheda Profilo (metabolic profile + radar) ──
+let _profileChart = null;
+async function loadProfileTab() {
+  try {
+    const res = await fetch('/api/metabolic-profile?window_days=90');
+    if (!res.ok) return;
+    const d = await res.json();
+    const c = d.classification || {};
+    document.getElementById('profile-type-badge').textContent = c.type || '—';
+    document.getElementById('profile-focus').textContent = c.focus || 'Completa il test di valutazione per il profilo completo.';
+    const set = (id, val, unit) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val != null ? val + (unit || '') : '—';
+    };
+    set('p-vo2max', d.vo2max_ml_kg_min != null ? Math.round(d.vo2max_ml_kg_min) : null, ' ml/kg/min');
+    set('p-vlamax', d.vlamax_mmol_l_s != null ? d.vlamax_mmol_l_s.toFixed(2) : null, ' mmol/l/s');
+    set('p-fatmax', d.fatmax_w != null ? Math.round(d.fatmax_w) : null, ' W');
+    set('p-wkg', c.wkg != null ? c.wkg.toFixed(2) : null, ' W/kg');
+    set('p-ftp', d.ftp_w || null, ' W');
+    set('p-ctl', d.ctl_snapshot && d.ctl_snapshot.current_ctl != null ? Math.round(d.ctl_snapshot.current_ctl) : null);
+    const canvas = document.getElementById('profile-radar');
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (_profileChart) { try { _profileChart.destroy(); } catch(_) {} _profileChart = null; }
+    const score = c.score || {};
+    _profileChart = new Chart(canvas, {
+      type: 'radar',
+      data: {
+        labels: ['VO₂max', 'VLamax', 'FatMax', 'W/kg', 'CTL'],
+        datasets: [{
+          label: 'Profilo attuale',
+          data: [score.vo2max||0, score.vlamax||0, score.fatmax||0, score.wkg||0, score.ctl||0],
+          backgroundColor: 'rgba(59,130,246,0.2)',
+          borderColor: '#3b82f6',
+          borderWidth: 2,
+          pointBackgroundColor: '#3b82f6',
+        }]
+      },
+      options: {
+        responsive: false,
+        plugins: { legend: { display: false } },
+        scales: { r: { min: 0, max: 100, ticks: { stepSize: 20, color: 'var(--text3)', backdropColor: 'transparent' }, pointLabels: { color: 'var(--text)', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.08)' }, angleLines: { color: 'rgba(255,255,255,0.08)' } } }
+      }
+    });
+  } catch(e) { /* silenzioso */ }
 }
 
 
@@ -22867,8 +22917,40 @@ document.addEventListener('DOMContentLoaded', function() {
     <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-family:monospace;">?</kbd> &nbsp; Questo pannello</div>
     <div><kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-family:monospace;">Esc</kbd> &nbsp; Chiudi / annulla</div>
   </div>
-</div>
-</div><!-- /main-content -->
+  </div>
+
+  <!-- ═══ PROFILO ═════════════════════════════════════════════════════ -->
+  <div class="section" id="sec-profile">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+      <div style="flex:1;min-width:280px;">
+        <div class="card" style="padding:14px;">
+          <h3 style="margin:0 0 8px;">Profilo metabolico</h3>
+          <div id="profile-type-badge" style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:6px;">—</div>
+          <div id="profile-focus" style="font-size:13px;color:var(--text2);margin-bottom:12px;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+            <div><span style="color:var(--text3);">VO₂max</span><br><b id="p-vo2max">—</b></div>
+            <div><span style="color:var(--text3);">VLamax</span><br><b id="p-vlamax">—</b></div>
+            <div><span style="color:var(--text3);">FatMax</span><br><b id="p-fatmax">—</b></div>
+            <div><span style="color:var(--text3);">W/kg</span><br><b id="p-wkg">—</b></div>
+            <div><span style="color:var(--text3);">FTP</span><br><b id="p-ftp">—</b></div>
+            <div><span style="color:var(--text3);">CTL</span><br><b id="p-ctl">—</b></div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:280px;">
+        <div class="card" style="padding:14px;">
+          <h3 style="margin:0 0 8px;">Radar qualita</h3>
+          <canvas id="profile-radar" width="260" height="260" style="max-width:260px;max-height:260px;margin:0 auto;"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px;">
+      <h3 style="margin:0 0 8px;">Cronologia metriche</h3>
+      <div id="profile-history" style="font-size:12px;color:var(--text3);">Dati di potenza necessari per la cronologia. Completa il test di valutazione.</div>
+    </div>
+  </div>
+
+  </div><!-- /main-content -->
 </div><!-- /app-shell -->
 </body>
 </html>
