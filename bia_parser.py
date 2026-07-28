@@ -144,6 +144,36 @@ _LABEL_PATTERNS = {
 }
 
 
+# Range fisiologici plausibili per un essere umano adulto.
+# Usati per scartare valori estratti da PDF illeggibili (es. AKERN Biavector
+# dove il primo numero dopo l'etichetta e' il valore di riferimento, non la
+# misurazione, oppure la virgola decimale italiana scompare nell'OCR).
+_BIA_RANGES = {
+    "weight_kg": (20.0, 250.0),
+    "height_cm": (100.0, 230.0),
+    "bmi": (10.0, 60.0),
+    "fat_mass_kg": (1.0, 120.0),
+    "fat_mass_pct": (2.0, 60.0),
+    "fat_free_mass_kg": (20.0, 200.0),
+    "fat_free_mass_pct": (40.0, 98.0),
+    "tbw_l": (10.0, 80.0),
+    "ecw_l": (1.0, 40.0),
+    "icw_l": (5.0, 70.0),
+    "hydration_pct": (30.0, 80.0),
+    "bcm_kg": (10.0, 80.0),
+    "smm_kg": (5.0, 80.0),
+    "asmm_kg": (3.0, 60.0),
+    "muscle_mass_kg": (5.0, 80.0),
+    "bone_kg": (1.0, 20.0),
+    "protein_kg": (1.0, 40.0),
+    "protein_pct": (5.0, 40.0),
+    "visceral_fat": (1.0, 40.0),
+    "metabolic_age": (5.0, 120.0),
+    "phase_angle": (1.0, 20.0),
+    "chi": (40.0, 600.0),
+}
+
+
 @dataclass
 class BIAReading:
     date: str = ""
@@ -179,13 +209,29 @@ class BIAReading:
         return {k: v for k, v in asdict(self).items()
                 if v is not None and k not in ("date", "source", "raw_text")}
 
+    def validated_fields(self):
+        """Campi con valore dentro il range fisiologico plausibile."""
+        out = {}
+        for k, v in self.filled_fields().items():
+            lo, hi = _BIA_RANGES.get(k, (float("-inf"), float("inf")))
+            if lo <= v <= hi:
+                out[k] = v
+        return out
+
 
 def _num(s: str) -> float:
     return float(s.replace(",", "."))
 
 
 def parse_bia_text(text: str) -> dict:
-    """Estrae i campi BIA dal testo del PDF (PDF testuale)."""
+    """Estrae i campi BIA dal testo del PDF (PDF testuale).
+
+    I valori estratti vengono filtrati per range fisiologico: i PDF AKERN
+    Biavector (testuali o scansionati via OCR) producono spesso numeri
+    errati (valore di riferimento invece della misurazione, o virgola
+    decimale italiana persa). I valori fuori range vengono scartati per
+    non salvare misurazioni impossibili.
+    """
     low = text.lower()
     r = BIAReading(source="pdf")
     found = {}
@@ -212,11 +258,26 @@ def parse_bia_text(text: str) -> dict:
             r.muscle_mass_kg = r.smm_kg
             found["muscle_mass_kg"] = r.muscle_mass_kg
     r.raw_text = text
+    # Filtra per range fisiologico: scarta i valori impossibili
+    validated = r.validated_fields()
+    # Se dopo il filtro restano pochi campi utili, il PDF non e' affidabile:
+    # ritorna scanned=True cosi' l'UI chiede all'atleta di confermare/inserire.
+    reliable = len(validated) >= 2 and "weight_kg" in validated
+    # reading ritornato all'UI contiene SOLO i campi validati (non quelli
+    # scartati per range), cosi' prefillBIAform non precompila valori assurdi.
+    clean = BIAReading(source="pdf", date=r.date, raw_text=text)
+    for k, v in validated.items():
+        setattr(clean, k, v)
     return {
-        "scanned": False,
-        "reading": r.to_dict(),
-        "found_fields": sorted(found.keys()),
-        "missing_fields": sorted(set(_LABEL_PATTERNS) - set(found.keys())),
+        "scanned": not reliable,
+        "reading": clean.to_dict(),
+        "found_fields": sorted(validated.keys()),
+        "rejected_fields": sorted(set(found) - set(validated)),
+        "missing_fields": sorted(set(_LABEL_PATTERNS) - set(validated.keys())),
+        "unreliable": not reliable,
+        "note": (None if reliable else
+                 "Valori non affidabili (fuori range fisiologico). Controlla e inserisci "
+                 "manualmente o incolla il testo del report."),
     }
 
 

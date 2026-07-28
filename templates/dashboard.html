@@ -9103,8 +9103,16 @@ async function importBIA() {
     if (j.scanned) {
       // mostra l'immagine del PDF e pre-compila il form manuale
       msg.style.color = 'var(--text2)';
-      msg.textContent = 'PDF scansionato: testo non estraibile automaticamente. Controlla l\'immagine qui sotto e inserisci i valori nel form (oppure incolla il testo).';
+      msg.textContent = (j.note || 'PDF scansionato: testo non estraibile automaticamente. Controlla l\'immagine qui sotto e inserisci i valori nel form (oppure incolla il testo).');
       showBIAscan(j);
+      return;
+    }
+    if (j.unreliable) {
+      msg.style.color = 'var(--red)';
+      msg.textContent = (j.note || 'Valori non affidabili (fuori range fisiologico). Inserisci manualmente o incolla il testo del report.') +
+        (j.rejected_fields && j.rejected_fields.length ? ' Scartati: ' + j.rejected_fields.join(', ') + '.' : '');
+      prefillBIAform(j.reading);
+      loadBIAHistory();
       return;
     }
     msg.style.color = 'var(--green)';

@@ -1,126 +1,125 @@
-"""PCC — OCR layer for scanned PDFs (BIA / blood-panel / diet exports).
+"""PCC — OCR layer per PDF BIA scansionati.
 
-Local-first: no cloud OCR. Uses PyMuPDF (fitz) to rasterize each page and
-pytesseract to read it. Tesseract is an OPTIONAL external binary — if it is
-not installed, :func:`ocr_pdf_text` returns ``None`` and the caller falls
-back to its existing "scanned PDF, paste values" UX (no crash, no cloud).
+Estrae il testo dai PDF che non contengono un layer testuale (scansioni,
+foto di bilance/referti) usando PyMuPDF per il rendering delle pagine e
+Tesseract per il riconoscimento ottico.
 
-The Windows installer bundles Tesseract; the CI build installs it via
-``choco install tesseract`` and points ``pytesseract.tesseract_cmd`` at the
-choco path so the bundled EXE works out of the box.
+Il backend chiama questa funzione da `bia_parser.parse_bia_pdf` quando il
+testo nativo del PDF e' vuoto. Se Tesseract non e' installato, ritorna
+una stringa vuota (il chiamante gestisce il caso "scansionato non leggibile").
+
+Dipendenze:
+  - PyMuPDF  (fitz)        -> rendering pagine in PNG
+  - Tesseract OCR engine   -> binario di sistema (PATH o percorso esplicito)
+  - language pack ita+eng -> in tessdata/
 """
-from __future__ import annotations
 
 import io
 import os
 import shutil
 import subprocess
-import tempfile
-from pathlib import Path
-from typing import Optional
-
-import fitz  # PyMuPDF
-
-try:
-    import pytesseract
-except Exception:  # pragma: no cover - wrapper import is mandatory at runtime
-    pytesseract = None
-
-# Common places a Tesseract binary may live (Windows choco, Winget, manual).
-_TESSERACT_CANDIDATES = (
-    "tesseract",
-    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-    r"C:\Users\Siviglino\AppData\Local\Programs\Tesseract-OCR\tesseract.exe",
-)
 
 
-def _local_tesseract_candidates():
-    """Tesseract bundled next to the running EXE (PyInstaller onefile/folder)."""
-    import sys
-    exe_dir = getattr(sys, "executable", "")
-    if not exe_dir:
-        return []
-    base = Path(exe_dir).parent
-    return [
-        str(base / "tesseract.exe"),
-        str(base / "tesseract_bin" / "tesseract.exe"),
-    ]
+def _tesseract_cmd() -> str:
+    """Ritorna il path del binario tesseract, o '' se non trovato."""
+    _candidates = (
+        "C:/Program Files/Tesseract-OCR/tesseract.exe",
+        "C:/Program Files (x86)/Tesseract-OCR/tesseract.exe",
+        "/usr/bin/tesseract",
+        "/opt/homebrew/bin/tesseract",
+    )
+    for _c in _candidates:
+        if os.path.isfile(_c):
+            return _c
+    _found = shutil.which("tesseract")
+    return _found or ""
 
 
-def _tesseract_cmd() -> Optional[str]:
-    """Return a usable tesseract binary path, or None if absent."""
-    for cand in list(_TESSERACT_CANDIDATES) + _local_tesseract_candidates():
-        if cand == "tesseract":
-            if shutil.which("tesseract"):
-                return "tesseract"
-        elif os.path.exists(cand):
-            return cand
-    return None
+def _tessdata_dir() -> str:
+    """Trova la cartella tessdata con i language pack installati.
+
+    Nota: Tesseract usa TESSDATA_PREFIX COME cartella dei .traineddata
+    (NON ci aggiunge "/tessdata"). Quindi il prefix e' la cartella tessdata
+    stessa, es. "C:/Program Files/Tesseract-OCR/tessdata".
+    """
+    for _cand in (
+        "C:/Program Files/Tesseract-OCR/tessdata",
+        "C:/Program Files (x86)/Tesseract-OCR/tessdata",
+        "/usr/share/tesseract-ocr/4.00/tessdata",
+        "/usr/share/tessdata",
+        "/opt/homebrew/share/tessdata",
+    ):
+        if os.path.isdir(_cand):
+            return _cand
+    return ""
 
 
-def tesseract_available() -> bool:
-    """True if a Tesseract binary is reachable (OCR will work)."""
-    return _tesseract_cmd() is not None
+def _ocr_page(png_bytes: bytes, lang: str, tessdata_dir: str, tesseract_bin: str) -> str:
+    """Esegue tesseract come subprocess su un PNG in memoria (pipe).
 
-
-def _configure() -> bool:
-    """Point pytesseract at the binary if present; return False if OCR unusable."""
-    if pytesseract is None:
-        return False
-    cmd = _tesseract_cmd()
-    if cmd is None:
-        return False
+    Piu' robusto di pytesseract in ambienti con threading/import complessi
+    (uvicorn, servizi Windows) perche' non dipende da pytesseract.
+    """
+    env = dict(os.environ)
+    if tessdata_dir:
+        env["TESSDATA_PREFIX"] = tessdata_dir
     try:
-        pytesseract.pytesseract.tesseract_cmd = cmd
-        # When bundled next to the EXE, tessdata lives in <exe_dir>/tessdata.
-        import sys
-        base = Path(getattr(sys, "executable", "")).parent
-        td = base / "tessdata"
-        if td.is_dir():
-            os.environ["TESSDATA_PREFIX"] = str(td)
+        proc = subprocess.run(
+            [tesseract_bin, "stdin", "stdout", "-l", lang, "--psm", "6"],
+            input=png_bytes,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+            env=env,
+        )
+        if proc.returncode == 0:
+            return proc.stdout.decode("utf-8", "ignore")
     except Exception:
         pass
-    return True
+    return ""
 
 
-def ocr_pdf_text(pdf_bytes: bytes, lang: str = "eng+ita") -> Optional[str]:
-    """OCR a scanned PDF. Returns extracted text, or None if OCR unavailable
-    or the PDF yields no text (caller should fall back to manual entry).
+def ocr_pdf_text(pdf_bytes: bytes, dpi: int = 220, lang: str = "ita+eng") -> str:
+    """Ritorna il testo OCR del PDF, o '' se non leggibile / OCR assente.
 
-    Args:
-        pdf_bytes: raw PDF file content.
-        lang: Tesseract language string (e.g. "eng+ita" for EN+IT).
+    Il testo e' normalizzato (spazi multipli compressi, righe vuote tagliate)
+    perche' i pattern del parser BIA sono case-insensitive e tollerano
+    spazi, ma non gradiscono rumore eccessivo.
     """
-    if not _configure():
-        return None
+    tesseract_bin = _tesseract_cmd()
+    if not tesseract_bin:
+        return ""
+    try:
+        import fitz
+        from PIL import Image
+    except Exception:
+        return ""
+
     try:
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     except Exception:
-        return None
-    pages_text: list[str] = []
-    try:
-        for page in doc:
-            pix = page.get_pixmap(dpi=300)
-            img_bytes = pix.tobytes("png")
+        return ""
+
+    tessdata_dir = _tessdata_dir()
+    chunks = []
+    for pg in doc:
+        try:
+            pix = pg.get_pixmap(matrix=fitz.Matrix(dpi / 72.0, dpi / 72.0))
+            img = Image.open(io.BytesIO(pix.tobytes("png")))
             try:
-                from PIL import Image
-                img = Image.open(io.BytesIO(img_bytes))
-                text = pytesseract.image_to_string(img, lang=lang)
+                img = img.convert("L")
             except Exception:
-                # fall back to raw pixmap buffer if PIL import path hiccups
-                text = pytesseract.image_to_string(io.BytesIO(img_bytes), lang=lang)
-            pages_text.append(text or "")
-    finally:
-        doc.close()
-    joined = "\n".join(pages_text).strip()
-    return joined or None
+                pass
+            import io as _io
+            buf = _io.BytesIO()
+            img.save(buf, format="PNG")
+            png_bytes_page = buf.getvalue()
+            text = _ocr_page(png_bytes_page, lang, tessdata_dir, tesseract_bin)
+            if text.strip():
+                chunks.append(text)
+        except Exception:
+            continue
 
-
-def ocr_pdf_file(path: str, lang: str = "eng+ita") -> Optional[str]:
-    """Convenience wrapper: OCR a PDF on disk."""
-    try:
-        with open(path, "rb") as fh:
-            return ocr_pdf_text(fh.read(), lang=lang)
-    except Exception:
-        return None
+    full = "\n".join(chunks).strip()
+    lines = [" ".join(ln.split()) for ln in full.splitlines() if ln.strip()]
+    return "\n".join(lines)

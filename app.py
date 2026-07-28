@@ -4557,8 +4557,8 @@ async def api_bia_import(request: Request):
             from bia_parser import BIAReading, to_icu_wellness, parse_bia_text
             # testo incollato: fai il parse regex invece di leggerlo come campi strutturati
             if data.get("raw_text"):
-                pt = parse_bia_text(data["raw_text"])
-                r = BIAReading(**pt["reading"])
+                res = parse_bia_text(data["raw_text"])
+                r = BIAReading(**res["reading"])
                 r.source = "pdf"
                 if not r.date:
                     r.date = __import__("datetime").date.today().isoformat()
@@ -4568,9 +4568,13 @@ async def api_bia_import(request: Request):
                 r.source = "manual"
                 if not r.date:
                     r.date = __import__("datetime").date.today().isoformat()
+                # JSON strutturato: costruisci res coerente col branch PDF
+                res = {"scanned": False, "unreliable": False,
+                       "reading": r.to_dict(), "found_fields": sorted(r.validated_fields().keys()),
+                       "rejected_fields": [], "note": None}
         else:
             # multipart: file PDF
-            from bia_parser import parse_bia_pdf, BIAReading
+            from bia_parser import parse_bia_pdf, BIAReading, to_icu_wellness
             form = await request.form()
             f = form.get("file")
             if not f:
@@ -4581,10 +4585,12 @@ async def api_bia_import(request: Request):
             r = BIAReading(**res["reading"])
             if not r.date:
                 r.date = __import__("datetime").date.today().isoformat()
-        # salva nello storico (solo se ci sono campi reali)
-        from bia_parser import to_icu_wellness
-        filled = r.filled_fields()
-        if filled:
+        # salva nello storico (solo campi validi entro range fisiologico)
+        validated = r.validated_fields()
+        # Se il PDF e' inaffidabile (valori fuori range), non salvare misurazioni
+        # impossibili: l'UI mostra l'avviso e chiede all'atleta di inserire/confermare.
+        unreliable = res.get("unreliable", False)
+        if validated and not unreliable:
             hist = _bia_load_history()
             entry = r.to_dict()
             hist = [h for h in hist if h.get("date") != r.date]
@@ -4595,14 +4601,16 @@ async def api_bia_import(request: Request):
         else:
             saved = False
             count = len(_bia_load_history())
-        icu = to_icu_wellness(r, r.date) if filled else None
+        icu = to_icu_wellness(r, r.date) if (validated and not unreliable) else None
         resp = {"ok": True, "scanned": scanned,
-                "reading": r.to_dict(), "found_fields": sorted(filled.keys()),
+                "reading": r.to_dict(), "found_fields": sorted(validated.keys()),
                 "icu_payload": icu, "history_saved": saved,
-                "history_count": count}
+                "history_count": count, "unreliable": unreliable}
         if scanned:
             resp["pages"] = res.get("pages", [])
             resp["note"] = res.get("note", "PDF scansionato: testo non estraibile.")
+        if unreliable:
+            resp["note"] = res.get("note", "Valori non affidabili (fuori range). Inserisci manualmente.")
         return resp
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": f"BIA import fallito: {e}"})
