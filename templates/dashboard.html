@@ -4562,9 +4562,17 @@ function pccConfirm(msg){
     if(!m||!t||!ok||!cancel){ resolve(true); return; }
     t.textContent = msg || 'Confermi?';
     m.style.display = 'flex';
-    function cleanup(){ m.style.display='none'; ok.onclick=null; cancel.onclick=null; }
+    function cleanup(){
+      m.style.display='none';
+      ok.onclick=null; cancel.onclick=null;
+      try { document.removeEventListener('keydown', onKey); } catch(_) {}
+    }
+    function onKey(e){ if(e.key==='Escape'){ cleanup(); resolve(false); } }
     ok.onclick = function(){ cleanup(); resolve(true); };
     cancel.onclick = function(){ cleanup(); resolve(false); };
+    // click sul backdrop (fuori dal pannello) = annulla
+    m.onclick = function(e){ if(e.target===m){ cleanup(); resolve(false); } };
+    document.addEventListener('keydown', onKey);
   });
 }
 // le funzioni esistenti puntano a pccConfirm (Promise) -> chiamanti resi async
@@ -23358,7 +23366,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div><!-- /main-content -->
 </div><!-- /app-shell -->
 <div id="pcc-confirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.4);max-width:420px;width:90vw;padding:20px;">
+  <div role="dialog" aria-modal="true" aria-labelledby="pcc-confirm-msg" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.4);max-width:420px;width:90vw;padding:20px;">
     <div id="pcc-confirm-msg" style="font-size:14px;line-height:1.5;color:var(--text);white-space:pre-wrap;"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
       <button id="pcc-confirm-cancel" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:9px 18px;border-radius:9px;font-size:13px;cursor:pointer;">Annulla</button>
