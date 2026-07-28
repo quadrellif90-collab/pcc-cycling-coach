@@ -6987,7 +6987,14 @@ def generate_plan(
     # slots of the same week, not the ftp_test slot.
     _inject_mid_cycle_ftp_tests(weeks, phases)
 
-    # v4.6.1 PLANNER-VARIETY+RONNESTAD: hard floor for build2 and peak phases
+    # v5.3.5 (backport Domestique v3.7.0): FTP test must land on FRESH legs.
+    # _inject_mid_cycle_ftp_tests prefers an easy previous day, but it runs
+    # BEFORE the build2/peak variety floors, which inject extra HIT and can
+    # land one the day before the test. A depressed FTP then propagates to
+    # every zone/session of the next cycle. This guard runs LAST.
+    _ensure_fresh_legs_before_ftp_tests(weeks)
+
+    # v4.6.1 PLANNER-VARIETY+IRONNESTAD: hard floor for build2 and peak phases
     # — each must include ≥1 anaerobic AND ≥1 neuromuscular AND ≥2 vo2_short
     # workouts across the phase. Post-sampling check + swap if floor not met.
     # FS1: these diversification floors are the AUTO sampler's variety contract;
@@ -7455,6 +7462,35 @@ def _session_is_hit(sess) -> bool:
         return True
     cc = _content_class_for_zwo(getattr(sess, "zwo_file", "") or "")
     return cc in _HIT_SLOT_CONTENT_CLASSES
+
+
+def _ensure_fresh_legs_before_ftp_tests(weeks: list) -> None:
+    """v5.3.5 (backport Domestique v3.7.0): a maximal FTP test is only
+    valid on fresh legs. _inject_mid_cycle_ftp_tests already prefers an easy
+    previous day, but it runs BEFORE the build2/peak variety floors, which
+    inject extra HIT and can land one the day before the test. The test then
+    reads a depressed FTP and that number becomes every zone/session of the
+    next cycle. This guard runs LAST (after every day-moving pass)."""
+    easy = {"rest", "z2", "long_z2", "recovery"}
+    by_day = {s.day: s for w in weeks for s in w.sessions
+               if getattr(s, "day", None) is not None}
+    for day, sess in sorted(by_day.items()):
+        if getattr(sess, "session_type", "") != "ftp_test":
+            continue
+        prev = by_day.get(day - timedelta(days=1))
+        if prev is None or prev.session_type in easy:
+            continue
+        prev.session_type = "recovery"
+        prev.zwo_file = ""
+        prev.zwo_name = ""
+        prev.matched = False
+        prev.duration_min = min(getattr(prev, "duration_min", 45) or 45, 45)
+        prev.tss_estimate = min(getattr(prev, "tss_estimate", 30.0) or 30.0,
+                                30.0)
+        prev.description = (
+            "Recovery — eased to leave fresh legs for tomorrow's FTP test. "
+            "A maximal protocol read off a fatigued day sets a wrong FTP for "
+            "the whole cycle.")
 
 
 def _week_hit_count(week) -> int:
