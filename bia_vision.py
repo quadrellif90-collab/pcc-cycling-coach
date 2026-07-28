@@ -61,7 +61,7 @@ def vision_configured() -> bool:
     return bool(os.getenv("BIA_VISION_API_KEY"))
 
 
-def _render_pages(pdf_bytes: bytes, dpi: int = 200):
+def _render_pages(pdf_bytes: bytes, dpi: int = 110):
     if fitz is None:
         return []
     try:
@@ -69,7 +69,9 @@ def _render_pages(pdf_bytes: bytes, dpi: int = 200):
         out = []
         for pg in doc:
             pix = pg.get_pixmap(matrix=fitz.Matrix(dpi / 72.0, dpi / 72.0))
-            out.append(pix.tobytes("png"))
+            # JPEG e' molto piu' leggero del PNG: evita 413 (Request Entity
+            # Too Large) su endpoint come z.ai con pagine A4 ad alta risoluzione.
+            out.append(("jpeg", pix.tobytes("jpeg")))
         return out
     except Exception:
         return []
@@ -120,18 +122,19 @@ def extract_bia_via_vision(pdf_bytes: bytes) -> dict:
         return None
 
     api_key = os.getenv("BIA_VISION_API_KEY")
-    base_url = os.getenv("BIA_VISION_BASE_URL", "https://api.z.ai/v1").rstrip("/")
-    model = os.getenv("BIA_VISION_MODEL", "glm-4v-flash")
+    base_url = os.getenv("BIA_VISION_BASE_URL", "https://api.z.ai/api/paas/v4").rstrip("/")
+    model = os.getenv("BIA_VISION_MODEL", "glm-4.7-flash")
 
     imgs = _render_pages(pdf_bytes)
     if not imgs:
         return None
-    b64 = [base64.b64encode(i).decode("ascii") for i in imgs]
+    b64 = [base64.b64encode(b).decode("ascii") for _, b in imgs]
+    mime = [("image/jpeg" if fmt == "jpeg" else "image/png") for fmt, _ in imgs]
 
     content = [{"type": "text", "text": _BIA_VISION_PROMPT}]
-    for b in b64:
+    for b, m in zip(b64, mime):
         content.append({"type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{b}"}})
+                        "image_url": {"url": f"data:{m};base64,{b}"}})
 
     try:
         resp = httpx.post(
