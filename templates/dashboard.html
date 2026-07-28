@@ -4237,7 +4237,7 @@ let _deletingProfile = false;
 // v4.4 — Reset profilo attivo: svuota dati + disconnette ICU, mantiene il profilo.
 async function resetActiveProfile() {
   const p = (_profileData && _profileData.active) || 'default';
-  if (!confirm('Reset profilo?\n\nSvuota rides, piani, wellness e credenziali Intervals.icu.\nIl profilo resta e riparti pulito.\n\nContinuare?')) return;
+  if (!(await confirm('Reset profilo?\n\nSvuota rides, piani, wellness e credenziali Intervals.icu.\nIl profilo resta e riparti pulito.\n\nContinuare?'))) return;
   try {
     const res = await fetch(`/api/profiles/${encodeURIComponent(p)}/reset`, {method:'POST'});
     const j = await res.json().catch(() => ({}));
@@ -4250,7 +4250,7 @@ async function resetActiveProfile() {
 async function deleteActiveProfile() {
   const p = (_profileData && _profileData.active) || 'default';
   const name = (_profileData && (_profileData.profiles||[]).find(x=>x.id===p)||{}).name || p;
-  if (!confirm(`Eliminare DEFINITIVAMENTE il profilo "${name}"?\n\nRimuove per sempre:\n• Tutte le uscite e i dati\n• Piani di allenamento\n• Credenziali Intervals.icu\n• Database\n\nOperazione irreversibile.`)) return;
+  if (!(await confirm(`Eliminare DEFINITIVAMENTE il profilo "${name}"?\n\nRimuove per sempre:\n• Tutte le uscite e i dati\n• Piani di allenamento\n• Credenziali Intervals.icu\n• Database\n\nOperazione irreversibile.`))) return;
   try {
     const res = await fetch(`/api/profiles/${encodeURIComponent(p)}`, {method:'DELETE'});
     if (!res.ok) { const b = await res.text().catch(()=> ''); alert(`Eliminazione fallita (${res.status}): ${b}`); return; }
@@ -4267,7 +4267,7 @@ async function deleteProfileFromBadge(id, name) {
     `• Intervals.icu credentials\n` +
     `• SQLite database\n\n` +
     `This cannot be undone.`;
-  if (!confirm(confirmMsg)) return;
+  if (!(await confirm(confirmMsg))) return;
   _deletingProfile = true;
   try {
     const res = await fetch(`/api/profiles/${encodeURIComponent(id)}`, {
@@ -4510,8 +4510,8 @@ function showClientError(e,title){ showToast((title?title+' ':'')+normalizeErr(e
 function gotoTab(t){ var el=document.querySelector('.tab[data-tab="'+t+'"]'); if(el) el.click(); }
 
 // ===== v5.2.x Ripristina disposizione card =====
-function resetCardLayout(){
-  if(!confirmDanger || !confirmDanger('Ripristinare l\'ordine originale delle card? Le modifiche manuali andranno perse.')) return;
+async function resetCardLayout(){
+  if(!(await confirmDanger('Ripristinare l\'ordine originale delle card? Le modifiche manuali andranno perse.'))) return;
 
 
 
@@ -4552,8 +4552,28 @@ function renderRecentActivities(filter){
 }
 
 
+// ===== v5.3.12 — modal conferma custom (sostituisce window.confirm nativo) =====
+function pccConfirm(msg){
+  return new Promise(function(resolve){
+    var m=document.getElementById('pcc-confirm');
+    var t=document.getElementById('pcc-confirm-msg');
+    var ok=document.getElementById('pcc-confirm-ok');
+    var cancel=document.getElementById('pcc-confirm-cancel');
+    if(!m||!t||!ok||!cancel){ resolve(true); return; }
+    t.textContent = msg || 'Confermi?';
+    m.style.display = 'flex';
+    function cleanup(){ m.style.display='none'; ok.onclick=null; cancel.onclick=null; }
+    ok.onclick = function(){ cleanup(); resolve(true); };
+    cancel.onclick = function(){ cleanup(); resolve(false); };
+  });
+}
+// le funzioni esistenti puntano a pccConfirm (Promise) -> chiamanti resi async
+function confirmDanger(msg){ return pccConfirm(msg||'Sei sicuro? L\'operazione non e reversibile.'); }
+// override globale per intercettare anche window.confirm(...)
+try { window.confirm = function(m){ return pccConfirm(m); }; } catch(_) {}
+
 // ===== v5.2 conferma azioni distruttive =====
-function confirmDanger(msg){ return window.confirm(msg||'Sei sicuro? L\'operazione non e reversibile.'); }
+function confirmDanger_legacy(msg){ return window.confirm(msg||'Sei sicuro? L\'operazione non e reversibile.'); }
 
 // ===== v5.2 empty-state riutilizzabile =====
 function emptyState(icon, title, subtitle, ctaLabel, ctaOnclick){
@@ -11337,7 +11357,7 @@ async function openRideDetail(rideId) {
       ${_raceCheckboxHtml}
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a class="btn" href="/api/rides/${rideIdEnc}/fit" download style="background:var(--surface2);text-decoration:none;display:inline-block;">Scarica FIT</a>
-        <button class="btn" style="background:var(--surface2);color:var(--dev-red);border-color:var(--dev-red);" onclick="if(confirmDanger('Eliminare questa uscita? L\'operazione non e reversibile.')){fetch('/api/rides/${rideIdEnc}',{method:'DELETE'}).then(r=>{if(!r.ok)throw new Error('Failed');$('ride-detail-overlay').style.display='none';}).catch(e=>showClientError(e, 'Eliminazione uscita non riuscita:'))}">Delete Ride</button>
+        <button class="btn" style="background:var(--surface2);color:var(--dev-red);border-color:var(--dev-red);" onclick="(async()=>{ if(await pccConfirm('Eliminare questa uscita? L\'operazione non e reversibile.')){fetch('/api/rides/${rideIdEnc}',{method:'DELETE'}).then(r=>{if(!r.ok)throw new Error('Failed');$('ride-detail-overlay').style.display='none';}).catch(e=>showClientError(e, 'Eliminazione uscita non riuscita:'))} })()">Delete Ride</button>
       </div>
     </div>`;
 
@@ -14509,11 +14529,11 @@ async function _commitAvailUpdate() {
   }
 }
 
-function _confirmDiscardAvailIfDirty() {
+async function _confirmDiscardAvailIfDirty() {
   // Returns true if it's safe to proceed (clean, or user discarded), false if
   // the user wants to keep editing.
   if (!_availDirty) return true;
-  const ok = window.confirm('Discard unsaved availability changes?');
+  const ok = await window.confirm('Discard unsaved availability changes?');
   if (ok) {
     _availDirty = false;
     loadAvailData();
@@ -14687,7 +14707,7 @@ async function generatePlan(opts) {
   // L4-UX 3: the scan card's Generate is ONE click — the card itself already
   // showed exactly what will be built (position, length, phases, end date).
   if (!opts.fromEntryCard && window._planData && (window._planData.weeks || []).length) {
-    if (!confirm('Rebuild your plan from your current settings and fitness?\n\nThis replaces the current plan. (Your plan already updates itself automatically after each sync and when you open this tab — you only need this after a goal, event-date, or availability change.)')) return;
+  if (!(await confirm('Rebuild your plan from your current settings and fitness?\n\nThis replaces the current plan. (Your plan already updates itself automatically after each sync and when you open this tab — you only need this after a goal, event-date, or availability change.)'))) return;
   }
   // v3.2.0 phase-split editor: a mis-summing split never reaches the server —
   // the banner explains; Generate is blocked ONLY on the sum mismatch.
@@ -17929,7 +17949,7 @@ async function saveZones(kind) {
   } catch (e) { showToast('Could not save zones', 4500, 'error'); }
 }
 async function resetZones(kind) {
-  if(!confirmDanger('Ripristinare le zone di potenza ai valori automatici? Le personalizzazioni verranno perse.')) return;
+  if(!(await confirmDanger('Ripristinare le zone di potenza ai valori automatici? Le personalizzazioni verranno perse.'))) return;
   try {
     await fetch('/api/settings/zones', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -18253,7 +18273,7 @@ async function runSync(btn) {
 }
 
 async function resetHrRows() {
-  if(!confirmDanger('Ripristinare le zone di frequenza cardiaca ai valori Coggan? Le personalizzazioni verranno perse.')) return;
+  if(!(await confirmDanger('Ripristinare le zone di frequenza cardiaca ai valori Coggan? Le personalizzazioni verranno perse.'))) return;
   // W1: back to the Coggan defaults (server drops the custom key).
   try {
     const r = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({hr_rows_custom: null})});
@@ -18272,7 +18292,7 @@ async function saveSettings() {
   if (isTested && Number.isFinite(newFtp) && Number.isFinite(priorFtp) && newFtp !== priorFtp) {
     const msg = `Are you sure? This will replace your current tested FTP of ${priorFtp}W with ${newFtp}W. ` +
                 `To keep the tested reading, cancel.`;
-    if (!confirm(msg)) {
+    if (!(await confirm(msg))) {
       // Revert the input to the previous value
       $('set-ftp').value = priorFtp;
       return;
@@ -23337,5 +23357,14 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div><!-- /main-content -->
 </div><!-- /app-shell -->
+<div id="pcc-confirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.4);max-width:420px;width:90vw;padding:20px;">
+    <div id="pcc-confirm-msg" style="font-size:14px;line-height:1.5;color:var(--text);white-space:pre-wrap;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+      <button id="pcc-confirm-cancel" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:9px 18px;border-radius:9px;font-size:13px;cursor:pointer;">Annulla</button>
+      <button id="pcc-confirm-ok" style="background:var(--accent);border:1px solid var(--accent);color:#fff;padding:9px 18px;border-radius:9px;font-size:13px;cursor:pointer;font-weight:600;">Conferma</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
