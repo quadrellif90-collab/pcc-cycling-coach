@@ -153,6 +153,8 @@ a = Analysis(
         "fitz",
         # ocr_pdf.py e' il modulo OCR che bia_parser importa lazy: forzarlo nel bundle
         "ocr_pdf",
+        # bia_vision.py: layer cloud vision (z.ai) importato lazy da bia_parser
+        "bia_vision",
         # v1.0.7 IMPL-TAU-FIT-CORE: scipy is now a hard dependency for
         # tau_fitting.py (Banister NLS via scipy.optimize.curve_fit +
         # bootstrap-CI). PyInstaller's static analyser misses scipy's lazy
