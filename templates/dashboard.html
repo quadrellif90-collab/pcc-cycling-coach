@@ -4618,9 +4618,21 @@ async function loadOnboarding(){
 }
 function onboardingGoto(goto){
   localStorage.setItem('onboarding-dismissed','1');
-  var map={settings:'settings',import:'home',plan:'plan',home:'home'};
+  var map={settings:'settings',import:'home',plan:'plan',home:'home',icu_sync:'home'};
   gotoTab(map[goto]||'home');
   if(goto==='import'){ setTimeout(function(){ try{ openImportFitPicker(); }catch(_){}} ,400); }
+  else if(goto==='icu_sync'){ setTimeout(function(){ try{ onboardingSyncIcu(); }catch(_){}} ,400); }
+}
+async function onboardingSyncIcu(){
+  showToast('Sincronizzazione attività da Intervals.icu…', 4000);
+  try{
+    const r=await fetch('/api/sync',{method:'POST'});
+    const j=await r.json();
+    const n=(j&&(j.imported||j.synced||j.added))||0;
+    showToast('Sincronizzate '+n+' attività da Intervals.icu.', 5000);
+  }catch(e){ showToast('Sync ICU fallito: '+e.message, 5000); }
+  try{ if(typeof loadOnboarding==='function') loadOnboarding(); }catch(_){}
+  try{ if(typeof loadProDashboard==='function') loadProDashboard(); }catch(_){}
 }
 function onboardingGotoFirst(){ var d=window.__onboarding; var f=d&&d.gaps&&d.gaps[0]; onboardingGoto(f?f.goto:'settings'); }
 function dismissOnboarding(){ localStorage.setItem('onboarding-dismissed','1'); var b=document.getElementById('onboarding-banner'); if(b) b.style.display='none'; }

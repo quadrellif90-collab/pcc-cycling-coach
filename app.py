@@ -10042,9 +10042,14 @@ def api_onboarding_status():
                      "detail": "Mancano: " + ", ".join(missing_profile),
                      "goto": "settings"})
     if not has_activities:
-        gaps.append({"id": "activities", "label": "Importa la prima uscita (FIT)",
-                     "detail": "Serve almeno un FIT per chiudere il loop.",
-                     "goto": "import"})
+        if icu_linked:
+            gaps.append({"id": "activities", "label": "Sincronizza attività da Intervals.icu",
+                         "detail": "ICU collegato: importa le uscite automaticamente.",
+                         "goto": "icu_sync"})
+        else:
+            gaps.append({"id": "activities", "label": "Importa la prima uscita (FIT)",
+                         "detail": "Serve almeno un FIT per chiudere il loop.",
+                         "goto": "import"})
     if not has_plan:
         gaps.append({"id": "plan", "label": "Genera il primo piano",
                      "detail": "Crea un piano di 4-6 settimane.",
@@ -10069,6 +10074,7 @@ def api_onboarding_status():
         "has_activities": has_activities,
         "has_plan": has_plan,
         "icu_linked": icu_linked,
+        "can_sync_icu": icu_linked,
     }
 
 
