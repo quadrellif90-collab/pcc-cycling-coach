@@ -61,7 +61,7 @@ def vision_configured() -> bool:
     return bool(os.getenv("BIA_VISION_API_KEY"))
 
 
-def _render_pages(pdf_bytes: bytes, dpi: int = 110):
+def _render_pages(pdf_bytes: bytes, dpi: int = 72):
     if fitz is None:
         return []
     try:
