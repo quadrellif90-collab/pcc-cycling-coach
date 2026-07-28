@@ -8848,7 +8848,7 @@ async function loadProDashboard() {
       sh('pro-sleep',rd.sleep_h!=null?rd.sleep_h.toFixed(1):(sleep.sleep_h!=null?sleep.sleep_h.toFixed(1):null),' h');
       sh('pro-rhr',rd.rhr!=null?Math.round(rd.rhr):(sleep.rhr_today!=null?sleep.rhr_today:null),' bpm');
     }}catch(_){}
-    if (typeof loadTodaySession === 'function') { try { loadTodaySession(); } catch(_){} }
+    if (typeof loadTodaySession === 'function') { try { await loadTodaySession(); } catch(_){} }
     { const v=document.getElementById('today-verdict'), tn=document.getElementById('pro-today-name'), tr=document.getElementById('pro-today-ring');
       if(v&&v.textContent.trim()&&v.textContent.trim()!=='Caricamento\u2026'&&tn){tn.textContent=v.textContent.trim().slice(0,40); if(tr){tr.textContent='\u2713';tr.style.borderColor='var(--green)';tr.style.color='var(--green)';}} }
     try{const pr=await fetch('/api/plan');if(pr.ok){const pd=await pr.json();const a=pd&&pd.plan_json&&pd.plan_json.assessment;const g=pd&&pd.plan_json&&pd.plan_json.goal;const bar=document.getElementById('pro-focus-bar'),txt=document.getElementById('pro-focus-text'),ico=document.getElementById('pro-focus-icon');
