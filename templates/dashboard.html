@@ -8926,11 +8926,11 @@ async function loadTSWeeklyChart() {
         }]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: true,
         plugins: { legend: { display: false } },
         scales: {
           x: { ticks: {color:"var(--text3)", font:{size:8}, maxTicksLimit:12}, grid:{display:false} },
-          y: { ticks: {color:"var(--text3)", font:{size:8}}, grid:{color:"rgba(255,255,255,0.05)"}, beginAtZero: true }
+          y: { ticks: {color:"var(--text3)", font:{size:8}}, grid:{color:"rgba(255,255,255,0.05)"}, beginAtZero: true, suggestedMax: Math.max(50, Math.ceil(Math.max.apply(null, wks.map(function(w){return w.tss_target||0})) / 50) * 50) }
         },
         animation: { duration: 600 },
       }
