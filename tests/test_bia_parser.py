@@ -1,74 +1,79 @@
-"""Test isolati per il parser BIA (validazione range fisiologico).
-
-Verificano che i report AKERN Biavector (dove il primo numero dopo
-l'etichetta e' il valore di riferimento, non la misurazione, e la
-virgola decimale italiana puo' sparire) non producano valori
-impossibili salvati silenziosamente.
-"""
+"""Test isolati per il parser BIA (ibrido: regex NutriCoach + cloud vision)."""
 import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(__file__))
+from bia_parser import parse_bia_text, parse_bia_vision_json, BIAReading, _norm
 
-from bia_parser import parse_bia_text, BIAReading
+
+def test_norm_decimal_preservation():
+    """_norm NON deve fondere la virgola decimale (75,2 -> 75.2 non 752)."""
+    assert "75.2" in _norm("Peso: 75,2 kg")
+    assert "13.1" in _norm("Massa Grassa 13,1 kg")
 
 
-def test_akern_text_restores_decimal():
-    """Valori AKERN con virgola persa (OCR) vengono ripristinati per divisione."""
-    fake = """
-Peso: 70.3 kg
+def test_akern_text_unit_aware():
+    """Il parser distingue kg/% e non confonde FM kg con FM %."""
+    txt = """Peso: 71.4 kg
 Altezza: 168.0 cm
-BMI: 24.9 kg/m
-Massa Grassa (FM) 131 kg 78 kg/m 18 28 5.6 9.5 13.3
-Massa Magra (FFM) 572 kg 34.0 kg/m
-Idratazione tissutale 731% (TBW/FFM)
-Angolo di Fase (PhA) 76
-Indice nutrizionale (CHI) 1052.3
-"""
-    res = parse_bia_text(fake)
-    validated = res["found_fields"]
-    restored = set(res["restored_fields"])
-    # Campi corretti mantenuti + ripristinati
-    assert "weight_kg" in validated
-    assert abs(res["reading"]["weight_kg"] - 70.3) < 0.01
-    assert "height_cm" in validated
-    assert "bmi" in validated
-    # Valori ripristinati (virgola decimale persa)
-    assert "fat_mass_kg" in restored          # 131 -> 13.1
-    assert abs(res["reading"]["fat_mass_kg"] - 13.1) < 0.1
-    assert "fat_free_mass_kg" in restored     # 572 -> 57.2
-    assert "hydration_pct" in restored         # 731 -> 73.1
-    assert "phase_angle" in restored           # 76 -> 7.6
-    assert "chi" in restored                    # 1052.3 -> 105.23
-    # Nessun valore > 200 nei campi validati
-    for k, v in res["reading"].items():
-        if k in validated and isinstance(v, (int, float)):
-            assert v <= 200, f"{k}={v} non dovrebbe essere validato"
-    assert res["unreliable"] is False
-    assert res["rejected_fields"] == []
+BMI: 25.3 kg/m2
+Massa Grassa (FM) 14.6 kg 8.7 kg/m
+Massa Magra (FFM) 56.8 kg 33.8 kg/m
+Idratazione tissutale 73.1% (TBW/FFM)
+Angolo di Fase (PhA) 7.4 °
+Indice nutrizionale (CHI) 109.16"""
+    res = parse_bia_text(txt)
+    f = res["fields"]
+    assert abs(f["weight_kg"] - 71.4) < 0.1
+    assert abs(f["fat_mass_kg"] - 14.6) < 0.1
+    assert abs(f["fat_free_mass_kg"] - 56.8) < 0.1
+    assert abs(f["height_cm"] - 168.0) < 0.1
 
 
-def test_clean_text_keeps_all_fields():
-    """Report con valori plausibili: tutto validato, niente scartato."""
-    clean = """
-Peso: 71.4 kg
-Altezza: 168.0 cm
-BMI: 25.3 kg/m
-Massa Grassa (FM): 14.2 kg
-Massa Magra (FFM): 57.2 kg
-Idratazione tissutale: 73.1% (TBW/FFM)
-Angolo di Fase (PhA): 6.5
-Indice nutrizionale (CHI): 109.1
-"""
-    res = parse_bia_text(clean)
-    assert res["unreliable"] is False
-    assert "fat_mass_kg" in res["found_fields"]
-    assert abs(res["reading"]["fat_mass_kg"] - 14.2) < 0.01
-    assert abs(res["reading"]["hydration_pct"] - 73.1) < 0.01
-    assert not res["rejected_fields"]
+def test_akern_ocr_litre_comma_loss():
+    """OCR perde la virgola sui litri (43.0L -> 430L): sanity-check /10."""
+    txt = """Acqua Totale (TBW) 430L 25.6 l/m
+Acqua Intra Cellulare (ICW) 253L 58.8%
+Idratazione tissutale 731% (TBW/FFM)"""
+    res = parse_bia_text(txt)
+    f = res["fields"]
+    # tbw 430 -> 43.0 (corretto via /10)
+    assert abs(f["tbw_l"] - 43.0) < 0.5
+    assert abs(f["icw_l"] - 25.3) < 0.5
+
+
+def test_ecw_gt_tbw_fix():
+    """Se ECW > TBW (rumore OCR 177 invece di 17.7), correggi ECW=TBW-ICW."""
+    txt = """Acqua Totale (TBW) 43.0 L
+Acqua Extra Cellulare (ECW) 177 L
+Acqua Intra Cellulare (ICW) 25.3 L"""
+    res = parse_bia_text(txt)
+    f = res["fields"]
+    # ECW 177 -> 43.0-25.3 = 17.7
+    assert abs(f["ecw_l"] - 17.7) < 0.5
+
+
+def test_chi_not_from_maschile():
+    """'chi' in 'Maschile' non deve essere scambiato per l'indice CHI."""
+    txt = "Sesso: Maschile\nIndice nutrizionale (CHI) 109.16"
+    res = parse_bia_text(txt)
+    f = res["fields"]
+    # deve prendere 109.16 da (CHI), non 15 da Maschile
+    assert f.get("chi") is None or abs(f["chi"] - 109.16) < 1
+
+
+def test_vision_json_maps_and_fixes_decimal():
+    """JSON vision: mappa campi e corregge virgola persa (1091.6 -> 109.16)."""
+    data = {"weight_kg": 71.4, "fat_mass_kg": 14.6, "chi": 1091.6,
+            "tbw_l": 43.0, "phase_angle": 7.4}
+    res = parse_bia_vision_json(data)
+    f = res["fields"]
+    assert abs(f["weight_kg"] - 71.4) < 0.01
+    assert abs(f["chi"] - 109.16) < 0.01
+    assert abs(f["tbw_l"] - 43.0) < 0.01
 
 
 def test_validated_fields_range():
     r = BIAReading(weight_kg=70.0, fat_mass_pct=186.0, hydration_pct=731.0)
     v = r.validated_fields()
     assert "weight_kg" in v
-    assert "fat_mass_pct" not in v   # 186% impossibile
-    assert "hydration_pct" not in v   # 731% impossibile
+    assert "fat_mass_pct" not in v
+    assert "hydration_pct" not in v

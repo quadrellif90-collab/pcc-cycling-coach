@@ -1,153 +1,190 @@
 """PCC — Parser BIA (Body Impedance Analysis) + mappatura Intervals.icu.
 
-Supporta report di bilance BIA / bioimpedenziometri (InBody, Tanita, AKERN
-BODYGRAM, Garmin Index, ecc.). Il PDF puo' essere:
-  - testuale (export nativo): il testo viene estratto e parsato via regex;
-  - scansionato (immagine): il testo non e' estraibile -> il parser ritorna
-    `scanned: True` e l'UI chiede all'atleta di incollare i valori o usare
-    un export testuale (il backend PCC non include OCR).
+Flusso ibrido (vedi parse_bia_pdf):
+  1. testo nativo presente -> parse_bia_text (regex robusto)
+  2. PDF scansionato + chiave cloud vision in .env -> bia_vision (modello z.ai)
+  3. PDF scansionato + Tesseract -> OCR -> parse_bia_text
+  4. nessun testo / nessun OCR -> scanned=True (UI chiede import manuale)
 
-Campi estratti (schema comune, unita incluse):
+Il parser testuale e' ispirato a NutriCoach (normalizzazione virgola->
+punto PRIMA di rimuovere la punteggiatura + sanity-check post-estrazione:
+ECW>TBW => ECW=TBW-ICW, PhA fuori 1-20 gradi scartato). Questo risolve
+il bug AKERN dove la virgola decimale italiana sparisce e i valori di
+riferimento vengono scambiati per la misurazione.
+
+Campi estratti:
   weight_kg, height_cm, bmi,
-  fat_mass_kg, fat_mass_pct,
-  fat_free_mass_kg, fat_free_mass_pct,
-  tbw_l (acqua totale), ecw_l, icw_l, hydration_pct,
-  bcm_kg (massa cellulare), smm_kg (massa muscolo-scheletrica),
-  asmm_kg (massa muscolare appendicolare), muscle_mass_kg,
+  fat_mass_kg, fat_mass_pct, fat_free_mass_kg, fat_free_mass_pct,
+  tbw_l, ecw_l, icw_l, hydration_pct,
+  bcm_kg, smm_kg, asmm_kg, muscle_mass_kg,
   bone_kg, protein_kg, protein_pct,
-  visceral_fat, metabolic_age, phase_angle (PhA, gradi),
-  chi (indice nutrizionale, opzionale)
-
-Mappatura -> Intervals.icu /wellness (POST /athlete/{id}/wellness/{date}):
-  weight      -> weight
-  fat_mass_pct-> bodyFat        (ICU lo intende come %)
-  fat_mass_pct-> pctBodyFat
-  fat_free_kg -> (nessun campo diretto; non inviato)
-  muscle_mass -> muscleMass     (usiamo SMM se presente, altrimenti FFM)
-  hydration_pct-> hydration
-  bone_kg     -> boneMass
-  protein_kg  -> protein
-  bmi         -> bmi
-  visceral_fat-> visceralFat
-  metabolic_age-> metabolicAge
-ICU NON gestisce dieta/piano alimentare: quella parte resta locale.
+  visceral_fat, metabolic_age, phase_angle, chi
 """
 
 import re
 import json
-from dataclasses import dataclass, field, asdict
+import unicodedata
+from dataclasses import dataclass, asdict
 from typing import Optional
 
 
-# Pattern: cattura "Etichetta 12.3 unita" o "Etichetta: 12.3".
-# L'etichetta puo' essere IT o EN. I valori sono float (ammessi decimali).
-_LABEL_PATTERNS = {
-    "weight_kg": [
-        r"peso\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"weight\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"body\s*weight\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-    ],
-    "height_cm": [
-        r"altezza\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*cm",
-        r"height\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*cm",
-    ],
-    "bmi": [
-        r"bmi\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-        r"imc\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-        r"indice\s*di\s*massa\s*corporea\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-    ],
-    "fat_mass_kg": [
-        r"massa\s*grassa\s*\(fm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"fat\s*mass\s*\(fm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"\bfm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-    ],
-    "fat_mass_pct": [
-        r"massa\s*grassa\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-        r"fat\s*mass\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-        r"\bfm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-        r"percentuale\s*di\s*grasso\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-    ],
-    "fat_free_mass_kg": [
-        r"massa\s*magra\s*\(ffm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"fat\s*free\s*mass\s*\(ffm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"\bffm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-    ],
-    "fat_free_mass_pct": [
-        r"massa\s*magra\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-        r"fat\s*free\s*mass\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-    ],
-    "tbw_l": [
-        r"acqua\s*totale\s*\(tbw\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
-        r"total\s*body\s*water\s*\(tbw\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
-        r"\btbw\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
-    ],
-    "ecw_l": [
-        r"acqua\s*extra\s*cellulare\s*\(ecw\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
-        r"\becw\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
-    ],
-    "icw_l": [
-        r"acqua\s*intra\s*cellulare\s*\(icw\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
-        r"\bicw\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*l",
-    ],
-    "hydration_pct": [
-        r"idratazione\s*tissutale\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-        r"hydration\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-        r"tbw/ffm\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-    ],
-    "bcm_kg": [
-        r"massa\s*cellulare\s*\(bcm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"\bbcm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-    ],
-    "smm_kg": [
-        r"massa\s*muscolo[- ]?scheletrica\s*\(smm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"skeletal\s*muscle\s*mass\s*\(smm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"\bsmm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-    ],
-    "asmm_kg": [
-        r"massa\s*muscolare\s*appendicolare\s*\(asmm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"appendicular\s*skeletal\s*muscle\s*mass\s*\(asmm\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"\basmm\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-    ],
-    "muscle_mass_kg": [
-        r"massa\s*muscolare\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"muscle\s*mass\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-    ],
-    "bone_kg": [
-        r"massa\s*ossea\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"bone\s*mass\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-    ],
-    "protein_kg": [
-        r"proteine\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-        r"protein\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*kg",
-    ],
-    "protein_pct": [
-        r"proteine\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-        r"protein\s*[:\.]?\s*(\d+(?:[.,]\d+)?)\s*%",
-    ],
-    "visceral_fat": [
-        r"grasso\s*viscerale\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-        r"visceral\s*fat\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-    ],
-    "metabolic_age": [
-        r"et[aà]\s*metabolica\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-        r"metabolic\s*age\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-    ],
-    "phase_angle": [
-        r"angolo\s*di\s*fase\s*\(pha\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-        r"phase\s*angle\s*\(pha\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-        r"\bpha\b\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-    ],
-    "chi": [
-        r"indice\s*nutrizionale\s*\(chi\)\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-        r"chi\s*[:\.]?\s*(\d+(?:[.,]\d+)?)",
-    ],
+# ── Pattern di estrazione (etichetta -> campo) ────────────────────────────────
+# Ogni campo puo' avere piu' varianti IT/EN. I pattern catturano il primo
+# numero valido DOPO l'etichetta, gestendo unita' attaccate (75.2kg, 43.0L, 74°).
+_FIELD_PATTERNS = {
+    "weight_kg": [r"peso", r"weight", r"body weight", r"\bwt\b"],
+    "height_cm": [r"altezza", r"height", r"statura", r"\bht\b"],
+    "bmi": [r"bmi", r"imc", r"indice di massa corporea"],
+    "fat_mass_kg": [r"massa grassa", r"fat mass", r"\bf\.?m\.?", r"\bfm\b"],
+    "fat_mass_pct": [r"massa grassa", r"fat mass", r"\bf\.?m\.?", r"\bfm\b",
+                     r"percentuale di grasso"],
+    "fat_free_mass_kg": [r"massa magra", r"fat free", r"\bf\.?f\.?m\.?", r"\bffm\b"],
+    "fat_free_mass_pct": [r"massa magra", r"fat free", r"\bffm\b"],
+    "tbw_l": [r"acqua totale", r"total body water", r"\btbw\b"],
+    "ecw_l": [r"acqua extra", r"extracellular", r"\becw\b"],
+    "icw_l": [r"acqua intra", r"intracellular", r"\bicw\b"],
+    "hydration_pct": [r"idratazione", r"hydration", r"tbw/ffm"],
+    "bcm_kg": [r"massa cellulare", r"body cell", r"\bbcm\b"],
+    "smm_kg": [r"massa muscolo", r"skeletal muscle", r"\bsmm\b", r"\bmms\b"],
+    "asmm_kg": [r"massa muscolare appendicolare", r"appendicular", r"\basmm\b"],
+    "muscle_mass_kg": [r"massa muscolare", r"muscle mass"],
+    "bone_kg": [r"massa ossea", r"bone mass"],
+    "protein_kg": [r"massa proteica", r"proteine", r"protein"],
+    "protein_pct": [r"massa proteica", r"proteine", r"protein"],
+    "visceral_fat": [r"grasso viscerale", r"visceral fat"],
+    "metabolic_age": [r"eta metabolica", r"metabolic age"],
+    "phase_angle": [r"angolo di fase", r"phase angle", r"\bpha\b", r"ph a"],
+    "chi": [r"indice nutrizionale", r"\(chi\)"],
 }
 
+# unita' numeriche: cattura numero (decimale, virgola o punto)
+_NUM = r"(-?\d+(?:[.,]\d+)?)"
 
-# Range fisiologici plausibili per un essere umano adulto.
-# Usati per scartare valori estratti da PDF illeggibili (es. AKERN Biavector
-# dove il primo numero dopo l'etichetta e' il valore di riferimento, non la
-# misurazione, oppure la virgola decimale italiana scompare nell'OCR).
+
+def _norm(s: str) -> str:
+    """Normalizza: minuscolo, accenti rimossi, virgola->punto PRIMA di
+    rimuovere la punteggiatura (cosi' i decimali 75,2 non diventano 752)."""
+    s = s.lower()
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+    s = s.replace(",", ".")
+    s = re.sub(r"[^a-z0-9 .]", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _match_field(label: str):
+    n = _norm(label)
+    for field, patterns in _FIELD_PATTERNS.items():
+        for p in patterns:
+            if p in n:
+                return field
+    return None
+
+
+def _parse_number(token: str):
+    m = re.search(_NUM, token.replace(",", "."))
+    return float(m.group(1)) if m else None
+
+
+def parse_bia_text(text: str) -> dict:
+    """Estrae i campi BIA da testo (PDF testuale o OCR incollato).
+
+    Robusto a: righe multiple o blob unico, unita' attaccate al numero,
+    varianti IT/EN, virgola decimale italiana. Sanity-check post-estrazione
+    per rumore OCR AKERN (ECW>TBW => ECW=TBW-ICW; PhA fuori 1-20 scartato).
+    """
+    norm = _norm(text)
+    fields = {}
+    for field, patterns in _FIELD_PATTERNS.items():
+        if field in fields:
+            continue
+        for p in patterns:
+            pat = r"(?<![a-z])" + re.escape(p.strip()) + r"(?![a-z])"
+            for m in re.finditer(pat, norm):
+                after = norm[m.end(): m.end() + 30]
+                if field in ("tbw_l", "ecw_l", "icw_l"):
+                    # preferisci numero seguito da 'l' (litri)
+                    nm = re.search(r"\(?\s*(\d+(?:\.\d+)?)\s*[lL]\b", after)
+                elif field == "phase_angle":
+                    nm = re.search(r"\(?\s*(\d+(?:\.\d+)?)\s*[°\u00b0]|"
+                                   r"\(\s*(\d+(?:\.\d+)?)\s*deg", after)
+                elif field in ("fat_mass_pct", "fat_free_mass_pct", "protein_pct",
+                               "hydration_pct"):
+                    # cerca numero seguito da '%'
+                    nm = re.search(r"\(?\s*(\d+(?:\.\d+)?)\s*%", after)
+                elif field in ("fat_mass_kg", "fat_free_mass_kg", "bcm_kg",
+                               "smm_kg", "asmm_kg", "muscle_mass_kg", "bone_kg",
+                               "protein_kg", "weight_kg"):
+                    # cerca numero seguito da 'kg'
+                    nm = re.search(r"\(?\s*(\d+(?:\.\d+)?)\s*kg\b", after)
+                elif field in ("height_cm",):
+                    nm = re.search(r"\(?\s*(\d+(?:\.\d+)?)\s*cm\b", after)
+                elif field == "chi":
+                    # AKERN: "Indice nutrizionale (CHI) 109.16 (mg...)"
+                    # L'OCR puo' inserire rumore. Strategia:
+                    # 1) cerca "(chi) NUM"
+                    # 2) tra i numeri nei 50 char, prendi quello che (da solo
+                    #    o /10) rientra nel range CHI (40-600); preferisci il
+                    #    piu' vicino alla label.
+                    nm = re.search(r"\(chi\)\s*\(?\s*(\d+(?:\.\d+)?)", after)
+                    if not nm:
+                        cands = re.findall(r"(\d+(?:\.\d+)?)", after[:50])
+                        for c in cands:
+                            v = float(c)
+                            if 40 <= v <= 600 or (v > 600 and v / 10 <= 600):
+                                nm = re.match(r"(\d+(?:\.\d+)?)", c)
+                                break
+                elif field == "visceral_fat":
+                    nm = re.search(r"\(?\s*(\d+(?:\.\d+)?)", after)
+                else:
+                    nm = re.search(r"\(?\s*(?<![a-z0-9.])(\d+(?:\.\d+)?)", after)
+                if nm:
+                    val = float(nm.group(1))
+                    fields[field] = val
+                    break
+            if field in fields:
+                break
+
+    # Sanity-check post-estrazione (rumore OCR AKERN/Biavector)
+    f = fields
+    if f.get("tbw_l") and f.get("icw_l") and f.get("ecw_l") and f["ecw_l"] > f["tbw_l"]:
+        f["ecw_l"] = round(f["tbw_l"] - f["icw_l"], 1)
+    if f.get("phase_angle") is not None and (f["phase_angle"] > 20 or f["phase_angle"] < 1):
+        f.pop("phase_angle", None)
+    # OCR puo' perdere la virgola sui litri (43.0L -> 430L) o su CHI
+    # (109.16 -> 1091.6). Se un valore e' ~10x fuori range e diviso per 10
+    # rientra, correggilo.
+    for _k in ("tbw_l", "ecw_l", "icw_l", "chi"):
+        v = f.get(_k)
+        if v is not None:
+            lo, hi = _BIA_RANGES.get(_k, (0, 1e9))
+            if v > hi and v / 10.0 <= hi:
+                f[_k] = round(v / 10.0, 1)
+
+    return {"fields": f, "raw_lines": len([l for l in text.splitlines() if l.strip()])}
+
+
+def parse_bia_vision_json(data: dict) -> dict:
+    """Mappa il JSON strutturato ritornato dal modello vision (z.ai/OpenAI)
+    nei campi BIA. I valori fuori range vengono scartati (il modello puo'
+    ancora sbagliare), ma applichiamo il sanity-check /10 per la virgola
+    decimale persa (es. CHI 1091.6 -> 109.16)."""
+    fields = {}
+    for k, v in (data or {}).items():
+        if v is None:
+            continue
+        try:
+            val = float(str(v).replace(",", "."))
+        except (ValueError, TypeError):
+            continue
+        # sanity-check: se fuori range ma /10 rientra, corigi
+        lo, hi = _BIA_RANGES.get(k, (float("-inf"), float("inf")))
+        if val > hi and val / 10.0 <= hi:
+            val = round(val / 10.0, 2)
+        fields[k] = val
+    return {"fields": fields, "raw_lines": 0, "vision": True}
+
+
+# ── Range fisiologici per validazione ─────────────────────────────────────────
 _BIA_RANGES = {
     "weight_kg": (20.0, 250.0),
     "height_cm": (100.0, 230.0),
@@ -171,6 +208,19 @@ _BIA_RANGES = {
     "metabolic_age": (5.0, 120.0),
     "phase_angle": (1.0, 20.0),
     "chi": (40.0, 600.0),
+}
+
+# Mappa nome campo interno <-> campo nel JSON del modello vision
+_VISION_FIELD_MAP = {
+    "weight_kg": "weight_kg", "height_cm": "height_cm", "bmi": "bmi",
+    "fat_mass_kg": "fat_mass_kg", "fat_mass_pct": "fat_mass_pct",
+    "fat_free_mass_kg": "fat_free_mass_kg", "fat_free_mass_pct": "fat_free_mass_pct",
+    "tbw_l": "tbw_l", "ecw_l": "ecw_l", "icw_l": "icw_l",
+    "hydration_pct": "hydration_pct", "bcm_kg": "bcm_kg", "smm_kg": "smm_kg",
+    "asmm_kg": "asmm_kg", "muscle_mass_kg": "muscle_mass_kg",
+    "bone_kg": "bone_kg", "protein_kg": "protein_kg", "protein_pct": "protein_pct",
+    "visceral_fat": "visceral_fat", "metabolic_age": "metabolic_age",
+    "phase_angle": "phase_angle", "chi": "chi",
 }
 
 
@@ -199,7 +249,7 @@ class BIAReading:
     metabolic_age: Optional[float] = None
     phase_angle: Optional[float] = None
     chi: Optional[float] = None
-    source: str = "manual"  # manual | pdf | pdf_scanned
+    source: str = "manual"
     raw_text: str = ""
 
     def to_dict(self):
@@ -210,7 +260,6 @@ class BIAReading:
                 if v is not None and k not in ("date", "source", "raw_text")}
 
     def validated_fields(self):
-        """Campi con valore dentro il range fisiologico plausibile."""
         out = {}
         for k, v in self.filled_fields().items():
             lo, hi = _BIA_RANGES.get(k, (float("-inf"), float("inf")))
@@ -219,166 +268,122 @@ class BIAReading:
         return out
 
 
-def _restore_decimal(field_name: str, val: float) -> tuple:
-    """Se il valore e' fuori range fisiologico, prova a dividerlo per
-    10/100/1000 per recuperare una virgola decimale persa nell'OCR
-    (es. AKERN Biavector: '13,1' -> '131', '73,1%' -> '731%',
-    '43,71' -> '4371'). Ritorna (valore_corretto, ripristinato)."""
-    lo, hi = _BIA_RANGES.get(field_name, (float("-inf"), float("inf")))
-    if lo <= val <= hi:
-        return val, False
-    for div in (10, 100, 1000):
-        cand = val / div
-        if lo <= cand <= hi:
-            return round(cand, 2), True
-    return val, False
-
-
-def _num(s: str) -> float:
-    return float(s.replace(",", "."))
-
-
-def parse_bia_text(text: str) -> dict:
-    """Estrae i campi BIA dal testo del PDF (PDF testuale).
-
-    I valori estratti vengono filtrati per range fisiologico: i PDF AKERN
-    Biavector (testuali o scansionati via OCR) producono spesso numeri
-    errati (valore di riferimento invece della misurazione, o virgola
-    decimale italiana persa). I valori fuori range vengono scartati per
-    non salvare misurazioni impossibili.
-    """
-    low = text.lower()
-    r = BIAReading(source="pdf")
-    found = {}
-    restored = {}
-    for field_name, patterns in _LABEL_PATTERNS.items():
-        for pat in patterns:
-            m = re.search(pat, low)
-            if m:
-                try:
-                    val = _num(m.group(1))
-                    val, fixed = _restore_decimal(field_name, val)
-                    if fixed:
-                        restored[field_name] = True
-                    setattr(r, field_name, val)
-                    found[field_name] = val
-                except ValueError:
-                    pass
-                break
-    # Deriva le percentuali mancanti da kg / peso (se peso presente)
+def _build_reading(fields: dict, source: str, date: str = "", raw: str = "") -> BIAReading:
+    """Costruisce BIAReading dai campi estratti, mappando i nomi del parser
+    (peso/weight, fm/fat_mass_kg, ecc.) su quelli interni."""
+    r = BIAReading(source=source, date=date, raw_text=raw)
+    # mappa campo parser -> campo interno
+    alias = {
+        "peso": "weight_kg", "altezza": "height_cm",
+        "fm": "fat_mass_kg", "ffm": "fat_free_mass_kg",
+        "tbw": "tbw_l", "ecw": "ecw_l", "icw": "icw_l",
+        "bcm": "bcm_kg", "smm": "smm_kg", "asmm": "asmm_kg",
+        "pha": "phase_angle", "hydration": "hydration_pct",
+        "protein": "protein_kg", "mineral": "bone_kg",
+        "fmi": "fat_mass_pct", "ffmi": "fat_free_mass_pct",
+        "bmr": None,  # metabolismo basale non e' un campo BIA
+    }
+    for k, v in fields.items():
+        if k in _VISION_FIELD_MAP:
+            setattr(r, _VISION_FIELD_MAP[k], v)
+        elif k in alias and alias[k]:
+            setattr(r, alias[k], v)
+    # calcola percentuali da kg se mancano
     if r.weight_kg and r.weight_kg > 0:
         if r.fat_mass_kg is not None and r.fat_mass_pct is None:
             r.fat_mass_pct = round(r.fat_mass_kg / r.weight_kg * 100, 1)
-            found["fat_mass_pct"] = r.fat_mass_pct
         if r.fat_free_mass_kg is not None and r.fat_free_mass_pct is None:
             r.fat_free_mass_pct = round(r.fat_free_mass_kg / r.weight_kg * 100, 1)
-            found["fat_free_mass_pct"] = r.fat_free_mass_pct
-        if r.muscle_mass_kg is None and r.smm_kg is not None:
-            r.muscle_mass_kg = r.smm_kg
-            found["muscle_mass_kg"] = r.muscle_mass_kg
-    r.raw_text = text
-    # Filtra per range fisiologico: scarta i valori impossibili (non
-    # ripristinabili dividendo per 10/100/1000)
-    validated = r.validated_fields()
-    # Se dopo il filtro restano pochi campi utili, il PDF non e' affidabile:
-    # ritorna scanned=True cosi' l'UI chiede all'atleta di confermare/inserire.
-    reliable = len(validated) >= 2 and "weight_kg" in validated
-    # reading ritornato all'UI contiene SOLO i campi validati (non quelli
-    # scartati per range), cosi' prefillBIAform non precompila valori assurdi.
-    clean = BIAReading(source="pdf", date=r.date, raw_text=text)
-    for k, v in validated.items():
-        setattr(clean, k, v)
-    restored_fields = sorted(restored.keys())
-    if restored_fields:
-        note = ("Virgola decimale ripristinata via OCR su: %s. "
-                "Verifica i valori." % ", ".join(restored_fields))
-    elif not reliable:
-        note = ("Valori non affidabili (fuori range fisiologico). Controlla e "
-                "inserisci manualmente o incolla il testo del report.")
-    else:
-        note = None
-    return {
-        "scanned": not reliable,
-        "reading": clean.to_dict(),
-        "found_fields": sorted(validated.keys()),
-        "rejected_fields": sorted(set(found) - set(validated)),
-        "restored_fields": restored_fields,
-        "missing_fields": sorted(set(_LABEL_PATTERNS) - set(validated.keys())),
-        "unreliable": not reliable,
-        "note": note,
-    }
+    return r
 
 
 def parse_bia_pdf(pdf_bytes: bytes) -> dict:
-    """Estrae testo dal PDF via PyMuPDF; se vuoto -> scansionato.
-
-    Nel caso scansionato, ritorna anche le immagini delle pagine (PNG base64)
-    cosi' l'UI puo' mostrarle all'atleta e fargli inserire/confermare i valori.
-    """
-    import io
-    import base64
+    """Estrae BIA da PDF: ibrido nativo -> cloud vision -> Tesseract -> scan."""
     try:
-        import fitz  # PyMuPDF
+        import fitz
+        import io
+        import base64
     except ImportError:
         return {"scanned": True, "error": "PyMuPDF non installato",
                 "reading": BIAReading(source="pdf_scanned").to_dict(),
-                "found_fields": [], "missing_fields": sorted(_LABEL_PATTERNS),
-                "pages": []}
+                "found_fields": [], "missing_fields": sorted(_VISION_FIELD_MAP)}
+
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     parts = []
     page_images = []
-    for i, pg in enumerate(doc):
+    for pg in doc:
         parts.append(pg.get_text() or "")
-        # renderizza la pagina in PNG base64 per l'UI (utile nei PDF scansionati)
         try:
-            pix = pg.get_pixmap(matrix=fitz.Matrix(1.4, 1.4))
-            img_bytes = pix.tobytes("png")
-            page_images.append("data:image/png;base64," + base64.b64encode(img_bytes).decode("ascii"))
+            pix = pg.get_pixmap(matrix=fitz.Matrix(1.6, 1.6))
+            page_images.append(base64.b64encode(pix.tobytes("png")).decode("ascii"))
         except Exception:
             pass
     text = "\n".join(parts).strip()
-    if not text:
-        # PCC 5.0 — OCR layer: a scanned PDF may still be readable if Tesseract
-        # is installed. Try OCR; if it yields text, parse it like a text export.
-        try:
-            import ocr_pdf
-            ocr_text = ocr_pdf.ocr_pdf_text(pdf_bytes)
-        except Exception:
-            ocr_text = None
+
+    # 1. testo nativo
+    if text:
+        parsed = parse_bia_text(text)
+        r = _build_reading(parsed["fields"], "pdf", raw=text)
+        return _finalize(r, False, None, page_images, None)
+
+    # 2. cloud vision (se chiave configurata)
+    try:
+        import bia_vision
+        if bia_vision.vision_configured():
+            vdata = bia_vision.extract_bia_via_vision(pdf_bytes)
+            if vdata:
+                parsed = parse_bia_vision_json(vdata)
+                r = _build_reading(parsed["fields"], "pdf_vision")
+                return _finalize(r, False, "Estratto via cloud vision (modello). "
+                                "Verifica i valori.", page_images, "pdf_vision")
+    except Exception:
+        pass
+
+    # 3. Tesseract OCR
+    try:
+        import ocr_pdf
+        ocr_text = ocr_pdf.ocr_pdf_text(pdf_bytes)
         if ocr_text:
-            from bia_parser import parse_bia_text
-            reading = parse_bia_text(ocr_text)
-            reading["scanned"] = False
-            reading["source"] = "pdf_ocr"
-            reading["pages"] = page_images
-            reading["note"] = ("PDF scansionato letto via OCR (Tesseract). "
-                                "Verifica i valori estratti.")
-            return reading
-        return {"scanned": True,
-                "reading": BIAReading(source="pdf_scanned").to_dict(),
-                "found_fields": [], "missing_fields": sorted(_LABEL_PATTERNS),
-                "note": "PDF scansionato: testo non estraibile. Incolla i valori o usa l'import manuale.",
-                "pages": page_images}
-    return parse_bia_text(text)
+            parsed = parse_bia_text(ocr_text)
+            r = _build_reading(parsed["fields"], "pdf_ocr", raw=ocr_text)
+            return _finalize(r, False, "PDF scansionato letto via OCR (Tesseract). "
+                            "Verifica i valori.", page_images, "pdf_ocr")
+    except Exception:
+        pass
+
+    # 4. nessun testo leggibile
+    return {"scanned": True,
+            "reading": BIAReading(source="pdf_scanned").to_dict(),
+            "found_fields": [], "missing_fields": sorted(_VISION_FIELD_MAP),
+            "note": "PDF scansionato: testo non estraibile. Incolla i valori o usa l'import manuale.",
+            "pages": page_images}
 
 
-# ── Mappatura BIA -> Intervals.icu /wellness ───────────────────────────────
-# Campi verificati accettati da ICU per questo atleta (PUT /wellness-bulk):
-#   weight, bodyFat (%)
-# Campi RIFIUTATI da ICU (422): pctBodyFat, muscleMass, hydration, bmi,
-#   boneMass, protein, visceralFat, metabolicAge
-# Li escludiamo per non far fallire l'intera push.
-ICU_WELLNESS_FIELDS = [
-    "weight", "bodyFat",
-]
+def _finalize(r: BIAReading, scanned: bool, note: Optional[str],
+              pages: list, source: Optional[str]) -> dict:
+    validated = r.validated_fields()
+    reliable = len(validated) >= 2 and "weight_kg" in validated
+    clean = BIAReading(source=source or r.source, date=r.date, raw_text=r.raw_text)
+    for k, v in validated.items():
+        setattr(clean, k, v)
+    return {
+        "scanned": scanned or not reliable,
+        "reading": clean.to_dict(),
+        "found_fields": sorted(validated.keys()),
+        "rejected_fields": sorted(set(r.filled_fields()) - set(validated)),
+        "missing_fields": sorted(set(_VISION_FIELD_MAP) - set(validated.keys())),
+        "unreliable": not reliable,
+        "note": note or (None if reliable else
+                         "Valori non affidabili (fuori range). Inserisci manualmente."),
+        "pages": pages,
+    }
+
+
+# ── Mappatura BIA -> Intervals.icu /wellness ──────────────────────────────────
+ICU_WELLNESS_FIELDS = ["weight", "bodyFat"]
 
 
 def to_icu_wellness(r: BIAReading, date: str) -> dict:
-    """Costruisce il payload ICU /wellness per una misurazione BIA.
-
-    Restituisce {"date":..., "payload": {...}} con solo i campi disponibili
-    e ACCETTATI da Intervals.icu (weight, bodyFat).
-    """
     d = r.to_dict()
     payload = {}
     if r.weight_kg is not None:
