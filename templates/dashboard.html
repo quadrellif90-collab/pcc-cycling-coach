@@ -4237,7 +4237,7 @@ let _deletingProfile = false;
 // v4.4 — Reset profilo attivo: svuota dati + disconnette ICU, mantiene il profilo.
 async function resetActiveProfile() {
   const p = (_profileData && _profileData.active) || 'default';
-  if (!(await confirm('Reset profilo?\n\nSvuota rides, piani, wellness e credenziali Intervals.icu.\nIl profilo resta e riparti pulito.\n\nContinuare?'))) return;
+  if (!(await pccConfirm('Reset profilo?\n\nSvuota rides, piani, wellness e credenziali Intervals.icu.\nIl profilo resta e riparti pulito.\n\nContinuare?'))) return;
   try {
     const res = await fetch(`/api/profiles/${encodeURIComponent(p)}/reset`, {method:'POST'});
     const j = await res.json().catch(() => ({}));
@@ -4250,7 +4250,7 @@ async function resetActiveProfile() {
 async function deleteActiveProfile() {
   const p = (_profileData && _profileData.active) || 'default';
   const name = (_profileData && (_profileData.profiles||[]).find(x=>x.id===p)||{}).name || p;
-  if (!(await confirm(`Eliminare DEFINITIVAMENTE il profilo "${name}"?\n\nRimuove per sempre:\n• Tutte le uscite e i dati\n• Piani di allenamento\n• Credenziali Intervals.icu\n• Database\n\nOperazione irreversibile.`))) return;
+  if (!(await pccConfirm(`Eliminare DEFINITIVAMENTE il profilo "${name}"?\n\nRimuove per sempre:\n• Tutte le uscite e i dati\n• Piani di allenamento\n• Credenziali Intervals.icu\n• Database\n\nOperazione irreversibile.`))) return;
   try {
     const res = await fetch(`/api/profiles/${encodeURIComponent(p)}`, {method:'DELETE'});
     if (!res.ok) { const b = await res.text().catch(()=> ''); alert(`Eliminazione fallita (${res.status}): ${b}`); return; }
@@ -8438,7 +8438,7 @@ async function loadHome() {
     // Sleep metrics with sparklines
     $('sleep-metrics').innerHTML = [
       {v:s.sleep_h?s.sleep_h+'h':'—',l:'Sleep',c:statusClass(s.sleep_status),t:'sleep',st:_sleepStale,sd:s.sleep_asof},
-      {v:s.hrv_ms??'—',l:'HRV (ms)',c:statusClass(s.hrv_status),t:'hrv',st:_hrvStale,sd:s.hrv_asof},
+      {v:s.hrv_ms!=null?s.hrv_ms.toFixed(1):'—',l:'HRV (ms)',c:statusClass(s.hrv_status),t:'hrv',st:_hrvStale,sd:s.hrv_asof},
       {v:s.rhr_today?s.rhr_today+'bpm':'—',l:'RHR',c:statusClass(s.rhr_status),t:'rhr',st:_rhrStale,sd:s.rhr_asof},
       {v:s.hrv_status??'—',l:'HRV status',c:statusClass(s.hrv_status),t:'hrv'},
       {v:s.sleep_score??'—',l:'Sleep score',c:_scoreCls(s.sleep_score),t:'sleep',st:_sleepStale,sd:s.sleep_asof},
@@ -23365,7 +23365,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div><!-- /main-content -->
 </div><!-- /app-shell -->
-<div id="pcc-confirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;">
+<div id="pcc-confirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;">
   <div role="dialog" aria-modal="true" aria-labelledby="pcc-confirm-msg" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.4);max-width:420px;width:90vw;padding:20px;">
     <div id="pcc-confirm-msg" style="font-size:14px;line-height:1.5;color:var(--text);white-space:pre-wrap;"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
