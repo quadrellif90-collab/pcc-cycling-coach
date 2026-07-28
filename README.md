@@ -6,9 +6,9 @@
 
 > **PCC** (Power Curve Coach): il nome evoca la *power-duration curve*, il cuore scientifico del pianificatore — la curva che descrive quanto riesci a produrre per quanto tempo. Il logo unisce quell'arco ascendente a una ruota, con il gradiente teal→amber della palette.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.3.6-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Tests](https://img.shields.io/badge/Tests-38%2F38-passing-green)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.3.9-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Tests](https://img.shields.io/badge/Tests-38%2F38-passing-green)
 
-> **Latest:** [**v5.3.6 — UI fixes + upstream Domestique update checker**](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.6)
+> **Latest:** [**v5.3.9 — Setup auto-sync da Intervals.icu**](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.9)
 
 > ⚠️ **Fork italiano di PCC** (Apache-2.0, `platypus45`). Questa è una versione derivata: stessa architettura di pianificazione adattiva, ma con motore nutrizione/integrazione riscritto, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento. Il credito all'autore originale è in [`NOTICE`](NOTICE).
 
@@ -26,6 +26,33 @@
 | 💡 **Explainer bottoni** | Già presenti: ogni azione nel calendario ha tooltip descrittivo |
 
 **Backend:** `upstream_check.py` + `UPSTREAM_BASE` + endpoint `/api/upstream/check` — confronto automatico tra la versione fork (v3.5.2) e l'ultima release upstream.
+
+---
+
+## Novità v5.3.7 — Home UI fix
+
+| Fix | Descrizione |
+|-----|-------------|
+| 🔧 **Tab switch** | Rimosso `}catch(_){}` orfano che bloccava TUTTI i listener JS — ora i tab funzionano |
+| 📊 **Dati home a cold start** | `loadProDashboard()` richiamato all'avvio (bootstrap della tab attiva) — le card si popolano all'apertura |
+| 🧩 **Card dentro `sec-home`** | `</div>` spurio spostava le card fuori dalla sezione home rendendole persistenti su tutte le tab |
+| 🔗 **Mappatura API** | `/api/wellness` (lista) e `/api/readiness` (campi nidificati) letti correttamente |
+
+## Novità v5.3.8 — Card layout + plan push fix
+
+| Fix | Descrizione |
+|-----|-------------|
+| 📐 **Card responsive** | Rimosso `resize:both`/`min-width:280px` — le card home si accostano automaticamente, niente resize manuale bloccato |
+| 🔄 **TSS chart** | Grafico settimanale non riempie più lo schermo (aspect-ratio fisso + cap asse Y) |
+| ⬆️ **Push piano ICU** | `load_plan_weeks()` leggeva `current_plan.json` (prima chiamava una funzione senza argomenti e falliva sempre) — il piano viene ora pushato su Intervals.icu |
+
+## Novità v5.3.9 — Setup auto-sync da Intervals.icu
+
+| Fix | Descrizione |
+|-----|-------------|
+| 🔗 **Setup intelligente** | Se Intervals.icu è collegato, il setup estrapola le attività automaticamente (`POST /api/sync`) invece di chiedere import FIT manuale |
+| 📥 **Fallback manuale** | Se ICU non è collegato, resta l'import manuale del FIT |
+| 🏷️ **Gap dinamico** | Il gap "activities" mostra "Sincronizza attività da Intervals.icu" quando linked |
 
 ---
 
@@ -269,7 +296,10 @@ Tutte le release: [github.com/quadrellif90-collab/pcc-cycling-coach/releases](ht
 
 | Versione | Piattaforma | Note |
 |----------|-------------|------|
-| **v5.3.6** (Latest) | Win / macOS | [UI fixes + upstream Domestique check](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.6) |
+| **v5.3.9** (Latest) | Win / macOS | [Setup auto-sync da Intervals.icu](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.9) |
+| v5.3.8 | Win / macOS | [Card layout + plan push fix](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.8) |
+| v5.3.7 | Win / macOS | [Home UI fix](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.7) |
+| v5.3.6 | Win / macOS | [UI fixes + upstream Domestique check](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.6) |
 | v5.3.5 | Win / macOS | [Fresh legs FTP test](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.5) |
 | v5.3.4 | Win / macOS | [Parser BIA ibrido (cloud vision + Tesseract)](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.4) |
 | v5.3.3 | Win / macOS | [Fix BIA AKERN + virgola decimale](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.3) |

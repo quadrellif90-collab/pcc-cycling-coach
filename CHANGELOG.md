@@ -1,5 +1,25 @@
 # Changelog
 
+## v5.3.9 — Setup auto-sync da Intervals.icu (2026-07-28)
+
+- **Setup intelligente**: se Intervals.icu è collegato, il banner "Completa il setup" estrapola le attività automaticamente (`POST /api/sync`) invece di chiedere import FIT manuale.
+- **Fallback manuale**: se ICU non è collegato, resta l'import manuale del FIT.
+- `api_onboarding_status`: il gap `activities` diventa `icu_sync` (label "Sincronizza attività da Intervals.icu") quando `icu_linked`.
+- `onboardingGoto`/`Inizia`: triggera `onboardingSyncIcu()` che chiama `/api/sync` e ricarica home + onboarding.
+
+## v5.3.8 — Card layout + plan push fix (2026-07-28)
+
+- **Card responsive**: rimosso `resize:both`/`overflow:auto`/`min-width:280px` su `#sec-home .card` → le card si accostano automaticamente (griglia `auto-fit`), niente resize manuale bloccato.
+- **TSS chart**: `maintainAspectRatio:true` + `suggestedMax` sull'asse Y → il grafico non riempie più lo schermo (canvas 80px fissi).
+- **Push piano ICU**: `load_plan_weeks()` (my_progress.py) leggeva `regenerate_from_today()` senza argomenti → falliva sempre → "Nessun piano da pushare". Ora legge `plans/current_plan.json` e il piano viene pushato su Intervals.icu (se le credenziali ICU sono configurate).
+
+## v5.3.7 — Home UI fix (2026-07-28)
+
+- **Tab switch**: rimosso `}catch(_){}` orfano che bloccava TUTTI i listener JS → i tab funzionano di nuovo.
+- **Dati home a cold start**: `loadProDashboard()` richiamato all'avvio (bootstrap della tab attiva) → le card si popolano all'apertura, non solo al click.
+- **Card dentro `sec-home`**: `</div>` spurio spostava le card fuori dalla sezione home rendendole persistenti su tutte le tab → risolto.
+- **Mappatura API**: `/api/wellness` (lista, ultimo elemento) e `/api/readiness` (campi nidificati `sleep.*`, `severity`/`fatigue_signal.label`) letti correttamente.
+
 ## v5.3.6 — UI fixes + upstream Domestique check (2026-07-28)
 
 **1. Day label esplicito (backport Domestique v3.7.0)**
