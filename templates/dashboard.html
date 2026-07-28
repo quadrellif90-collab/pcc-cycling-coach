@@ -1791,7 +1791,6 @@ window.addEventListener('unhandledrejection', function(e) {
     <button class="btn btn-sm" style="margin-left:4px;" onclick="dismissOnboarding()">Piu tardi</button>
   </div>
   <div id="onboarding-steps" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;"></div>
-</div>
 
   <!-- PCC Pro Dashboard -->
   <div id="pro-dashboard-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px;">
@@ -1858,6 +1857,20 @@ window.addEventListener('unhandledrejection', function(e) {
         <span id="pro-plan-total" style="font-size:10px;color:var(--text3);"></span>
       </div>
       <canvas id="pro-tss-weekly-chart" width="600" height="80" style="width:100%;height:80px;"></canvas>
+    </div>
+  <div class="grid g3" style="margin-top:12px;">
+    <div class="card">
+      <h3>Sleep &amp; HRV</h3>
+      <div class="metrics-row" id="sleep-metrics"></div>
+      <div style="margin-top:10px;display:flex;gap:16px;" id="sleep-sparklines"></div>
+    </div>
+    <div class="card">
+      <h3>Avanzamento eFTP</h3>
+      <div id="eftp-card" class="loading">Caricamento...</div>
+    </div>
+    <div class="card">
+      <h3>Body &amp; Performance</h3>
+      <div id="body-perf-card" class="loading">Caricamento...</div>
     </div>
   </div>
   <div id="pro-focus-bar"  style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);font-size:13px;">
@@ -2097,20 +2110,6 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="diet-weekly" style="font-size:11px;color:var(--text2);">Caricamento…</div>
   </details>
 
-  <div class="grid g3" style="margin-top:12px;">
-    <div class="card">
-      <h3>Sleep &amp; HRV</h3>
-      <div class="metrics-row" id="sleep-metrics"></div>
-      <div style="margin-top:10px;display:flex;gap:16px;" id="sleep-sparklines"></div>
-    </div>
-    <div class="card">
-      <h3>Avanzamento eFTP</h3>
-      <div id="eftp-card" class="loading">Caricamento...</div>
-    </div>
-    <div class="card">
-      <h3>Body &amp; Performance</h3>
-      <div id="body-perf-card" class="loading">Caricamento...</div>
-    </div>
   </div>
 
   <div style="margin-top:12px;">
@@ -2121,18 +2120,7 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
   </div>
 
-  <!-- Power Duration Curve -->
-  <!-- v1.8.8 Bug 2/11 — the legacy div here had id="power-curve-chart"
-       which collided with the <canvas id="power-curve-chart"> above.
-       Renamed to a unique placeholder id so renderPowerCurve() targets
-       only the canvas, and loadPowerCurve() can replace this placeholder
-       once the response lands (or with a backfill prompt when n_rides==0). -->
-  <!-- Legacy duplicate "Power Duration Curve" card removed: it was a redundant
-       second surface that showed a "Loading…" block then vanished once the real
-       Power Curve canvas (#power-curve-chart, above) rendered — confusing phantom.
-       3.4.1 ④: #power-curve-loading-placeholder is fully retired — the backfill
-       bar + auto-poll render into #power-curve-meta on the Analysis tab now. -->
-</div>
+</div><!-- /sec-home -->
 
 <!-- v1.8.8 Bug 10 — Ride History section removed (homepage activity list +
      agenda cover this surface). The #ride-detail-overlay below is kept
@@ -4425,6 +4413,18 @@ document.querySelectorAll('.tab[data-tab]').forEach(t => {
     if (loaders[tab]) loaders[tab]();
   });
 });
+// v5.3.7 — bootstrap the active tab (home) on first load. The home tab is
+// marked .active in the HTML but its loader only fired on click; on a cold
+// start loadProDashboard() never ran, leaving Training Status / Oggi /
+// Recupero / HRV cards stuck at "—". Trigger the active tab's loader once.
+(function bootstrapActiveTab(){
+  const active = document.querySelector('.tab.active[data-tab]');
+  if (!active) return;
+  const tab = active.dataset.tab;
+  const loaders = (typeof window.__tabLoaders !== 'undefined') ? window.__tabLoaders : null;
+  if (tab === 'home') { if (typeof loadProDashboard === 'function') setTimeout(loadProDashboard, 150); }
+  else if (loaders && loaders[tab]) { try { loaders[tab](); } catch(_){} }
+})();
 
 // ═══ MODAL SYSTEM ═════════════════════════════════════════════════════════
 
@@ -8823,19 +8823,24 @@ async function loadProDashboard() {
   try {
     try { await loadTSWeeklyChart(); } catch(_) {}
     const wr=await fetch('/api/wellness?days=42');
-    if(wr.ok){const w=await wr.json(); const sn=(id,v,col)=>{const e=document.getElementById(id);if(e){e.textContent=v!=null?v:'\u2014';if(col&&v!=null)e.style.color=col;}};
-      sn('pro-ctl',w.ctl!=null?Math.round(w.ctl):null); sn('pro-tsb',w.tsb!=null?Math.round(w.tsb):null,w.tsb>5?'var(--green)':w.tsb<-10?'var(--red)':'var(--orange)'); sn('pro-atl',w.atl!=null?Math.round(w.atl):null);
+    if(wr.ok){const wd=await wr.json(); const w=Array.isArray(wd)?wd[wd.length-1]:wd; const sn=(id,v,col)=>{const e=document.getElementById(id);if(e){e.textContent=v!=null?v:'—';if(col&&v!=null)e.style.color=col;}};
+      sn('pro-ctl',w&&w.ctl!=null?Math.round(w.ctl):null); sn('pro-tsb',w&&w.tsb!=null?Math.round(w.tsb):null,w.tsb>5?'var(--green)':w.tsb<-10?'var(--red)':'var(--orange)'); sn('pro-atl',w&&w.atl!=null?Math.round(w.atl):null);
       const dot=document.getElementById('pro-ts-dot'),label=document.getElementById('pro-ts-label'),msg=document.getElementById('pro-ts-msg');
       if(dot&&w.tsb!=null){if(w.tsb>5){dot.style.background='var(--green)';label.textContent='Recuperato';if(msg)msg.textContent='In forma.';}else if(w.tsb>-5){dot.style.background='var(--yellow)';label.textContent='Equilibrato';}else if(w.tsb>-15){dot.style.background='var(--orange)';label.textContent='Affaticato';if(msg)msg.textContent='Scarico.';}else{dot.style.background='var(--red)';label.textContent='Sovraccarico';if(msg)msg.textContent='Rischio.';}}
     }
     const td=document.getElementById('pro-today-date');
     if(td)td.textContent=new Date().toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
-    const v=document.getElementById('today-verdict'), tn=document.getElementById('pro-today-name'), tr=document.getElementById('pro-today-ring');
-    if(v&&v.textContent.trim()&&v.textContent.trim()!=='Caricamento\u2026'&&tn){tn.textContent=v.textContent.trim().slice(0,40); if(tr){tr.textContent='\u2713';tr.style.borderColor='var(--green)';tr.style.color='var(--green)';}}
-    try{const rr=await fetch('/api/readiness');if(rr.ok){const rd=await rr.json();const sev=rd.severity||rd.fatigue_signal||'';const ring=document.getElementById('pro-recovery-ring'),lbl=document.getElementById('pro-recovery-label');
-      if(ring){if(sev==='low'){ring.style.borderColor='var(--green)';ring.textContent='\u2713';if(lbl)lbl.textContent='Pronto';}else if(sev==='moderate'){ring.style.borderColor='var(--yellow)';ring.textContent='!';if(lbl)lbl.textContent='Cauto';}else if(sev==='high'){ring.style.borderColor='var(--red)';ring.textContent='\u26A0';if(lbl)lbl.textContent='Affaticato';}}
-      const sh=(id,v,u)=>{const e=document.getElementById(id);if(e)e.textContent=v!=null?v+(u||''):'\u2014';};sh('pro-hrv',rd.ln_rmssd_7d!=null?rd.ln_rmssd_7d.toFixed(1):null,' ms');sh('pro-sleep',rd.sleep_h!=null?rd.sleep_h.toFixed(1):null,' h');sh('pro-rhr',rd.rhr!=null?Math.round(rd.rhr):null,' bpm');}
-    }catch(_){}
+    try{const rr=await fetch('/api/readiness');if(rr.ok){const rd=await rr.json();const sev=((rd.severity||'')+' '+(rd.fatigue_signal&&rd.fatigue_signal.label||'')).toLowerCase();const ring=document.getElementById('pro-recovery-ring'),lbl=document.getElementById('pro-recovery-label');
+      if(ring){if(sev.indexOf('verde')>=0||sev==='low'){ring.style.borderColor='var(--green)';ring.textContent='✓';if(lbl)lbl.textContent='Pronto';}else if(sev.indexOf('giallo')>=0||sev==='moderate'){ring.style.borderColor='var(--yellow)';ring.textContent='!';if(lbl)lbl.textContent='Cauto';}else if(sev.indexOf('rosso')>=0||sev==='high'){ring.style.borderColor='var(--red)';ring.textContent='⚠';if(lbl)lbl.textContent='Affaticato';}else{ring.style.borderColor='var(--border)';ring.textContent='—';if(lbl)lbl.textContent='—';}}
+      const sleep=rd.sleep||{};
+      const sh=(id,v,u)=>{const e=document.getElementById(id);if(e)e.textContent=v!=null?v+(u||''):'—';};
+      sh('pro-hrv',rd.ln_rmssd_7d!=null?rd.ln_rmssd_7d.toFixed(1):(sleep.ln_rmssd_7d!=null?sleep.ln_rmssd_7d.toFixed(1):null),' ms');
+      sh('pro-sleep',rd.sleep_h!=null?rd.sleep_h.toFixed(1):(sleep.sleep_h!=null?sleep.sleep_h.toFixed(1):null),' h');
+      sh('pro-rhr',rd.rhr!=null?Math.round(rd.rhr):(sleep.rhr_today!=null?sleep.rhr_today:null),' bpm');
+    }}catch(_){}
+    if (typeof loadTodaySession === 'function') { try { loadTodaySession(); } catch(_){} }
+    { const v=document.getElementById('today-verdict'), tn=document.getElementById('pro-today-name'), tr=document.getElementById('pro-today-ring');
+      if(v&&v.textContent.trim()&&v.textContent.trim()!=='Caricamento\u2026'&&tn){tn.textContent=v.textContent.trim().slice(0,40); if(tr){tr.textContent='\u2713';tr.style.borderColor='var(--green)';tr.style.color='var(--green)';}} }
     try{const pr=await fetch('/api/plan');if(pr.ok){const pd=await pr.json();const a=pd&&pd.plan_json&&pd.plan_json.assessment;const g=pd&&pd.plan_json&&pd.plan_json.goal;const bar=document.getElementById('pro-focus-bar'),txt=document.getElementById('pro-focus-text'),ico=document.getElementById('pro-focus-icon');
       if(bar&&txt){if(a&&a.pending){bar.style.display='block';ico.textContent='\ud83e\uddea';txt.textContent=a.message||'Test in sospeso.';}else if(g&&g.event_name){const eDate=g.event_date||g.target_date;if(eDate){const days=Math.round((new Date(eDate)-new Date())/86400000);if(days>0&&days<365){bar.style.display='block';ico.textContent='\ud83c\udfc1';txt.textContent=g.event_name+' tra '+days+'g.';}}}}
     }}catch(_){}
