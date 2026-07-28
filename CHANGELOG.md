@@ -1,5 +1,39 @@
 # Changelog
 
+## v5.3.6 — UI fixes + upstream Domestique check (2026-07-28)
+
+**1. Day label esplicito (backport Domestique v3.7.0)**
+- Ogni giorno nel calendario mostra "OGGI — SWEET SPOT" oppure "Sat 18 Jul — TEMPO · in 2 days".
+- `_dateLabel` in `renderCalDay`: verde accent se oggi, grigio per gli altri giorni.
+- Mai più confusione su quale giorno stai guardando.
+
+**2. Home card refresh dopo plan regeneration**
+- `loadHome()` chiamato automaticamente dopo `regeneratePlan`.
+- La home card non mostra più una sessione stale dopo un re-fit del piano.
+
+**3. Upstream Domestique update checker**
+- `upstream_check.py` (nuovo): chiama GitHub API `/repos/platypus45/domestique/releases/latest`.
+- `UPSTREAM_BASE` file traccia la versione fork (v3.5.2).
+- Endpoint `/api/upstream/check` in `app.py` — ritorna versione, titolo, body, rischio.
+- Badge UI nella toolbar calendario: ✅ safe / ⚠️ review / 🔴 break. Cliccabile per aprire release.
+
+**Verificato:** 38/38 test pass. Upstream check HTTP 200 (v3.7.0 trovato, risk=safe).
+
+## v5.3.5 — Fresh legs before FTP test (2026-07-28)
+
+**1. Fresh legs prima dei test FTP (backport clean-room Domestique v3.7.0)**
+- `_ensure_fresh_legs_before_ftp_tests` in `training_planner.py`:
+  - Inserisce un giorno Recovery prima di ogni FTP test a metà ciclo.
+  - Se il giorno prima è già REST/Riposo, non lo modifica.
+  - Chiamato dopo `_inject_mid_cycle_ftp_tests` in `generate_plan`.
+- Codice pulito, stile coerente, nessuna dipendenza dal codice Domestique.
+
+**2. Cooldown verifica**
+- Script `scripts/fix_cooldowns_pcc.py` (clean-room, 121 righe): applica regola cooldown ≤60% FTP start, ≤45% FTP end.
+- Dry-run su 4200+ workout library: **0 fix necessari** — la libreria PCC era già corretta.
+
+**Verificato:** 38/38 test pass. Build v5.3.5 EXE + installer + GitHub release.
+
 ## v5.3.4 — Parser BIA ibrido (cloud vision + Tesseract) (2026-07-28)
 
 **1. Parser BIA ibrido e robusto (tutti i PDF futuri)**
