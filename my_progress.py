@@ -97,17 +97,26 @@ def fetch_actual_tss_by_week(api_key: str, athlete_id: str,
 
 
 def load_plan_weeks() -> list[dict]:
-    """Legge current_plan.json di Domestique e ritorna le settimane con
-    start + tss_target. Se non c'è un piano, lista vuota."""
+    """Legge plans/current_plan.json (dove PCC salva il piano generato) e
+    ritorna le settimane con start + tss_target + phase. Se non c'è un piano,
+    lista vuota."""
     import json, os
-    from training_planner import regenerate_from_today  # best-effort
-    try:
-        plan = regenerate_from_today()
-    except Exception:
-        plan = None
-    if not plan:
+    from pathlib import Path
+    candidates = [
+        Path(__file__).parent / "plans" / "current_plan.json",
+        Path(__file__).parent / "current_plan.json",
+    ]
+    data = None
+    for p in candidates:
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                data = None
+            break
+    if not data:
         return []
-    weeks = plan.get("weeks", []) or []
+    weeks = data.get("weeks", []) or data.get("plan_json", {}).get("weeks", []) or []
     out = []
     for wk in weeks:
         out.append({
