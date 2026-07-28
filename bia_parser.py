@@ -219,6 +219,21 @@ class BIAReading:
         return out
 
 
+def _restore_decimal(field_name: str, val: float) -> tuple:
+    """Se il valore e' fuori range fisiologico, prova a dividerlo per
+    10/100/1000 per recuperare una virgola decimale persa nell'OCR
+    (es. AKERN Biavector: '13,1' -> '131', '73,1%' -> '731%',
+    '43,71' -> '4371'). Ritorna (valore_corretto, ripristinato)."""
+    lo, hi = _BIA_RANGES.get(field_name, (float("-inf"), float("inf")))
+    if lo <= val <= hi:
+        return val, False
+    for div in (10, 100, 1000):
+        cand = val / div
+        if lo <= cand <= hi:
+            return round(cand, 2), True
+    return val, False
+
+
 def _num(s: str) -> float:
     return float(s.replace(",", "."))
 
@@ -235,12 +250,16 @@ def parse_bia_text(text: str) -> dict:
     low = text.lower()
     r = BIAReading(source="pdf")
     found = {}
+    restored = {}
     for field_name, patterns in _LABEL_PATTERNS.items():
         for pat in patterns:
             m = re.search(pat, low)
             if m:
                 try:
                     val = _num(m.group(1))
+                    val, fixed = _restore_decimal(field_name, val)
+                    if fixed:
+                        restored[field_name] = True
                     setattr(r, field_name, val)
                     found[field_name] = val
                 except ValueError:
@@ -258,7 +277,8 @@ def parse_bia_text(text: str) -> dict:
             r.muscle_mass_kg = r.smm_kg
             found["muscle_mass_kg"] = r.muscle_mass_kg
     r.raw_text = text
-    # Filtra per range fisiologico: scarta i valori impossibili
+    # Filtra per range fisiologico: scarta i valori impossibili (non
+    # ripristinabili dividendo per 10/100/1000)
     validated = r.validated_fields()
     # Se dopo il filtro restano pochi campi utili, il PDF non e' affidabile:
     # ritorna scanned=True cosi' l'UI chiede all'atleta di confermare/inserire.
@@ -268,16 +288,24 @@ def parse_bia_text(text: str) -> dict:
     clean = BIAReading(source="pdf", date=r.date, raw_text=text)
     for k, v in validated.items():
         setattr(clean, k, v)
+    restored_fields = sorted(restored.keys())
+    if restored_fields:
+        note = ("Virgola decimale ripristinata via OCR su: %s. "
+                "Verifica i valori." % ", ".join(restored_fields))
+    elif not reliable:
+        note = ("Valori non affidabili (fuori range fisiologico). Controlla e "
+                "inserisci manualmente o incolla il testo del report.")
+    else:
+        note = None
     return {
         "scanned": not reliable,
         "reading": clean.to_dict(),
         "found_fields": sorted(validated.keys()),
         "rejected_fields": sorted(set(found) - set(validated)),
+        "restored_fields": restored_fields,
         "missing_fields": sorted(set(_LABEL_PATTERNS) - set(validated.keys())),
         "unreliable": not reliable,
-        "note": (None if reliable else
-                 "Valori non affidabili (fuori range fisiologico). Controlla e inserisci "
-                 "manualmente o incolla il testo del report."),
+        "note": note,
     }
 
 
@@ -318,6 +346,7 @@ def parse_bia_pdf(pdf_bytes: bytes) -> dict:
         except Exception:
             ocr_text = None
         if ocr_text:
+            from bia_parser import parse_bia_text
             reading = parse_bia_text(ocr_text)
             reading["scanned"] = False
             reading["source"] = "pdf_ocr"

@@ -4604,6 +4604,8 @@ async def api_bia_import(request: Request):
         icu = to_icu_wellness(r, r.date) if (validated and not unreliable) else None
         resp = {"ok": True, "scanned": scanned,
                 "reading": r.to_dict(), "found_fields": sorted(validated.keys()),
+                "restored_fields": res.get("restored_fields", []),
+                "rejected_fields": res.get("rejected_fields", []),
                 "icu_payload": icu, "history_saved": saved,
                 "history_count": count, "unreliable": unreliable}
         if scanned:

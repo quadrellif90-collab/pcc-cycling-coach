@@ -11,8 +11,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from bia_parser import parse_bia_text, BIAReading
 
 
-def test_akern_text_rejects_out_of_range():
-    """Valori AKERN sbagliati (riferimento invece di misurazione) vengono scartati."""
+def test_akern_text_restores_decimal():
+    """Valori AKERN con virgola persa (OCR) vengono ripristinati per divisione."""
     fake = """
 Peso: 70.3 kg
 Altezza: 168.0 cm
@@ -25,23 +25,25 @@ Indice nutrizionale (CHI) 1052.3
 """
     res = parse_bia_text(fake)
     validated = res["found_fields"]
-    rejected = set(res["rejected_fields"])
-    # Campi corretti mantenuti
+    restored = set(res["restored_fields"])
+    # Campi corretti mantenuti + ripristinati
     assert "weight_kg" in validated
     assert abs(res["reading"]["weight_kg"] - 70.3) < 0.01
     assert "height_cm" in validated
     assert "bmi" in validated
-    # Campi assurdi scartati
-    assert "fat_mass_kg" in rejected
-    assert "fat_mass_pct" in rejected
-    assert "fat_free_mass_kg" in rejected
-    assert "hydration_pct" in rejected
-    assert "chi" in rejected
-    assert "phase_angle" in rejected
+    # Valori ripristinati (virgola decimale persa)
+    assert "fat_mass_kg" in restored          # 131 -> 13.1
+    assert abs(res["reading"]["fat_mass_kg"] - 13.1) < 0.1
+    assert "fat_free_mass_kg" in restored     # 572 -> 57.2
+    assert "hydration_pct" in restored         # 731 -> 73.1
+    assert "phase_angle" in restored           # 76 -> 7.6
+    assert "chi" in restored                    # 1052.3 -> 105.23
     # Nessun valore > 200 nei campi validati
     for k, v in res["reading"].items():
         if k in validated and isinstance(v, (int, float)):
             assert v <= 200, f"{k}={v} non dovrebbe essere validato"
+    assert res["unreliable"] is False
+    assert res["rejected_fields"] == []
 
 
 def test_clean_text_keeps_all_fields():
