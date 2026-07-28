@@ -11093,8 +11093,14 @@ def api_update_check(force: int = Query(0)):
             "cached": False,
             "error": str(e),
             "release_body": None,
-        }
+    }
 
+@app.get("/api/upstream/check")
+def api_upstream_check():
+    """Check upstream Domestique for new releases."""
+    from upstream_check import check_upstream
+    result = check_upstream()
+    return result
 
 @app.post("/api/self-update")
 async def api_self_update(request: Request):

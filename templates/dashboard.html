@@ -3304,7 +3304,8 @@ window.addEventListener('unhandledrejection', function(e) {
       <div class="cal-tab active" id="cal-tab-overlay" data-view="overlay" onclick="calSwitchView('overlay')">Calendario</div>
       <div class="cal-tab" id="cal-tab-grid" data-view="grid" onclick="calSwitchView('grid')">Griglia</div>
       <button class="cal-jump-btn" onclick="calJumpToToday()">Vai a oggi</button>
-    </div>
+            <span id="upstream-badge" style="display:none;margin-left:auto;font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--text2);cursor:pointer;" onclick="openUpstreamTab()" title="Clicka per vedere le note di rilascio"></span>
+          </div>
     <div id="cal-body" class="cal-scroll">
       <div class="cal-week-grid">
         <div></div>
@@ -16233,19 +16234,27 @@ function renderCalDay(d, wi, di, phaseKey, today) {
 
   // v4.5.1 FIX-UI B2 — drop REST label when actual exists (defense-in-depth;
   // server commit 1f26123 already classifies rest+actual as completed).
-  const showRestLabel = (cs === 'rest') && !actual && !planned;
-  // v4.5.1 FIX-UI variety — per-cell tooltip with filename + content_class +
-  // duration + score so power-users can see provenance.
-  const cellTip = calCellTooltip(planned, actual);
-  const tipAttr = cellTip ? ` title="${esc(cellTip)}"` : '';
-  return `<div class="cal-day cal-phase-${phaseKey}${stateCls}" data-cs="${cs}" data-cs-v2="${esc(csV2)}"
-    data-date="${esc(d.date)}" data-week-idx="${wi}" data-day-idx="${di}"
-    data-cal-rest="${restFlag}" data-cal-completed="${completedFlag}" data-cal-missing="${missingFlag}"
-    ${dragAttrs}${tipAttr}
-    ondragover="calDragOver(event)" ondragleave="calDragLeave(event)" ondrop="calDrop(event,'${esc(d.date)}',${wi})"
-    onclick="calOpenDay('${esc(d.date)}')">
-    ${redrawBtn}
-    ${goalBadge}
+    const showRestLabel = (cs === 'rest') && !actual && !planned;
+    // v4.5.1 FIX-UI variety — per-cell tooltip with filename + content_class +
+    // duration + score so power-users can see provenance.
+    const cellTip = calCellTooltip(planned, actual);
+    const tipAttr = cellTip ? ` title="${esc(cellTip)}"` : '';
+    // v5.3.6 (backport Domestique v3.7.0): day label — "Today" vs "Sat 18 Jul"
+    const _dateLabel = isToday
+      ? '<div class="cal-day-label" style="font-size:9px;font-weight:700;color:var(--accent);margin-bottom:2px;text-transform:uppercase;">OGGI</div>'
+      : (d.date
+        ? `<div class="cal-day-label" style="font-size:9px;font-weight:600;color:var(--text3);margin-bottom:2px;">${new Date(d.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</div>`
+        : '');
+    return `<div class="cal-day cal-phase-${phaseKey}${stateCls}" data-cs="${cs}" data-cs-v2="${esc(csV2)}"
+
+      data-date="${esc(d.date)}" data-week-idx="${wi}" data-day-idx="${di}"
+      data-cal-rest="${restFlag}" data-cal-completed="${completedFlag}" data-cal-missing="${missingFlag}"
+      ${dragAttrs}${tipAttr}
+      ondragover="calDragOver(event)" ondragleave="calDragLeave(event)" ondrop="calDrop(event,'${esc(d.date)}',${wi})"
+      onclick="calOpenDay('${esc(d.date)}')">
+      ${redrawBtn}
+      ${goalBadge}
+      ${_dateLabel}
     ${plannedHtml || (showRestLabel ? '<div style="font-size:10px;font-weight:700;color:var(--text3);">RIPOSO</div>' : '')}
     ${actualHtml}
   </div>`;
@@ -17651,14 +17660,16 @@ async function regeneratePlan() {
       (info.taper_compressed ? ' · Taper compressed to 8 days' : '');
     $('plan-status').style.color = 'var(--green)';
     $('plan-gap-alert').style.display = 'none';
-    await renderPlanJSON(d.plan_json);
-    // v1.4.0 — mandatory loadCalendar() after every plan mutation.
-    try { await loadCalendar(); } catch(_) {}
-  } catch(e) {
-    $('plan-status').textContent = 'Failed: ' + e.message;
-    $('plan-status').style.color = 'var(--red)';
-  }
-}
+        await renderPlanJSON(d.plan_json);
+        // v1.4.0 — mandatory loadCalendar() after every plan mutation.
+        try { await loadCalendar(); } catch(_) {}
+        // v5.3.6 — home card refresh after plan mutation (stale session fix)
+        try { loadHome(); } catch(_) {}
+      } catch(e) {
+        $('plan-status').textContent = 'Failed: ' + e.message;
+        $('plan-status').style.color = 'var(--red)';
+      }
+    }
 
 function showMarkUnavailable() {
   const todayStr = new Date().toLocaleDateString('en-CA');
@@ -22112,6 +22123,27 @@ function dismissUpdateBanner(latest) {
   if (el) el.style.display = 'none';
 }
 
+// v5.3.6 — upstream (Domestique) update check badge
+async function loadUpstreamCheck() {
+  const badge = document.getElementById('upstream-badge');
+  if (!badge) return;
+  try {
+    const r = await fetch('/api/upstream/check');
+    if (!r.ok) { badge.style.display = 'none'; return; }
+    const d = await r.json();
+    if (!d.has_update || !d.upstream_tag) { badge.style.display = 'none'; return; }
+    const riskIcon = d.risk === 'safe' ? '✅ ' : (d.risk === 'review' ? '⚠️ ' : '🔴 ');
+    badge.textContent = riskIcon + 'Domestique ' + d.upstream_tag;
+    badge.style.display = 'inline-block';
+    window.__upstreamData = d;
+  } catch (_) { badge.style.display = 'none'; }
+}
+function openUpstreamTab() {
+  const d = window.__upstreamData;
+  if (!d || !d.upstream_tag) return;
+  window.open('https://github.com/platypus45/domestique/releases/tag/' + d.upstream_tag, '_blank');
+}
+
 // PCC 5.1 — auto-update attivo. Chiama /api/self-update che scarica
 // l'installer platform-specifico e lo lancia silenzioso (/S su Windows,
 // open .dmg su mac); l'app poi si chiude per liberare l'EXE.
@@ -22996,7 +23028,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // unauthenticated rate limit.
   try { loadUpdateCheck(true); } catch (_) {}
   setInterval(() => { try { loadUpdateCheck(true); } catch (_) {} }, 3 * 60 * 60 * 1000);
-  // ICU OAuth: toast the callback bounce + refresh connection status on load.
+    try { loadUpstreamCheck(); } catch (_) {}
+    // ICU OAuth: toast the callback bounce + refresh connection status on load.
   try { handleIcuOauthReturn(); } catch (_) {}
   try { maybePromptIcuMigration(); } catch (_) {}
   // v2.2.9 — activity-sync progress strip, driven by the live /api/sync/progress
