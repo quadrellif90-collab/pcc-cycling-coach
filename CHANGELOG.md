@@ -1,5 +1,56 @@
 # Changelog
 
+## v5.3.4 — Parser BIA ibrido (cloud vision + Tesseract) (2026-07-28)
+
+**1. Parser BIA ibrido e robusto (tutti i PDF futuri)**
+- Flusso `parse_bia_pdf`: testo nativo → **cloud vision** (z.ai/OpenAI se `BIA_VISION_API_KEY` in `.env`) → **Tesseract** (fallback offline) → scanned.
+- `bia_vision.py` (nuovo): renderizza il PDF e chiama un modello vision che ritorna **JSON strutturato** con tutti i campi (qualità = OCR z.ai: virgole decimali preservate, colonne non confuse). Senza chiave → Tesseract.
+- `bia_parser.py` riscritto con l'approccio di NutriCoach:
+  - normalizzazione virgola→punto **prima** della punteggiatura (risolve `13,1→131`);
+  - pattern **unit-aware** (non confonde FM kg con FM %);
+  - **sanity-check post-estrazione**: `ECW>TBW → ECW=TBW-ICW`, `PhA` fuori 1–20° scartato, litri/CHI ÷10 se la virgola decimale è persa (`430L→43.0L`, `1091.6→109.16`).
+  - fix: `chi` non estratto da "Maschile".
+
+**Verificato:** PDF AKERN reale → 12 campi corretti via Tesseract (peso 71.4, grasso 14.6, TBW 43.0, ICW 25.3). Cloud vision mock → 22 campi tutti corretti (CHI 109.16 da 1091.6). Test `tests/test_bia_parser.py`: 7 passed.
+
+## v5.3.3 — Fix BIA: AKERN scansionato + virgola decimale (2026-07-28)
+
+**Fix critici (OCR AKERN/Biavector)**
+- Ripristino della virgola decimale italiana persa nell'OCR: `131kg→13.1kg`, `731%→73.1%`, `4371→43.71L`. Prima questi valori venivano salvati sbagliati.
+- Sanity-check: se ECW > TBW (rumore OCR `177` invece di `17.7`) → `ECW = TBW - ICW`.
+- PhA fuori range 1–20° scartato.
+- Valori estratti e salvati automaticamente nello storico BIA.
+
+## v5.3.2 — BIA OCR su PDF scansionati (2026-07-27)
+
+**1. Import BIA da PDF scansionati (senza testo nativo)**
+- I referti BIA scansionati (immagine) vengono ora letti via **OCR (Tesseract)**: il PDF è renderizzato in pagine e il testo è estratto.
+- Estrazione automatica: peso, massa grassa, SMM, BMI, idratazione, BCM, ecc. → salvati nello storico BIA.
+- Fallback: se l'OCR fallisce, l'UI chiede di incollare i valori o usare l'import manuale.
+
+**Fix**
+- Gestione errori OCR silenziosa; nessun crash su PDF illeggibili.
+
+## v5.3.1 — Fix auto-update + layout (2026-07-27)
+
+**Fix**
+- Installer ora **chiude PCC prima di aggiornare** (risolve auto-update silenzioso che lasciava la versione vecchia per file-lock).
+- Build pulito con tutti i fix grafici: radar metabolico animato, Power Curve zoom, Fitness interattivo, layout dashboard Pro.
+
+## v5.3.0 — PCC Pro: dashboard interattiva + radar metabolico (2026-07-27)
+
+**1. Radar metabolico animato (funziona davvero)**
+- Aggiunta libreria **Chart.js locale** (prima mancante → grafici vuoti/non renderizzati).
+- Radar a 5 assi (VO₂max, VLamax, FatMax, W/kg, FTP, CTL) con score normalizzato 0–100, disegno pixel-by-pixel verificato.
+
+**2. Drag-and-drop card sistemato**
+- Risolto errore `insertBefore` che bloccava il riordino delle card nella dashboard.
+
+**3. Design System Pro completo**
+- Griglia dashboard ridimensionabile (`resize:both`), card KPI animate, Power Curve con zoom, TSS settimanale Chart.js, timeline stagione drag-and-drop, tema racing (teal→amber), PWA (manifest + service worker, installabile/offline).
+
+
+
 ## v5.2.5 — Auto-aggiornamento quotidiano, valutazione INSCYD, profilo metabolico (2026-07-27)
 
 **1. Daily-sync — piano si aggiorna da solo ogni giorno**

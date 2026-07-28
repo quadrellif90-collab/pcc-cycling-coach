@@ -7,8 +7,8 @@
 > **PCC** (VELocità + ARCO di potenza): il nome evoca la *power-duration curve*, il cuore scientifico del pianificatore — la curva che descrive quanto riesci a produrre per quanto tempo. Il logo unisce quell'arco ascendente a una ruota, con il gradiente teal→amber della palette.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.3.0-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-PCC-orange)
-
-Latest: **[v5.3.0 — Auto-aggiornamento quotidiano, valutazione INSCYD, profilo metabolico](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.0)**
+|![Version](https://img.shields.io/badge/Version-v5.3.4-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Fork](https://img.shields.io/badge/Fork%20of-PCC-orange)|
+|Latest: **[v5.3.4 — Parser BIA ibrido (cloud vision + Tesseract)](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.4)**
 
 > ⚠️ **Fork italiano di PCC** (Apache-2.0, `platypus45`). Questa è una versione derivata: stessa architettura di pianificazione adattiva, ma con motore nutrizione/integrazione riscritto, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento. Il credito all'autore originale è in [`NOTICE`](NOTICE).
 
@@ -62,11 +62,29 @@ La release **v5.2.0-beta.2** porta PCC a un livello professionale sia funzionale
 
 **Design System Pro (beta.2):** UI elevata al pari di TrainingPeaks / Intervals.icu — card con profondità e hover-lift, header sticky frosted-glass con KPI, tab a underline morbido, whitespace generoso, tipografia rifinita. Verificata in light e dark.
 
-> Le versioni `v5.2.0-beta.1` / `beta.2` restano disponibili come **prerelease storiche**. La release consigliata è la **v5.2.0 stabile**.
-
----
-
-## Perché esiste
+|Le versioni `v5.2.0-beta.1` / `beta.2` restano disponibili come **prerelease storiche**. La release consigliata è la **v5.2.0 stabile**.
+|
+|> **PCC Pro (v5.3.x)** porta la dashboar e la grafica a livello professionale: tutte le funzioni v5.2 + la **Pro Experience** qui sotto.
+|
+|## PCC Pro — Dashboard & Pro Experience (v5.3.x)
+|
+|La versione **Pro** eleva l'interfaccia a standard da software professionale (TrainingPeaks / Intervals.icu / WKO), mantenendo il motore di pianificazione adattiva identico.
+|
+|**Dashboard interattiva**
+|- **Griglia dashboard ridimensionabile** (`pro-dashboard-grid`): ogni widget si può **ridimensionare** (handle `resize:both`) e **riordinare via drag-and-drop**, con persistenza della disposizione in `localStorage`.
+|- **Card KPI animate**: forma/fatica, TSB, CTL/ATL, carico settimanale — con micro-animazioni e hover-lift.
+|- **Grafici Chart.js locali** (offline, nessun CDN): Power Curve con zoom interattivo, Fitness/TSS interattivi, TSS settimanale.
+|- **Radar metabolico animato** (`profile-radar`): 5 assi (VO₂max, VLamax, FatMax, W/kg, FTP, CTL) con score normalizzato 0–100 e disegno pixel-by-pixel verificato (non solo un canvas vuoto).
+|- **Badge tipo atleta** (Scalatore / Sprinter / All-rounder / Cronoman / Intermedio / Amatoriale) + **raccomandazioni IA** di focus allenamento basate sul punto debole.
+|- **Timeline stagione drag-and-drop** (`season-timeline-card`): riordina gli eventi/blocchi trascinandoli.
+|- **Tema racing** (palette teal→amber, sidebar tab a sinistra, header sticky frosted-glass).
+|- **PWA**: manifest + service worker → installabile e usabile offline dal browser.
+|
+|**Verificato end-to-end** (smoke test Playwright, 0 JS errors): pro-dashboard-grid, season-timeline drag-and-drop, pro-tss-weekly-chart (Chart.js), profile-radar + pixel disegnati, input PDF BIA, PWA manifest.
+|
+|---
+|
+|## Perché esiste
 
 La maggior parte delle app di allenamento cade in due modalità:
 
@@ -150,15 +168,25 @@ PCC non è solo ciclismo. Il profilo atleta accetta `disciplines` (`cycling`, `r
 
 ---
 
-## Body Composition (BIA)
-
-Modulo [`bia_parser.py`](bia_parser.py). Import di misurazioni da **PDF di bioimpedenziometria**:
-
-- PDF nativo (testo estratti) o **scansionato** (render delle pagine in immagine + incolla-testo OCR esterno, parsing regex dei campi);
-- Estrazione automatica: peso, altezza, BMI, massa grassa/magra, acqua totale, fase, SMM, ecc.;
-- **Storico** salvato e **sync su Intervals.icu** via `PUT /wellness-bulk` (peso + % grassa) — verificato con push reali 200 OK.
-
-Test: `tests/test_bia.py`.
+|## Body Composition (BIA)
+|
+|Modulo [`bia_parser.py`](bia_parser.py) + layer cloud vision opzionale [`bia_vision.py`](bia_vision.py). Import di misurazioni da **PDF di bioimpedenziometria** (AKERN Biavector, InBody, Tanita, BODYGRAM):
+|
+|- **Flusso ibrido** (massima affidabilità su tutti i PDF futuri):
+|  1. **PDF testuale** (export nativo) → parsing regex diretto;
+|  2. **PDF scansionato + chiave cloud in `.env`** → modello vision (z.ai / OpenAI-compatible) che ritorna **JSON strutturato** con tutti i campi (qualità = OCR z.ai: virgole decimali preservate, colonne non confuse);
+|  3. **PDF scansionato senza chiave** → **OCR Tesseract** + parser regex (fallback offline, nessuna API key necessaria).
+|- **Parser regex robusto** (ereditato da NutriCoach): normalizzazione virgola→punto *prima* della punteggiatura (risolve `13,1→131`), pattern *unit-aware* (non confonde FM kg con FM %), e **sanity-check post-estrazione** per rumore OCR AKERN: `ECW>TBW → ECW=TBW-ICW`, `PhA` fuori 1–20° scartato, litri/CHI ÷10 se la virgola decimale è persa (`430L→43.0L`, `1091.6→109.16`).
+|- **Estrazione automatica**: peso, altezza, BMI, massa grassa/magra, acqua totale (TBW), extra/intra-cellulare (ECW/ICW), idratazione, massa cellulare (BCM), SMM, ASMM, angolo di fase (PhA), indice nutrizionale (CHI) — tipicamente **12–22 campi** da un singolo PDF.
+|- **Storico** salvato e **sync su Intervals.icu** via `PUT /wellness-bulk` (peso + % grassa) — verificato con push reali 200 OK.
+|
+|Config cloud vision (`.env`):
+|```bash
+|BIA_VISION_API_KEY=sk-...          # attiva il layer cloud (qualità z.ai)
+|BIA_VISION_BASE_URL=https://api.z.ai/v1
+|BIA_VISION_MODEL=glm-4v-flash      # modello vision; cambia se necessario
+|```
+|Senza chiave l'app usa Tesseract (offline). Test: `tests/test_bia_parser.py`.
 
 ---
 
@@ -230,16 +258,29 @@ Ogni regola del planner cita uno studio. Tabella completa e formule in [**docs/S
 
 ---
 
-## Release
-
-| Piattaforma | Asset | Auto-update |
-|---|---|---|
-| Windows | `PCC-Setup-4.0.0.exe` (installer NSIS silenzioso) | `PCC-Setup*.exe /S` |
-| macOS | `PCC.dmg` (buildato da CI su runner macOS) | monta e trascina in Applicazioni |
-
-Vedi [**Releases**](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases) sul fork.
-
----
+|## Release
+|
+|Tutte le release: [github.com/quadrellif90-collab/pcc-cycling-coach/releases](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases)
+|
+|| Versione | Piattaforma | Asset | Note |
+||---|---|---|---|
+|| **v5.3.4** (Latest) | Win / macOS | `PCC-Setup-5.3.4.exe`, `PCC.dmg` | [Parser BIA ibrido (cloud vision + Tesseract)](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.4) |
+|| v5.3.3 | Win / macOS | `PCC-Setup-5.3.3.exe`, `PCC.dmg` | [Fix BIA AKERN + virgola decimale](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.3) |
+|| v5.3.2 | Win / macOS | `PCC-Setup-5.3.2.exe`, `PCC.dmg` | [BIA OCR su PDF scansionati](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.2) |
+|| v5.3.1 | Win / macOS | `PCC-Setup-5.3.1.exe`, `PCC.dmg` | [Fix auto-update + layout](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.1) |
+|| v5.3.0 | Win / macOS | `PCC-Setup-5.3.0.exe`, `PCC.dmg` | [PCC Pro: radar animato, Chart.js, drag-drop](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.0) |
+|| v5.2.5 | Win / macOS | `PCC-Setup-5.2.5.exe`, `PCC.dmg` | [Daily-sync, INSCYD, profilo metabolico](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.2.5) |
+|| v5.2.4 | Win / macOS | `PCC-Setup-5.2.4.exe`, `PCC.dmg` | [Fix self-update + i18n](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.2.4) |
+|| v5.2.3 | Win / macOS | `PCC-Setup-5.2.3.exe`, `PCC.dmg` | [Release notes + design system](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.2.3) |
+|| v5.2.2 | Win / macOS | `PCC-Setup-5.2.2.exe`, `PCC.dmg` | [Fix planner + nutrizione](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.2.2) |
+|| v5.2.1 | Win / macOS | `PCC-Setup-5.2.1.exe`, `PCC.dmg` | [Fix sync ICU](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.2.1) |
+|| v5.2.0 | Win / macOS | `PCC-Setup-5.2.0.exe`, `PCC.dmg` | [12 nuove funzioni + Design System Pro](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.2.0) |
+|| v5.1.0 | Win / macOS | `PCC-Setup-5.1.0.exe`, `PCC.dmg` | [Rebrand VELARCO + ricerca WorldTour + auto-update](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.1.0) |
+|| v5.0.0 | Win / macOS | `PCC-Setup-5.0.0.exe`, `PCC.dmg` | [Selettore di accomodamenti + OCR](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.0.0) |
+|| v4.4.0 | Win / macOS | `PCC-Setup-4.4.0.exe`, `PCC.dmg` | [OAuth persistente, profili, motore runway-aware](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v4.4.0) |
+|| v4.0.0 | Win / macOS | `PCC-Setup-4.0.0.exe`, `PCC.dmg` | [Fork italiano di Domestique + auto-update](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v4.0.0) |
+|
+|Auto-update: Windows (`PCC-Setup*.exe /S` silenzioso), macOS (monta `.dmg` → trascina in Applicazioni).
 
 ## Licenza & attribuzione
 
