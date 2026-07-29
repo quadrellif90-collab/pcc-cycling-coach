@@ -199,8 +199,28 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; h
 /* Scroll container for horizontal overflow */
 .scroll-x { overflow-x:auto; }
 
-/* Loading */
-.loading { color:var(--text3); font-style:italic; padding:20px; text-align:center; }
+/* Skeleton shimmer — sostituisce il loading statico */
+.loading { padding:20px; text-align:center; }
+.skeleton-card {
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface1) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 10px;
+  min-height: 60px;
+  margin-bottom: 8px;
+}
+.skeleton-line {
+  display:block; height:12px; border-radius:6px; margin-bottom:8px;
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface1) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.skeleton-h { height:18px; width:45%; }
+.skeleton-title { height:16px; width:30%; margin-bottom:12px; }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
 /* Loading bars — replace spinners on the catch-up overlay + library load.
    .lbar is the track; .lbar-fill is the determinate fill (width set inline
@@ -3046,7 +3066,7 @@ window.addEventListener('unhandledrejection', function(e) {
         // (A) Sceglie un test di valutazione e rigenera il piano con quel test
         window.chooseAssessmentTest = async function(kind) {
           const g = window._planData && window._planData.goal;
-          if (!g) { showToast('Nessun piano caricato', 3000); return; }
+          if (!g) { showToast('Nessun piano trovato. Vai su Piano > Genera per crearne uno.', 3000); return; }
           const body = {
             goal_type: g.type || g.goal_type || 'event',
             event_date: g.event_date || g.target_date || '',
@@ -3070,13 +3090,13 @@ window.addEventListener('unhandledrejection', function(e) {
             } else {
               showToast('Errore: ' + (d.detail || d.error || 'generazione fallita'), 5000);
             }
-          } catch(e) { showToast('Errore di rete', 4000); }
+          } catch(e) { showToast('Connessione al server assente. Verifica e riprova.', 4000); }
         };
 
         // (A) Salta la valutazione e genera il piano comunque
         window.skipAssessment = async function() {
           const g = window._planData && window._planData.goal;
-          if (!g) { showToast('Nessun piano caricato', 3000); return; }
+          if (!g) { showToast('Nessun piano trovato. Vai su Piano > Genera per crearne uno.', 3000); return; }
           const body = {
             goal_type: g.type || g.goal_type || 'event',
             event_date: g.event_date || g.target_date || '',
@@ -3099,7 +3119,7 @@ window.addEventListener('unhandledrejection', function(e) {
             } else {
               showToast('Errore: ' + (d.detail || d.error || 'generazione fallita'), 5000);
             }
-          } catch(e) { showToast('Errore di rete', 4000); }
+          } catch(e) { showToast('Connessione al server assente. Verifica e riprova.', 4000); }
         };
   });
 
@@ -4446,37 +4466,132 @@ function closeModal() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); if (typeof dismissPlanCatchup === 'function') dismissPlanCatchup(); } });
 
-// ═══ TOAST ═════════════════════════════════════════════════════════════════
-function showToast(msg, duration=3000, kind=null) {
+// ═══ TOAST v2 — coda FIFO, pausa hover, aria-live, progress bar ═══════════════
+const _toastQueue = [];
+const _toastActive = new Set();
+const _TOAST_MAX_VISIBLE = 3;
+const _TOAST_MIN_DURATION = 2000;
+
+function showToast(msg, duration=3500, kind=null) {
+  const entry = { msg, duration: Math.max(duration, _TOAST_MIN_DURATION), kind, timer: null, el: null, remaining: 0, started: 0 };
+  _toastQueue.push(entry);
+  _flushToastQueue();
+}
+
+function _flushToastQueue() {
+  if (!_toastQueue.length || _toastActive.size >= _TOAST_MAX_VISIBLE) return;
+  const entry = _toastQueue.shift();
+  _createToast(entry);
+  _flushToastQueue();
+}
+
+function _createToast(entry) {
   let tc = document.getElementById('toast-container');
   if (!tc) {
     tc = document.createElement('div');
     tc.id = 'toast-container';
-    // v4.3.1 FIX-UI: top-right per MASTER_DECISIONS_v42 §3 (was bottom-right).
-    // top:80px clears any sticky header; z-index:9999 stays above calendar grid.
-    tc.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
+    tc.setAttribute('aria-live', 'polite');
+    tc.setAttribute('role', 'status');
+    tc.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
     document.body.appendChild(tc);
   }
   const t = document.createElement('div');
-  // v1.8.9 Bug 9 — optional kind="success"|"warning"|"error" tints the toast.
   let borderCol = 'var(--border)';
   let bgCol = 'var(--surface2)';
-  if (kind === 'success') { borderCol = 'var(--green)'; bgCol = 'rgba(34,197,94,0.10)'; }
-  else if (kind === 'warning') { borderCol = 'var(--yellow)'; bgCol = 'rgba(234,179,8,0.10)'; }
-  else if (kind === 'error') { borderCol = 'var(--red)'; bgCol = 'rgba(239,68,68,0.10)'; }
-  t.style.cssText = `background:${bgCol};border:1px solid ${borderCol};color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.2);max-width:360px;opacity:0;transition:opacity 0.2s;cursor:pointer;`;
-  t.textContent = msg;
-  // v4.3.1 FIX-UI: click-to-dismiss (per MASTER §3 contract).
-  t.addEventListener('click', () => {
-    t.style.opacity = '0';
-    setTimeout(() => { try { t.remove(); } catch(_) {} }, 250);
-  });
+  let icon = 'ℹ️';
+  if (entry.kind === 'success') { borderCol = 'var(--green)'; bgCol = 'rgba(34,197,94,0.10)'; icon = '✅'; }
+  else if (entry.kind === 'warning') { borderCol = 'var(--yellow)'; bgCol = 'rgba(234,179,8,0.10)'; icon = '⚠️'; }
+  else if (entry.kind === 'error') { borderCol = 'var(--red)'; bgCol = 'rgba(239,68,68,0.10)'; icon = '❌'; }
+
+  t.style.cssText = `background:${bgCol};border:1px solid ${borderCol};color:var(--text);padding:10px 14px 8px;border-radius:8px;font-size:13px;box-shadow:0 3px 12px rgba(0,0,0,0.25);max-width:380px;opacity:0;transform:translateX(20px);transition:opacity 0.25s,transform 0.25s;cursor:pointer;pointer-events:auto;position:relative;overflow:hidden;`;
+  t.innerHTML = `<div style="display:flex;align-items:flex-start;gap:8px;"><span style="flex-shrink:0;font-size:15px;line-height:1.4;">${icon}</span><span style="flex:1;line-height:1.4;">${_escapeHtml(entry.msg)}</span></div><div class="toast-bar" style="height:3px;background:${borderCol};border-radius:2px;margin-top:6px;width:100%;transition:width 0.1s linear;"></div>`;
+
+  _toastActive.add(entry);
+  entry.el = t;
   tc.appendChild(t);
-  requestAnimationFrame(() => { t.style.opacity = '1'; });
+
+  requestAnimationFrame(() => {
+    t.style.opacity = '1';
+    t.style.transform = 'translateX(0)';
+  });
+
+  entry.remaining = entry.duration;
+  entry.started = Date.now();
+  entry.timer = setInterval(() => {
+    if (entry._paused) return;
+    const elapsed = Date.now() - entry.started;
+    entry.remaining = entry.duration - elapsed;
+    const bar = t.querySelector('.toast-bar');
+    if (bar) bar.style.width = Math.max(0, (entry.remaining / entry.duration) * 100) + '%';
+    if (elapsed >= entry.duration) _dismissToast(entry);
+  }, 100);
+
+  // Pausa su hover
+  t.addEventListener('mouseenter', () => { entry._paused = true; });
+  t.addEventListener('mouseleave', () => { entry._paused = false; entry.started = Date.now() - (entry.duration - entry.remaining); });
+  // Click = dismiss immediato
+  t.addEventListener('click', () => { _dismissToast(entry); });
+}
+
+function _dismissToast(entry) {
+  if (!entry || !entry.el) return;
+  entry.el.style.opacity = '0';
+  entry.el.style.transform = 'translateX(20px)';
+  clearInterval(entry.timer);
   setTimeout(() => {
-    t.style.opacity = '0';
-    setTimeout(() => { try { t.remove(); } catch(_) {} }, 250);
-  }, duration);
+    if (entry.el && entry.el.parentNode) entry.el.parentNode.removeChild(entry.el);
+    _toastActive.delete(entry);
+    _flushToastQueue();
+  }, 250);
+}
+
+function _escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== v5.3.14 — fetch wrapper con timeout, error toast, retry =====
+async function apiJson(url, opts={}) {
+  const timeout = opts.timeout || 10000;
+  const controller = new AbortController();
+  const timerId = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, { ...opts, signal: controller.signal });
+    clearTimeout(timerId);
+    if (!res.ok) {
+      let detail = '';
+      try { const j = await res.json(); detail = j.detail || j.error || ''; } catch(_) {}
+      const err = new Error(detail || `HTTP ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    return await res.json();
+  } catch (e) {
+    clearTimeout(timerId);
+    if (e.name === 'AbortError') {
+      showToast('⏱ Richiesta troppo lenta. Verifica la connessione e riprova.', 5000, 'error');
+    } else {
+      showToast(`⚠️ ${e.message || 'Connessione al server assente. Verifica e riprova.'}`, 5000, 'error');
+    }
+    throw e;
+  }
+}
+
+// ===== v5.3.14 — skeleton helper per card in caricamento =====
+function showSkeleton(containerId, lines=3) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  let html = '';
+  if (lines === 1) {
+    html = '<span class="skeleton-line skeleton-h"></span>';
+  } else {
+    html += '<div class="skeleton-title"></div>';
+    for (let i = 0; i < lines; i++) {
+      const w = 60 + Math.round(Math.random() * 35);
+      html += `<span class="skeleton-line" style="width:${w}%"></span>`;
+    }
+  }
+  el.innerHTML = `<div class="skeleton-card">${html}</div>`;
 }
 
 // ===== v5.2 client-friendly errors =====
@@ -4824,7 +4939,7 @@ async function _loadProfileProgress() {
         labels.push(wk.week_label||''); ctlData.push(wk.ctl!=null?Math.round(wk.ctl):null); tsbData.push(wk.tsb!=null?Math.round(wk.tsb):null);
       }
     }
-    if (labels.length < 3) { container.innerHTML = '<div style="font-size:12px;color:var(--text3);">Dati insufficienti.</div>'; return; }
+    if (labels.length < 3) { container.innerHTML = '<div style="font-size:12px;color:var(--text3);">Ancora pochi dati. Continua ad allenarti! 💪</div>'; return; }
     container.innerHTML = '<canvas id="pro-progress-canvas" width="600" height="180"></canvas>';
     const cv = document.getElementById('pro-progress-canvas');
     if (!cv || typeof Chart === 'undefined') return;
@@ -5769,7 +5884,7 @@ function fitnessChartInteractive(data, containerId) {
 }
 function fitnessChart(data, containerId) {
   const container = $(containerId);
-  if (!data || data.length < 2) { container.innerHTML = '<div class="loading">Dati insufficienti</div>'; return; }
+  if (!data || data.length < 2) { container.innerHTML = '<div class="loading">Ancora pochi dati per il calcolo. Continua ad allenarti! 💪</div>'; return; }
 
   const W = 900, H = 320, PAD_L = 44, PAD_R = 60, PAD_T = 12, PAD_B = 32;
   const cw = W - PAD_L - PAD_R, ch = H - PAD_T - PAD_B;
@@ -6553,7 +6668,7 @@ async function loadCpModels() {
     const res = await fetch('/api/cp-models');
     if (!res.ok) { host.textContent = 'Modelli CP non disponibili.'; return; }
     const d = await res.json();
-    if (d.error) { host.textContent = 'Dati insufficienti per i modelli CP.'; return; }
+    if (d.error) { host.textContent = 'Dati ancora insufficienti per i modelli CP. Continua ad allenarti!'; return; }
     const m = d.monod || {}, t = d.morton_3p || {};
     const levels = (d.progression_levels || []);
     let lvlHtml = levels.map(l => {
@@ -6817,7 +6932,7 @@ function renderHomeFitnessSparkline(wellness) {
   const vals = ctl.concat(tsb).filter(v => v != null && !isNaN(v));
   if (rows.length < 2 || vals.length < 2) {
     host.innerHTML = '';
-    if (stats) stats.textContent = 'Not enough data yet — open Analysis for details';
+    if (stats) stats.textContent = 'Ancora pochi dati per il calcolo — apri Analisi per i dettagli';
     return;
   }
   const W = 520, H = 64, pad = 2;
@@ -8017,7 +8132,7 @@ async function _v136RunBackfill(auto=false) {
 function energySystemChart(data, containerId) {
   const container = $(containerId);
   if (!container) return;
-  if (!data || data.length < 2) { container.innerHTML = '<div class="loading">Dati insufficienti</div>'; return; }
+  if (!data || data.length < 2) { container.innerHTML = '<div class="loading">Ancora pochi dati per il calcolo. Continua ad allenarti! 💪</div>'; return; }
   // Extract per-day fitness values (None when not yet computed by the 3D model).
   const cp  = data.map(d => d.cp_fitness ?? null);
   const wp  = data.map(d => d.w_prime_fitness ?? null);
@@ -8682,7 +8797,7 @@ async function loadMetabolicProfile() {
     const res = await fetch('/api/metabolic-profile');
     if (!res.ok) { host.textContent = 'Profilo metabolico non disponibile.'; return; }
     const d = await res.json();
-    if (d.error) { host.textContent = 'Dati insufficienti per la stima.'; return; }
+    if (d.error) { host.textContent = 'Dati ancora insufficienti per la stima. Continua ad allenarti!'; return; }
     const vo2 = d.vo2max_ml_kg_min, vla = d.vlamax_mmol_l_s, fat = d.fatmax_w;
     if (vo2 == null && vla == null && fat == null) {
       host.innerHTML = '<span style="color:var(--text3);">Nessun dato di potenza nel profilo — carica alcune attività (.fit) per stimare il profilo metabolico.</span>';
@@ -9819,7 +9934,7 @@ async function loadDfaTab() {
     if (!r.ok) { if (status) status.innerHTML = '<span style="color:var(--red);font-size:12px;">Failed to load DFA data ('+r.status+')</span>'; return; }
     d = await r.json();
   } catch (e) {
-    if (status) status.innerHTML = '<span style="color:var(--red);font-size:12px;">Errore di rete nel caricamento dati DFA</span>';
+    if (status) status.innerHTML = '<span style="color:var(--red);font-size:12px;">Caricamento DFA fallito — verifica la connessione</span>';
     return;
   }
   _dfaTabData = d;
@@ -17311,7 +17426,7 @@ async function loadActivityInsights() {
     const res = await fetch('/api/activity-insights');
     if (!res.ok) { host.textContent = 'Attività non disponibili.'; return; }
     const d = await res.json();
-    if (d.error) { host.textContent = 'Dati insufficienti.'; return; }
+    if (d.error) { host.textContent = 'Ancora pochi dati. Continua ad allenarti! 💪'; return; }
     const rows = d.activities || [];
     if (!rows.length) {
       host.innerHTML = '<div style="color:var(--text3);">Nessuna attività recente. Carica i .fit per abilitare classificazione + RPE.</div>';
@@ -22617,7 +22732,7 @@ async function openActivityModal(rideId) {
         window._activityModalCache.delete(firstKey);
       }
     } catch (e) {
-      content.innerHTML = `<div style="color:var(--red);padding:20px;">Errore di rete nel caricamento attività<div style="margin-top:8px;"><button class="btn" onclick="closeActivityModal()">Chiudi</button></div></div>`;
+      content.innerHTML = `<div style="color:var(--red);padding:20px;">Caricamento attività fallito — verifica la connessione<div style="margin-top:8px;"><button class="btn" onclick="closeActivityModal()">Chiudi</button></div></div>`;
       return;
     }
   }
