@@ -22,6 +22,10 @@
   --z1: #64748b; --z2: #ef4444; --z3: #22c55e; --z4: #eab308; --z5: #f97316; --z6: #ef4444; --z7: #e2e8f0;
   --radius: 10px;
 }
+.section { width:100%; }
+/* Overflow protection per card con chart/tabella */
+.card canvas, .card .chart-container, .card table { max-width:100%; overflow-x:auto; }
+.card { overflow-wrap:break-word; }
 [data-theme="light"] {
   --bg: #fafafa; --surface: #ffffff; --surface2: #f5f5f7; --border: #e0e0e5;
   --card: #ffffff;
@@ -3086,7 +3090,7 @@ window.addEventListener('unhandledrejection', function(e) {
             if (res.ok && d.plan_json) {
               await renderPlanJSON(d.plan_json);
               dismissAssessmentBanner();
-              showToast('Piano rigenerato con ' + kind + ' test', 4000);
+              showToast('Piano rigenerato con test ' + kind + ' ✅', 5000, 'success');
             } else {
               showToast('Errore: ' + (d.detail || d.error || 'generazione fallita'), 5000);
             }
@@ -3115,7 +3119,7 @@ window.addEventListener('unhandledrejection', function(e) {
             if (res.ok && d.plan_json) {
               await renderPlanJSON(d.plan_json);
               dismissAssessmentBanner();
-              showToast('Piano generato senza valutazione', 4000);
+              showToast('Piano generato senza valutazione ✅', 5000, 'success');
             } else {
               showToast('Errore: ' + (d.detail || d.error || 'generazione fallita'), 5000);
             }
@@ -4654,7 +4658,7 @@ function renderRecentActivities(filter){
   var all=window.__ALL_ACTIVITIES||[];
   var f=(filter||'').trim().toLowerCase();
   var list=all.filter(function(a){ if(!f) return true; var name=(a.name||'')+' '+(a.date||a.start_date||''); return name.toLowerCase().indexOf(f)>=0; });
-  if(!list.length){ box.innerHTML=emptyState('🔍','Nessuna attivita trovata', f?('Nessun risultato per "'+filter+'"'):'Ancora nessuna uscita.', 'Importa FIT','openImportFitPicker()'); return; }
+  if(!list.length){ box.innerHTML=emptyState('🔍','Nessuna attivita trovata', f?('Nessun risultato per "'+_escapeHtml(filter)+'"'):'Ancora nessuna uscita.', 'Importa FIT','openImportFitPicker()'); return; }
   var shown=list.slice().reverse();
   box.innerHTML=shown.map(function(a){
     var id=_normalizeRideId(a);
