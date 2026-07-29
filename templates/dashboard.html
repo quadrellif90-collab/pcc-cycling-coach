@@ -2072,21 +2072,27 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 
   <!-- BETA Fase 7a: Forza e Mobilita -->
-  <div class="card" data-card=" class="card" style="margin-top:12px;" id="strength-card"" style="margin-top:12px;" id="strength-card">
-    <h3 data-tip="Forza in palestra (Llanos-Lagos 2025, meta-analisi 17 studi/262 ciclisti: la forza pesante migliora efficienza di pedalata + TT). Mobilità quotidiana 15 min (Warneke 2025) riduce infortuni.">Forza &amp; Mobilità</h3>
-    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-      <select id="strength-phase" style="font-size:11px;padding:3px 6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;">
-        <option value="base">Base</option><option value="build">Build</option>
-        <option value="peak">Peak</option><option value="taper">Taper</option>
-      </select>
-      <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadStrength()">Genera piano</button>
-      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, injectMultidiscipline, 'Inietto…')" title="Inserisce forza+mobilità + running/MTB (se nei discipline) nel piano, affine al ciclismo">⚡ Inietta multi</button>
-      <a class="btn" style="font-size:11px;padding:3px 10px;" href="/api/export-plan-html?athlete=Atleta&phase=base" target="_blank" rel="noopener">⤓ Esporta piano (PDF/HTML)</a>
+    <div class="card" data-card=" class="card" style="margin-top:12px;" id="strength-card"" style="margin-top:12px;" id="strength-card">
+      <h3 data-tip="Forza in palestra (Llanos-Lagos 2025, meta-analisi 17 studi/262 ciclisti: la forza pesante migliora efficienza di pedalata + TT). Mobilità quotidiana 15 min (Warneke 2025) riduce infortuni.">Forza & Mobilità</h3>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+        <select id="strength-phase" style="font-size:11px;padding:3px 6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;">
+          <option value="base">Base</option><option value="build">Build</option>
+          <option value="peak">Peak</option><option value="taper">Taper</option>
+        </select>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" id="opt-strength" checked> Forza
+        </label>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" id="opt-mobility" checked> Mobilità
+        </label>
+        <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadStrength()">Genera piano</button>
+        <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, injectMultidiscipline, 'Inietto…')" title="Inserisce forza+mobilità + running/MTB (se nei discipline) nel piano, affine al ciclismo">⚡ Inietta multi</button>
+        <a class="btn" style="font-size:11px;padding:3px 10px;" href="/api/export-plan-html?athlete=Atleta&phase=base" target="_blank" rel="noopener">⤓ Esporta piano (PDF/HTML)</a>
+      </div>
+      <div id="strength-summary" style="font-size:12px;color:var(--text2);margin-bottom:8px;"></div>
+      <div id="strength-weeks" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div id="mobility-routine" style="font-size:11px;color:var(--text3);margin-top:8px;"></div>
     </div>
-    <div id="strength-summary" style="font-size:12px;color:var(--text2);margin-bottom:8px;"></div>
-    <div id="strength-weeks" style="display:flex;flex-direction:column;gap:6px;"></div>
-    <div id="mobility-routine" style="font-size:11px;color:var(--text3);margin-top:8px;"></div>
-  </div>
 
   <!-- BETA Fase 7e (DIY): Il mio calendario / aderenza personale -->
   <div class="card" data-card=" class="card" style="margin-top:12px;" id="my-cal-card"" style="margin-top:12px;" id="my-cal-card">
@@ -9376,12 +9382,16 @@ async function syncBIAicu() {
 async function injectMultidiscipline() {
   const phase = ($('strength-phase') || {}).value || 'base';
   const oneR = ($('profile-one-rm') && parseFloat($('profile-one-rm').value)) || 0;
+  const wantStrength = document.getElementById('opt-strength')?.checked !== false;
+  const wantMobility = document.getElementById('opt-mobility')?.checked !== false;
   const btn = event && event.target;
   if (btn) { btn.disabled = true; btn.textContent = 'Inietto…'; }
   try {
     const fd = new FormData();
     fd.append('phase', phase);
     if (oneR) fd.append('one_rm_kg', oneR);
+    fd.append('include_strength', wantStrength);
+    fd.append('include_mobility', wantMobility);
     const res = await fetch('/api/plan/inject-multidiscipline', { method: 'POST', body: fd });
     if (!res.ok) { alert('Errore inject: ' + res.status); return; }
     const j = await res.json();
@@ -9416,15 +9426,20 @@ async function loadMyCalendar() {
   try {
     const j = await (await fetch('/api/my-calendar')).json();
     const rows = j.rows || [];
-    if (!rows.length) { host.textContent = j.note || 'Genera un piano per vedere l’aderenza…'; return; }
+    if (!rows.length) { host.textContent = j.note || 'Genera un piano per vedere l\u0027aderenza...'; return; }
     const maxTss = Math.max(...rows.map(r => Math.max(r.planned_tss || 1, r.actual_tss || 1)));
     const flagColor = {green:'#2d9d5f', amber:'#d99100', red:'#d9534f'};
     const body = rows.map(r => {
       const pW = Math.round(100 * (r.planned_tss || 0) / maxTss);
       const aW = Math.round(100 * (r.actual_tss || 0) / maxTss);
+      // Build intervals.icu link if athlete ID available
+      const icuBtn = `<button class="btn" style="font-size:10px;padding:2px 8px;" onclick="openIcuCalendar()">↗ Vedi su intervals.icu</button>`;
       return `<div style="margin:6px 0;">
-        <div style="font-weight:600;">${esc(r.week_label)} <span style="color:${flagColor[r.flag]||'var(--text2)'};">● ${r.flag}</span>
-          <span style="color:var(--text3);font-size:10px;"> · ${esc(r.phase)} · aderenza ${Math.round(r.tss_ratio*100)}%</span></div>
+        <div style="font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          ${esc(r.week_label)} <span style="color:${flagColor[r.flag]||'var(--text2)'};">● ${r.flag}</span>
+          <span style="color:var(--text3);font-size:10px;"> · ${esc(r.phase)} · aderenza ${Math.round(r.tss_ratio*100)}%</span>
+          ${icuBtn}
+        </div>
         <div style="background:var(--surface2);border-radius:4px;height:10px;margin:2px 0;position:relative;">
           <div style="background:#3b82f6;height:10px;border-radius:4px;width:${pW}%;opacity:.5;"></div>
           <div style="background:#2d9d5f;height:10px;border-radius:4px;width:${aW}%;position:relative;top:-10px;"></div>
@@ -9447,9 +9462,25 @@ async function myPushPlan() {
   } catch (e) { host.textContent = 'Push fallito: ' + e.message; }
 }
 
+function openIcuCalendar() {
+  // Read athlete ID from profile or config
+  fetch('/api/profile').then(r => r.json()).then(p => {
+    const aid = (p.profile && (p.profile.icu_athlete_id || p.profile.icu_id)) || '';
+    if (aid) {
+      window.open(`https://intervals.icu/athlete/${aid}/calendar`, '_blank', 'noopener,noreferrer');
+    } else {
+      showToast('ID atleta intervals.icu non configurato in Impostazioni', 4000, 'warning');
+    }
+  }).catch(() => {
+    window.open('https://intervals.icu', '_blank', 'noopener,noreferrer');
+  });
+}
+
 // BETA Fase 7a — Forza & Mobilità (chiamato dal bottone "Genera piano")
 async function loadStrength() {
   const phase = (document.getElementById('strength-phase') || {}).value || 'base';
+  const wantStrength = document.getElementById('opt-strength')?.checked !== false;
+  const wantMobility = document.getElementById('opt-mobility')?.checked !== false;
   const sumEl = document.getElementById('strength-summary');
   const weeksEl = document.getElementById('strength-weeks');
   const mobEl = document.getElementById('mobility-routine');
@@ -9458,16 +9489,26 @@ async function loadStrength() {
     // PCC: legge 1RM dal profilo per mostrare i carichi in kg reali
     let oneRm = 0;
     try { const p = await (await fetch('/api/profile')).json(); oneRm = (p.profile && p.profile.one_rm_kg) || 0; } catch (_) {}
-    const [sp, mp] = await Promise.all([
-      fetch(`/api/strength-plan?phase=${phase}&weeks=4${oneRm ? '&one_rm_kg=' + oneRm : ''}`).then(r => r.ok ? r.json() : null),
-      fetch('/api/mobility-plan?days=7').then(r => r.ok ? r.json() : null),
-    ]);
+    const promises = [];
+    if (wantStrength) {
+      promises.push(fetch(`/api/strength-plan?phase=${phase}&weeks=4${oneRm ? '&one_rm_kg=' + oneRm : ''}`).then(r => r.ok ? r.json() : null));
+    } else {
+      promises.push(Promise.resolve(null));
+    }
+    if (wantMobility) {
+      promises.push(fetch('/api/mobility-plan?days=7').then(r => r.ok ? r.json() : null));
+    } else {
+      promises.push(Promise.resolve(null));
+    }
+    const [sp, mp] = await Promise.all(promises);
     if (sp && sp.summary) {
       const s = sp.summary;
       sumEl.innerHTML = `<b>${esc(s.phase)}</b>: ${s.sessions_per_week}×/sett, ${s.sets}×${s.reps} al ${s.pct_1rm}% 1RM` +
         (oneRm ? ` <b style="color:var(--accent);">(≈${Math.round(oneRm * s.pct_1rm / 100)} kg)</b>` : '') +
         (s.exercises.length ? ` — ${s.exercises.map(esc).join(', ')}` : '') +
         `<br><span style="font-size:10px;color:var(--text3);">${esc(s.source)}</span>`;
+    } else {
+      sumEl.innerHTML = '<span style="color:var(--text3);">Forza disabilitata</span>';
     }
     if (sp && sp.plan) {
       weeksEl.innerHTML = sp.plan.map(wk => {
@@ -9478,10 +9519,14 @@ async function loadStrength() {
            </div>`).join('');
         return `<div style="background:var(--surface2);border-radius:6px;padding:6px 8px;"><div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px;">Settimana ${wk.week}</div>${rows}</div>`;
       }).join('');
+    } else {
+      weeksEl.innerHTML = '<span style="color:var(--text3);">Forza disabilitata</span>';
     }
-    if (mp && mp.routine) {
+    if (mp && mp.routine && wantMobility) {
       const names = mp.routine[0].sequence.map(x => x.exercise).join(' · ');
       mobEl.innerHTML = `Mobilità quotidiana (${mp.routine[0].minutes} min): ${esc(names)} <span style="color:var(--text3);">(Warneke 2025)</span>`;
+    } else {
+      mobEl.innerHTML = '<span style="color:var(--text3);">Mobilità disabilitata</span>';
     }
   } catch (e) { /* non bloccare */ }
 }

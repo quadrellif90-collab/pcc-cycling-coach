@@ -4015,8 +4015,9 @@ async def api_inject_multidiscipline(request: Request):
     if not one_rm:
         one_rm = float(a.get("one_rm_kg") or 0)
     disciplines = set(d.lower() for d in (a.get("disciplines") or []))
-    do_strength = True
-    do_mobility = True
+    # Allow client to override via request body
+    do_strength = body.get("include_strength", True)
+    do_mobility = body.get("include_mobility", True)
     do_running = "running" in disciplines
     do_mtb = "mtb" in disciplines
 
@@ -4761,11 +4762,10 @@ def api_my_calendar():
 @app.post("/api/my-push-plan")
 def api_my_push_plan():
     """BETA Fase 7c/7e (DIY) — pusha il piano integrato sul proprio calendario
-    intervals.icu (self). Invia un EVENTO per ogni settimana del piano con
-    ciclismo + forza + mobilità + nutrizione (riuso plan_export)."""
+    intervals.icu (self). Invia un EVENTO per ogni seduta del piano con
+    dettagli specifici: ciclismo, forza, mobilità, running, MTB, nutrizione."""
     from my_progress import load_plan_weeks
     from profile_manager import ProfileManager
-    from plan_export import build_plan_html
     import httpx
     plan_weeks = load_plan_weeks()
     if not plan_weeks:
@@ -4784,22 +4784,49 @@ def api_my_push_plan():
     pushed = 0
     errors = []
     for wk in plan_weeks:
-        ev_date = wk.get("start")
-        if not ev_date:
-            continue
-        title = f"Sett. piano — {wk.get('phase','ciclismo')}"
-        desc = f"TSS target {round(wk.get('tss_target',0))} · piano PCC (ciclismo+forza+mobilità+nutrizione)"
-        payload = {"date": ev_date, "title": title, "description": desc, "type": "workout"}
-        try:
-            r = httpx.post(
-                f"https://intervals.icu/api/v1/athlete/{aid}/events",
-                auth=("API_KEY", key), json=payload, timeout=15)
-            if r.status_code in (200, 201):
-                pushed += 1
+        sessions = wk.get("sessions", [])
+        for sess in sessions:
+            day = sess.get("day")
+            if not day:
+                continue
+            sess_type = sess.get("session_type", "cycling")
+            desc_parts = []
+            if sess_type == "cycling":
+                tss = sess.get("tss_estimate", 0)
+                dur = sess.get("duration_min", 0)
+                desc = sess.get("description", "")
+                desc_parts.append(f"🚴 {desc} ({dur}min, {tss} TSS)")
+            elif sess_type == "strength":
+                desc_parts.append(f"💪 Forza: {sess.get('description', '')}")
+            elif sess_type == "mobility":
+                desc_parts.append(f"🤸 Mobilità: {sess.get('description', '')}")
+            elif sess_type == "running":
+                desc_parts.append(f"🏃 Corsa: {sess.get('description', '')}")
+            elif sess_type == "mtb":
+                desc_parts.append(f"🚵 MTB: {sess.get('description', '')}")
             else:
-                errors.append(f"{ev_date}: HTTP {r.status_code}")
-        except Exception as e:
-            errors.append(f"{ev_date}: {e}")
+                desc_parts.append(sess.get("description", "Seduta"))
+            # Add nutrition hint if present
+            if "carbs_per_hour" in sess or "nutrition" in sess:
+                nut = sess.get("nutrition", {})
+                if "carbs_per_hour" in nut:
+                    desc_parts.append(f"🍌 {nut['carbs_per_hour']}g CHO/h")
+            payload = {
+                "date": day,
+                "title": f"Sett. {wk.get('week', '?')} — {sess_type.capitalize()}",
+                "description": " · ".join(desc_parts),
+                "type": "workout"
+            }
+            try:
+                r = httpx.post(
+                    f"https://intervals.icu/api/v1/athlete/{aid}/events",
+                    auth=("API_KEY", key), json=payload, timeout=15)
+                if r.status_code in (200, 201):
+                    pushed += 1
+                else:
+                    errors.append(f"{day} {sess_type}: HTTP {r.status_code}")
+            except Exception as e:
+                errors.append(f"{day} {sess_type}: {e}")
     return {"pushed": pushed, "errors": errors, "athlete": aid}
 
 
