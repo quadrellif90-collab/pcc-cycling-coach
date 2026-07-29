@@ -1,8 +1,8 @@
 # 🛡️ CERTIFICATO DI IDONEITÀ ALLA DISTRIBUZIONE
-Data Validazione: mer 29 lug 2026 12:04:18
+Data Validazione: mer 29 lug 2026 12:12:20
 Versione: 5.4.0
 Branch: pro
-Commit: 74b6da84
+Commit: ec7c7bf9
 ---
 
 ## Risultato Audit
@@ -11,7 +11,7 @@ Commit: 74b6da84
 * **Avvisi (WARN)**: 1
 * **Versione**: v5.4.0
 * **Branch**: pro
-* **Commit**: 74b6da84
+* **Commit**: ec7c7bf9
 
 ### STATO: ✅ APPROVATO PER LA DISTRIBUZIONE — READY FOR PRODUCTION
 
