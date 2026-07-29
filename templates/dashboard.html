@@ -2099,7 +2099,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <h3 data-tip="Il tuo calendario: per ogni settimana del piano mostra TSS pianificato vs eseguito (da intervals.icu) e l'aderenza %. 'Hai eseguito quanto richiesto' = barre verdi su blu.">Il mio calendario</h3>
     <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
       <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadMyCalendar()">Aggiorna</button>
-      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, myPushPlan, 'Invio a intervals.icu…')">⤴ Push piano su intervals.icu</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, icuPushNow, 'Push a intervals.icu…')">⤴ Push piano su intervals.icu</button>
 
     </div>
     <div id="my-calendar" style="font-size:11px;color:var(--text2);">Genera un piano per vedere l'aderenza…</div>
