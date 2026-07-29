@@ -407,6 +407,7 @@ class ProfileManager:
                     "hours_per_week": 8.0,
                     "available_days": [0, 1, 2, 3, 4, 5, 6],
                     "rest_days": [0],
+                    "icu_calendar_sync": True,
                 })
 
                 # v4.0.0-alpha: device_prefs seeded empty -- no trainer

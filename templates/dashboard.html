@@ -2080,10 +2080,10 @@ window.addEventListener('unhandledrejection', function(e) {
           <option value="peak">Peak</option><option value="taper">Taper</option>
         </select>
         <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;">
-          <input type="checkbox" id="opt-strength" checked> Forza
+          <input type="checkbox" id="po-strength" checked> Forza
         </label>
         <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;">
-          <input type="checkbox" id="opt-mobility" checked> Mobilità
+          <input type="checkbox" id="po-mobility" checked> Mobilità
         </label>
         <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadStrength()">Genera piano</button>
         <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, injectMultidiscipline, 'Inietto…')" title="Inserisce forza+mobilità + running/MTB (se nei discipline) nel piano, affine al ciclismo">⚡ Inietta multi</button>
@@ -2093,17 +2093,6 @@ window.addEventListener('unhandledrejection', function(e) {
       <div id="strength-weeks" style="display:flex;flex-direction:column;gap:6px;"></div>
       <div id="mobility-routine" style="font-size:11px;color:var(--text3);margin-top:8px;"></div>
     </div>
-
-  <!-- BETA Fase 7e (DIY): Il mio calendario / aderenza personale -->
-  <div class="card" data-card=" class="card" style="margin-top:12px;" id="my-cal-card"" style="margin-top:12px;" id="my-cal-card">
-    <h3 data-tip="Il tuo calendario: per ogni settimana del piano mostra TSS pianificato vs eseguito (da intervals.icu) e l'aderenza %. 'Hai eseguito quanto richiesto' = barre verdi su blu.">Il mio calendario</h3>
-    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-      <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadMyCalendar()">Aggiorna</button>
-      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, icuPushNow, 'Push a intervals.icu…')">⤴ Push piano su intervals.icu</button>
-
-    </div>
-    <div id="my-calendar" style="font-size:11px;color:var(--text2);">Genera un piano per vedere l'aderenza…</div>
-  </div>
 
   <!-- PCC: Piano alimentare settimanale (creatore di diete) -->
   <details class="card" style="margin-top:12px;" id="diet-card">
@@ -9382,8 +9371,8 @@ async function syncBIAicu() {
 async function injectMultidiscipline() {
   const phase = ($('strength-phase') || {}).value || 'base';
   const oneR = ($('profile-one-rm') && parseFloat($('profile-one-rm').value)) || 0;
-  const wantStrength = document.getElementById('opt-strength')?.checked !== false;
-  const wantMobility = document.getElementById('opt-mobility')?.checked !== false;
+  const wantStrength = document.getElementById('po-strength')?.checked !== false;
+  const wantMobility = document.getElementById('po-mobility')?.checked !== false;
   const btn = event && event.target;
   if (btn) { btn.disabled = true; btn.textContent = 'Inietto…'; }
   try {
@@ -9479,8 +9468,8 @@ function openIcuCalendar() {
 // BETA Fase 7a — Forza & Mobilità (chiamato dal bottone "Genera piano")
 async function loadStrength() {
   const phase = (document.getElementById('strength-phase') || {}).value || 'base';
-  const wantStrength = document.getElementById('opt-strength')?.checked !== false;
-  const wantMobility = document.getElementById('opt-mobility')?.checked !== false;
+  const wantStrength = document.getElementById('po-strength')?.checked !== false;
+  const wantMobility = document.getElementById('po-mobility')?.checked !== false;
   const sumEl = document.getElementById('strength-summary');
   const weeksEl = document.getElementById('strength-weeks');
   const mobEl = document.getElementById('mobility-routine');
