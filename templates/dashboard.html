@@ -8447,40 +8447,12 @@ async function loadHome() {
   // v3.1.0 PART A: fire-and-forget adoption-toast check (non-blocking).
   try { loadPlanAdoptionToast(); } catch (_) {}
   try {
-    // v1.6.1 — fine-grained fetch + parse instrumentation. Each /api/* call
-    // gets its own try-around-fetch and try-around-json so a single failed
-    // panel ships an E_FRONTEND_<panel>_<step> code instead of just the
-    // catch-all E_FRONTEND_LOADHOME. The Promise.all is preserved for
-    // parallelism; the per-response parsing is what's split.
-    let rRes, wRes, aRes;
-    try {
-      [rRes, wRes, aRes] = await Promise.all([
-        fetch('/api/readiness'), fetch('/api/wellness?days=90'), fetch('/api/activities')
-      ]);
-    } catch (eFetch) {
-      // Network error in any of the three. Best-effort tag: prefer the
-      // homepage-init code so the ring entry shows the bulk fetch failed
-      // before any panel had data.
-      try { window._diagFrontendError('E_FRONTEND_HOMEPAGE_INIT', {msg: String(eFetch && eFetch.message || eFetch), stage: 'fetch'}); } catch(_) {}
-      throw eFetch;
-    }
-    let d, wellness, activities;
-    try { d = await rRes.json(); }
-    catch (e) { try { window._diagFrontendError('E_FRONTEND_READINESS_PARSE', {msg: String(e && e.message || e), status: rRes && rRes.status}); } catch(_) {} throw e; }
-    if (!rRes.ok) {
-      try { window._diagFrontendError('E_FRONTEND_READINESS_FETCH', {status: rRes.status}); } catch(_) {}
-    }
-    try { wellness = await wRes.json(); }
-    catch (e) { try { window._diagFrontendError('E_FRONTEND_FITNESS_PARSE', {msg: String(e && e.message || e), status: wRes && wRes.status}); } catch(_) {} throw e; }
-    if (!wRes.ok) {
-      try { window._diagFrontendError('E_FRONTEND_FITNESS_FETCH', {status: wRes.status}); } catch(_) {}
-    }
-    _wellnessCache = wellness;
-    try { activities = await aRes.json(); }
-    catch (e) { try { window._diagFrontendError('E_FRONTEND_ACTIVITIES_PARSE', {msg: String(e && e.message || e), status: aRes && aRes.status}); } catch(_) {} throw e; }
-    if (!aRes.ok) {
-      try { window._diagFrontendError('E_FRONTEND_ACTIVITIES_FETCH', {status: aRes.status}); } catch(_) {}
-    }
+    // v5.3.17 — usa apiJson() per error handling user-friendly (toast italiano)
+    const [d, wellness, activities] = await Promise.all([
+      apiJson('/api/readiness'),
+      apiJson('/api/wellness?days=90'),
+      apiJson('/api/activities')
+    ]);
     const r=d.readiness, t=d.training, s=d.sleep;
 
     // P3.1 — the full Fitness & Form + energy-system charts moved to the
@@ -17383,7 +17355,7 @@ async function loadPlan() {
       if (bres.ok) { const bd = await bres.json(); if (bd.active_today) adjusted = true; }
     } catch (_) {}
     const url = adjusted ? '/api/plan/adjusted' : '/api/plan';
-    d = await (await fetch(url)).json();
+    d = await apiJson(url);
     if (adjusted) {
       const flag = document.getElementById('injury-flag');
       if (flag) flag.innerHTML = '<span style="color:var(--red);font-weight:600;">⚠️ Piano con riposo automatico per infortunio/malattia attivo.</span>';
@@ -17427,9 +17399,7 @@ async function loadActivityInsights() {
   const host = document.getElementById('activity-insights');
   if (!host) return;
   try {
-    const res = await fetch('/api/activity-insights');
-    if (!res.ok) { host.textContent = 'Attività non disponibili.'; return; }
-    const d = await res.json();
+    const d = await apiJson('/api/activity-insights');
     if (d.error) { host.textContent = 'Ancora pochi dati. Continua ad allenarti! 💪'; return; }
     const rows = d.activities || [];
     if (!rows.length) {
