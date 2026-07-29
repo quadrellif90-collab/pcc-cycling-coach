@@ -4725,6 +4725,7 @@ def api_my_calendar():
     """BETA Fase 7e (DIY) — il mio calendario: aderenza personale pianificato
     vs eseguito. Legge il piano di PCC (tss_target) e le attività reali
     del profilo self da intervals.icu (se le credenziali ci sono)."""
+    import datetime as _dt
     from my_progress import compute_my_adherence, fetch_actual_tss_by_week, load_plan_weeks
     from profile_manager import ProfileManager
     plan_weeks = load_plan_weeks()
