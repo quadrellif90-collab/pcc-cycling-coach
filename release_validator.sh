@@ -125,7 +125,7 @@ else
   log_warn "EXE non trovato in dist/PCC/PCC.exe"
 fi
 
-LATEST_INSTALLER=$(ls -t PCC-Setup-*.exe 2>/dev/null | head -1 || true)
+LATEST_INSTALLER=$(ls -t PCC-Setup-*.exe release/PCC-Setup-*.exe 2>/dev/null | head -1 || true)
 if [ -n "$LATEST_INSTALLER" ]; then
   SIZE=$(du -h "$LATEST_INSTALLER" | cut -f1)
   log_success "Installer presente: $LATEST_INSTALLER ($SIZE)"
