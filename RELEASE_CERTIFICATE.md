@@ -1,8 +1,8 @@
 # 🛡️ CERTIFICATO DI IDONEITÀ ALLA DISTRIBUZIONE
-Data Validazione: ven 31 lug 2026 10:43:15
+Data Validazione: ven 31 lug 2026 11:36:20
 Versione: 5.4.2
 Branch: pro
-Commit: cb627e71
+Commit: 3bc9686b
 ---
 
 ## Risultato Audit
@@ -11,7 +11,7 @@ Commit: cb627e71
 * **Avvisi (WARN)**: 0
 * **Versione**: v5.4.2
 * **Branch**: pro
-* **Commit**: cb627e71
+* **Commit**: 3bc9686b
 
 ### STATO: ✅ APPROVATO PER LA DISTRIBUZIONE — READY FOR PRODUCTION
 
