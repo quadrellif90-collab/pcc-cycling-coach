@@ -4,7 +4,9 @@ logs/
 # Build artifacts
 build/
 dist/
-dist_new2/
+*dist_new2/
+build_nsis.bat
+release/PCC-*.exe
 *.pyc
 __pycache__/
 *.spec.bak
