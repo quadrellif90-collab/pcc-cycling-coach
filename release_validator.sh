@@ -185,7 +185,7 @@ fi
 # ── PHASE 8: GIT INTEGRITY ──────────────────────────────────────────────
 log_section "PHASE 8: GIT INTEGRITY"
 
-UNCOMMITTED=$(git status --porcelain 2>/dev/null | grep -v 'RELEASE_CERTIFICATE.md' | wc -l)
+UNCOMMITTED=$(git status --porcelain 2>/dev/null | grep -vE 'RELEASE_CERTIFICATE.md|release_notes.*\.md' | wc -l)
 if [ "$UNCOMMITTED" -eq 0 ]; then
   log_success "Working tree pulito (escluse release notes)."
 else
