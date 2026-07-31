@@ -6,15 +6,38 @@
 
 > **PCC** (Power Curve Coach): il nome evoca la *power-duration curve*, il cuore scientifico del pianificatore — la curva che descrive quanto riesci a produrre per quanto tempo. Il logo unisce quell'arco ascendente a una ruota, con il gradiente teal→amber della palette.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.3.9-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Tests](https://img.shields.io/badge/Tests-38%2F38-passing-green)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.4.2-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Tests](https://img.shields.io/badge/Tests-2974%2B-passing-green)
 
-> **Latest:** [**v5.3.9 — Setup auto-sync da Intervals.icu**](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.3.9)
+> Latest: **[v5.4.2 — Accorgimenti persistiti: forza/mobilità/nutrizione sopravvivono agli auto-update**](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.4.2)
 
 > ⚠️ **Fork italiano di PCC** (Apache-2.0, `platypus45`). Questa è una versione derivata: stessa architettura di pianificazione adattiva, ma con motore nutrizione/integrazione riscritto, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento. Il credito all'autore originale è in [`NOTICE`](NOTICE).
 
 ---
 
-## Novità v5.3.6 — UI Cleanup + Domestique Upstream Check
+## Novità v5.4.2 — Accorgimenti persistiti
+
+| Feature | Descrizione |
+|---------|-------------|
+| 🔧 **Accorgimenti che sopravvivono** | Forza, mobilità, nutrizione e integratori NON vengono più azzerati da auto-update, ricalcoli e reforecast (`_apply_plan_options_future` su tutti i path + round-trip completo delle note) |
+| 💾 **Flag persistiti** | I `plan_options` vengono salvati nel piano → ogni rigenerazione rilegge gli stessi flag |
+| 🎨 **UI coerente** | Card "Forza & Mobilità" con ID univoci + `syncCardFlags()`; Nutrizione/Integrazione chiuse di default; forza/mobilità OFF di default |
+| 📤 **Push completo** | `load_plan_weeks()` include le sessioni → il push su intervals.icu non invia più 0 eventi |
+
+**Verificato E2E:** genera piano con flag → 4 forza + 4 mobilità + 18 note nutrizione + 7 integratori → update tier `rebalanced` → tutti preservati → push `/api/icu/push` → `pushed=4 updated=9 deleted=2`.
+
+---
+
+## Novità v5.4.0 — ICU push per-sessione + Forza/Mobilità opt-in
+
+| Feature | Descrizione |
+|---------|-------------|
+| 📅 **Push piano su intervals.icu** | `/api/icu/push` usa il motore `reconcile()`: pusha ogni singola seduta (ciclismo, forza, mobilità, running, MTB) con file ZWO verbatim (potenza) o FIT HR-target (HR), upsert bulk idempotente, orphan sweep |
+| ⚙️ **Forza & Mobilità opt-in** | Checkbox nella card Home rispettate da `loadStrength()`/`injectMultidiscipline()` e dal backend |
+| 🔗 **Vedi su intervals.icu** | Bottone nel calendario "Il mio calendario" → `https://intervals.icu/athlete/<id>/calendar` |
+
+---
+
+## Novità v5.3.9 — Setup auto-sync da Intervals.icu
 
 | Feature | Descrizione |
 |---------|-------------|

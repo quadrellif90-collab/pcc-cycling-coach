@@ -3630,6 +3630,24 @@ def _apply_plan_options(weeks, opts, goal):
     return weeks
 
 
+def _apply_plan_options_future(weeks, opts, goal, today=None):
+    """Apply the accorgimento layers to FUTURE weeks only (regen/recalc/refit
+    paths), then strip nutrition notes when the nutrition layer is off —
+    mirrors generate_plan's tail so every auto-update keeps the user's
+    accorgimenti instead of silently dropping them."""
+    if opts.is_normal:
+        return weeks
+    today = today or date.today()
+    future = [w for w in weeks
+              if getattr(w, "start", None) is not None and w.start >= today]
+    _apply_plan_options(future, opts, goal)
+    if not opts.enable_nutrition:
+        for w in future:
+            for s in w.sessions:
+                s.nutrition_note = ""
+    return weeks
+
+
 # ── ZWO matching ──────────────────────────────────────────────────────────────
 
 def score_workout(zwo_data: dict) -> float:
@@ -10023,6 +10041,16 @@ def _plan_dict_to_planned_weeks(plan_dict: dict) -> list[PlannedWeek]:
                 race=(s_json.get("race")
                       if isinstance(s_json.get("race"), dict) else None),
                 is_opener=bool(s_json.get("is_opener", False)),
+                # PCC 5.x — round-trip the accorgimenti layer notes too,
+                # otherwise reforecast/refit/recalc silently dropped them
+                # (the dict→PlannedWeek conversion was the single loss site).
+                nutrition_note=s_json.get("nutrition_note", "") or "",
+                integrator_note=s_json.get("integrator_note", "") or "",
+                heat_note=s_json.get("heat_note", "") or "",
+                strength_note=s_json.get("strength_note", "") or "",
+                mobility_note=s_json.get("mobility_note", "") or "",
+                durability_note=s_json.get("durability_note", "") or "",
+                altitude_note=s_json.get("altitude_note", "") or "",
             ))
         pw_list.append(PlannedWeek(
             week_num=w.get("week_num", 0), start=ws, end=we,
@@ -10971,6 +10999,10 @@ def regenerate_from_today(
         _future_weeks, library,
         plan_start_date=(phase_start_date if new_phases else today),
         seed_salt=seed_salt)
+    # PCC 5.x — re-apply the accorgimenti layers on this adaptation path too
+    # (they were only applied at first generation; without this every regen
+    # silently dropped strength/mobility/integrators/heat/altitude).
+    _apply_plan_options_future(all_weeks, opts, goal, today)
     return new_phases, all_weeks, regen_info
 
 
@@ -11598,6 +11630,8 @@ def recalculate_plan(
         "phase_weeks_status": getattr(adjusted_goal, "_phase_weeks_status", None),
     }
 
+    # PCC 5.x — re-apply the accorgimenti layers on the weekly recalc path.
+    _apply_plan_options_future(all_weeks, opts, goal, today)
     return new_phases, all_weeks, recalc_info
 
 
@@ -11916,6 +11950,8 @@ def extend_continuous_plan(
         "recalc_date": today.isoformat(),
         "phase_weeks_status": None,
     }
+    # PCC 5.x — keep the accorgimenti layers on the extend/refit path.
+    _apply_plan_options_future(all_weeks, opts, goal, today)
     return [phase], all_weeks, info
 
 

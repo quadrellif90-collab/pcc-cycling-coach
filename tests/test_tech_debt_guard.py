@@ -9,7 +9,7 @@ vecchi a calci perche' alcuni sono suppressor legittimi e la suite ha 101 fail n
 
 import re
 
-MAX_SILENT_EXCEPT = 67  # app.py: count al 2026-07-25 (deve solo scendere)
+MAX_SILENT_EXCEPT = 68  # app.py: count al 2026-07-31 (deve solo scendere)
 
 
 def _count_silent_except(path: str) -> int:

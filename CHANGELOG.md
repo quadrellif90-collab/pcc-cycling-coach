@@ -1,5 +1,30 @@
 # Changelog
 
+## v5.4.2 — Accorgimenti persistiti: forza/mobilità/nutrizione sopravvivono agli auto-update (2026-07-31)
+
+- **Fix radicale accorgimenti**: `_apply_plan_options_future()` applica i layer (forza, mobilità, nutrizione, integratori, calore, altitudine, durability) a tutte le settimane **future** nei 3 path di auto-aggiornamento — `regenerate_from_today`, `recalculate_plan`, `extend_continuous_plan` — prima azzeravano silenziosamente forza/mobilità/integratori a ogni ricalcolo.
+- **Fix round-trip note (root cause)**: `_plan_dict_to_planned_weeks()` ora ricostruisce TUTTI i campi accorgimenti (`nutrition_note`, `integrator_note`, `heat_note`, `strength_note`, `mobility_note`, `durability_note`, `altitude_note`) — il reforecast/refit/recalc li buttava via a ogni conversione dict→PlannedWeek.
+- **Re-apply post-reforecast**: il tier `rebalanced` ri-applica gli accorgimenti sulle settimane future dopo il re-sampling (i giorni toccati perdevano le sessioni iniettate).
+- **Persistenza flag**: `plan_options.to_dict()` salvato nel blocco `goal` del piano → i rigeneri rileggono gli stessi flag invece di tornare a `normal`.
+- **Fix ID duplicati UI**: checkbox card "Forza & Mobilità" rinominati `card-strength`/`card-mobility` (erano duplicati di `po-strength`/`po-mobility` del selettore Accorgimenti) + `syncCardFlags()` sincronizza card→selettore (fonte canonica). Entrambi OFF di default (prima erano sempre ON).
+- **Card chiuse di default**: `nutrition-card` e `supplement-card` non più `open` all'avvio.
+- **Fix push 0 eventi**: `load_plan_weeks()` ora ritorna le settimane **con le sessioni** → `myPushPlan()` non spinge più 0 eventi.
+- **Verificato E2E**: generate con flag → 4 strength + 4 mobility + 18 note nutrizione + 7 integratori; update (tier rebalanced) → tutti preservati; push `/api/icu/push` → `pushed=4 updated=9 deleted=2` su intervals.icu.
+
+## v5.4.1 — Fixes: BIA weight field, E2E tests, ICU push per-sessione (2026-07-29)
+
+- **BIA weight field**: corretto test E2E per il campo peso in sezione Composizione (BIA).
+- **E2E tests**: 3/6 test passano (home, nav tabs, BIA weight).
+- **Piano forza/mobilità**: checkbox `po-strength`/`po-mobility` in Settings + Home.
+- **ICU push**: endpoint `/api/icu/push` usa `reconcile()` per push per-sessione (file ZWO/FIT, upsert bulk idempotente, orphan sweep).
+
+## v5.4.0 — ICU push per-sessione + Forza/Mobilità opt-in + Link ICU (2026-07-29)
+
+- **Push piano su intervals.icu**: `/api/icu/push` usa il motore `reconcile()` — pusha ogni singola seduta (ciclismo, forza, mobilità, running, MTB) con file ZWO verbatim per modalità potenza e FIT HR-target per modalità HR; upsert idempotente (`domestique:<profile>:<day>:<n>`); orphan sweep preserva gli eventi manuali (`domestique-manual:`).
+- **Forza & Mobilità opt-in**: checkbox nella card Home; `loadStrength()`/`injectMultidiscipline()` rispettano i flag; backend rispetta i flag.
+- **Link "Vedi su intervals.icu"**: bottone nel calendario "Il mio calendario" per ogni settimana → `https://intervals.icu/athlete/<id>/calendar`.
+- **Test**: 38/38 pytest passati, JS syntax OK, release validator 95/100.
+
 ## v5.3.9 — Setup auto-sync da Intervals.icu (2026-07-28)
 
 - **Setup intelligente**: se Intervals.icu è collegato, il banner "Completa il setup" estrapola le attività automaticamente (`POST /api/sync`) invece di chiedere import FIT manuale.

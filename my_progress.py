@@ -98,8 +98,8 @@ def fetch_actual_tss_by_week(api_key: str, athlete_id: str,
 
 def load_plan_weeks() -> list[dict]:
     """Legge plans/current_plan.json (dove PCC salva il piano generato) e
-    ritorna le settimane con start + tss_target + phase. Se non c'è un piano,
-    lista vuota."""
+    ritorna le settimane con sessions + start + tss_target + phase. Se non
+    c'è un piano, lista vuota."""
     import json, os
     from pathlib import Path
     candidates = [
@@ -116,12 +116,6 @@ def load_plan_weeks() -> list[dict]:
             break
     if not data:
         return []
-    weeks = data.get("weeks", []) or data.get("plan_json", {}).get("weeks", []) or []
-    out = []
-    for wk in weeks:
-        out.append({
-            "start": wk.get("start", ""),
-            "tss_target": float(wk.get("tss_target", 0) or 0),
-            "phase": wk.get("phase", ""),
-        })
-    return out
+    # Include the FULL week dict (sessions, phase, start, tss_target, etc.)
+    # so callers like api_my_push_plan can push every session to intervals.icu
+    return data.get("weeks", []) or data.get("plan_json", {}).get("weeks", []) or []

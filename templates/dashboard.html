@@ -2042,7 +2042,7 @@ window.addEventListener('unhandledrejection', function(e) {
 
   <!-- BETA Fase 7b: Nutrizione & Integrazione -->
   <!-- PCC: Nutrizione (compressa con <details>, decide da sola il carico) -->
-  <details class="card" style="margin-top:12px;" id="nutrition-card" open>
+  <details class="card" style="margin-top:12px;" id="nutrition-card">
     <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
       🍎 Nutrizione <span id="nutri-summary-badge" style="font-size:10px;color:var(--text3);font-weight:400;"></span>
     </summary>
@@ -2059,7 +2059,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </details>
 
   <!-- PCC: Integrazione (card separata, compressa) -->
-  <details class="card" style="margin-top:12px;" id="supplement-card" open>
+  <details class="card" style="margin-top:12px;" id="supplement-card">
     <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
       💊 Integrazione <span style="font-size:10px;color:var(--text3);font-weight:400;">(Gruppo A, dosi su peso)</span>
     </summary>
@@ -2080,10 +2080,10 @@ window.addEventListener('unhandledrejection', function(e) {
           <option value="peak">Peak</option><option value="taper">Taper</option>
         </select>
         <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;">
-          <input type="checkbox" id="po-strength" checked> Forza
+          <input type="checkbox" id="card-strength" onchange="syncCardFlags()"> Forza
         </label>
         <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;">
-          <input type="checkbox" id="po-mobility" checked> Mobilità
+          <input type="checkbox" id="card-mobility" onchange="syncCardFlags()"> Mobilità
         </label>
         <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadStrength()">Genera piano</button>
         <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, injectMultidiscipline, 'Inietto…')" title="Inserisce forza+mobilità + running/MTB (se nei discipline) nel piano, affine al ciclismo">⚡ Inietta multi</button>
@@ -9371,8 +9371,8 @@ async function syncBIAicu() {
 async function injectMultidiscipline() {
   const phase = ($('strength-phase') || {}).value || 'base';
   const oneR = ($('profile-one-rm') && parseFloat($('profile-one-rm').value)) || 0;
-  const wantStrength = document.getElementById('po-strength')?.checked !== false;
-  const wantMobility = document.getElementById('po-mobility')?.checked !== false;
+  const wantStrength = document.getElementById('card-strength')?.checked !== false;
+  const wantMobility = document.getElementById('card-mobility')?.checked !== false;
   const btn = event && event.target;
   if (btn) { btn.disabled = true; btn.textContent = 'Inietto…'; }
   try {
@@ -9468,8 +9468,8 @@ function openIcuCalendar() {
 // BETA Fase 7a — Forza & Mobilità (chiamato dal bottone "Genera piano")
 async function loadStrength() {
   const phase = (document.getElementById('strength-phase') || {}).value || 'base';
-  const wantStrength = document.getElementById('po-strength')?.checked !== false;
-  const wantMobility = document.getElementById('po-mobility')?.checked !== false;
+  const wantStrength = document.getElementById('card-strength')?.checked !== false;
+  const wantMobility = document.getElementById('card-mobility')?.checked !== false;
   const sumEl = document.getElementById('strength-summary');
   const weeksEl = document.getElementById('strength-weeks');
   const mobEl = document.getElementById('mobility-routine');
@@ -14138,6 +14138,17 @@ function _readPlanOptions() {
   return any ? Object.assign({ mode: 'accorgimenti' }, flags) : { mode: 'normal' };
 }
 function _chk(id) { const el = document.getElementById(id); return !!(el && el.checked); }
+// La card "Forza & Mobilità" (card-strength/card-mobility) è un quick-toggle:
+// sincronizza verso il selettore Accorgimenti (po-*), che è la fonte canonica
+// letta da _readPlanOptions() al momento della generazione del piano.
+function syncCardFlags() {
+  const map = { 'card-strength': 'po-strength', 'card-mobility': 'po-mobility' };
+  for (const [fromId, toId] of Object.entries(map)) {
+    const from = document.getElementById(fromId);
+    const to = document.getElementById(toId);
+    if (from && to) to.checked = from.checked;
+  }
+}
 function phaseStepperClick(name, delta) {
   const ps = _phaseSplit;
   if (ps.disabled || !(name in (ps.rec || {}))) return;

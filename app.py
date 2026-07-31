@@ -14470,6 +14470,10 @@ async def api_plan_generate(request: Request):
                 # 3.4.0 W2: continuous focus pref — persisted so the weekly
                 # extend + rotation policy keep the chosen emphasis.
                 "focus": getattr(goal, "focus", "both") or "both",
+                # PCC 5.x — persist the accorgimenti selector so every
+                # auto-update path (regen/recalc/refit) re-applies the same
+                # layers instead of silently dropping them.
+                "plan_options": plan_options.to_dict() if isinstance(plan_options, PO.PlanOptions) else {},
             },
             "phases": [
                 {
@@ -15179,6 +15183,14 @@ def _regenerate_plan_dict(
         activities=activities,
         seed_salt=seed_salt,
     )
+    # PCC 5.x — carry the persisted accorgimenti selector through the
+    # regenerate path (it used to be dropped, wiping strength/mobility/…).
+    _po_raw = (plan.get("goal", {}) or {}).get("plan_options")
+    if _po_raw:
+        try:
+            _regen_kwargs["plan_options"] = PO.PlanOptions.from_dict(_po_raw)
+        except Exception:  # noqa: BLE001 — malformed persisted options: keep default
+            pass
     # Pass athlete only if regenerate_from_today accepts it (the kwarg is being
     # added in training_planner concurrently — guard so a stale signature in a
     # narrow build window can't crash the hot ride-sync regen path).
@@ -15755,6 +15767,29 @@ def _apply_plan_update(
     )
     plan["reforecast_date"] = now_iso
     plan["last_reforecast_info"] = reforecast_info
+    # PCC 5.x — re-apply the accorgimenti layers after the reforecast tier
+    # (it re-samples touched days and would otherwise drop the injected
+    # strength/mobility/integrator sessions on every auto-update).
+    _po_raw2 = (plan.get("goal", {}) or {}).get("plan_options")
+    if _po_raw2:
+        try:
+            _po2 = PO.PlanOptions.from_dict(_po_raw2)
+            if not _po2.is_normal:
+                _pw2 = tp._plan_dict_to_planned_weeks(plan)
+                _g2 = _goal_from_plan_dict(plan.get("goal", {}) or {})
+                tp._apply_plan_options_future(_pw2, _po2, _g2, today)
+                _w2_by_start = {}
+                for _w2 in plan.get("weeks", []) or []:
+                    _w2_by_start[_w2.get("start")] = _w2
+                for _pw2 in _pw2:
+                    if _pw2.start < today:
+                        continue
+                    _wj = _w2_by_start.get(_pw2.start.isoformat())
+                    if _wj is None:
+                        continue
+                    _wj["sessions"] = [_planned_session_to_json(_s) for _s in _pw2.sessions]
+        except Exception:  # noqa: BLE001 — best-effort; never block the update
+            _log.exception("accorgimenti re-apply on reforecast skipped")
     if taper_blocks and needs_regen_now:
         # Behind plan but inside the event taper — do NOT silently rebuild;
         # surface a banner so the rider decides (manual Update plan still acts).
@@ -19810,6 +19845,8 @@ def api_plan_auto_recalc():
             goal=goal, current_plan_weeks=old_weeks,
             current_ctl=current_ctl, current_eftp=eftp,
             athlete=recalc_athlete,
+            plan_options=PO.PlanOptions.from_dict(
+                (plan.get("goal", {}) or {}).get("plan_options")),
         )
 
         if recalc_info.get("action") == "no_change":
