@@ -403,11 +403,17 @@ class ProfileManager:
                 )
 
                 # Default prefs
+                # icu_calendar_sync defaults OFF (opt-in). The keep-in-sync
+                # toggle must be explicitly enabled AND write-capable
+                # (write_ok / CALENDAR:WRITE) before any calendar mirroring
+                # runs — a fresh profile must never auto-push to the athlete's
+                # calendar. See _icu_push_sync_enabled ("default OFF") and the
+                # IP_ICU_PUSH G-A/G-F contract. (1ea21afa briefly flipped this
+                # to True without touching the UI/doc/tests and broke 5 tests.)
                 self._write_json(profile_dir / "user_prefs.json", {
                     "hours_per_week": 8.0,
                     "available_days": [0, 1, 2, 3, 4, 5, 6],
                     "rest_days": [0],
-                    "icu_calendar_sync": True,
                 })
 
                 # v4.0.0-alpha: device_prefs seeded empty -- no trainer
