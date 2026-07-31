@@ -2042,7 +2042,7 @@ window.addEventListener('unhandledrejection', function(e) {
 
   <!-- BETA Fase 7b: Nutrizione & Integrazione -->
   <!-- PCC: Nutrizione (compressa con <details>, decide da sola il carico) -->
-  <details class="card" style="margin-top:12px;" id="nutrition-card">
+  <details class="card" style="margin-top:12px;" id="nutrition-card" open>
     <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
       🍎 Nutrizione <span id="nutri-summary-badge" style="font-size:10px;color:var(--text3);font-weight:400;"></span>
     </summary>
@@ -2059,7 +2059,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </details>
 
   <!-- PCC: Integrazione (card separata, compressa) -->
-  <details class="card" style="margin-top:12px;" id="supplement-card">
+  <details class="card" style="margin-top:12px;" id="supplement-card" open>
     <summary style="cursor:pointer;font-weight:600;font-size:13px;list-style:none;">
       💊 Integrazione <span style="font-size:10px;color:var(--text3);font-weight:400;">(Gruppo A, dosi su peso)</span>
     </summary>
@@ -2080,10 +2080,10 @@ window.addEventListener('unhandledrejection', function(e) {
           <option value="peak">Peak</option><option value="taper">Taper</option>
         </select>
         <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;">
-          <input type="checkbox" id="card-strength" onchange="syncCardFlags()"> Forza
+          <input type="checkbox" id="card-strength" checked onchange="syncCardFlags()"> Forza
         </label>
         <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer;">
-          <input type="checkbox" id="card-mobility" onchange="syncCardFlags()"> Mobilità
+          <input type="checkbox" id="card-mobility" checked onchange="syncCardFlags()"> Mobilità
         </label>
         <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadStrength()">Genera piano</button>
         <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, injectMultidiscipline, 'Inietto…')" title="Inserisce forza+mobilità + running/MTB (se nei discipline) nel piano, affine al ciclismo">⚡ Inietta multi</button>
@@ -2093,6 +2093,16 @@ window.addEventListener('unhandledrejection', function(e) {
       <div id="strength-weeks" style="display:flex;flex-direction:column;gap:6px;"></div>
       <div id="mobility-routine" style="font-size:11px;color:var(--text3);margin-top:8px;"></div>
     </div>
+
+  <!-- BETA Fase 7e (DIY): Il mio calendario / aderenza personale -->
+  <div class="card" style="margin-top:12px;" id="my-cal-card">
+    <h3 data-tip="Il tuo calendario: per ogni settimana del piano mostra TSS pianificato vs eseguito (da intervals.icu) e l'aderenza %.">Il mio calendario</h3>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="loadMyCalendar()">Aggiorna</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;" onclick="busyButton(this, myPushPlan, 'Invio a intervals.icu…')">⤴ Push piano su intervals.icu</button>
+    </div>
+    <div id="my-calendar" style="font-size:11px;color:var(--text2);">Genera un piano per vedere l'aderenza…</div>
+  </div>
 
   <!-- PCC: Piano alimentare settimanale (creatore di diete) -->
   <details class="card" style="margin-top:12px;" id="diet-card">
