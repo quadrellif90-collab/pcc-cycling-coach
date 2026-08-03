@@ -592,7 +592,7 @@ def test_3_one_click_generate_and_friendly_engine_refusal():
                "_entryFmtDate", "_entryEndDateIso", "_entryTssTrend",
                "_entryWhyRowsHtml", "_renderEntryScan", "_entryStripHtml",
                "entryCardGenerate", "_pgEntryCurrentIdx", "_pgEntryNoteText",
-               "_planTrainingMode", "_planGoalValue", "generatePlan")
+               "_planTrainingMode", "_planGoalValue", "generatePlan", "_readPlanOptions", "_chk")
     harness = _CARD_STUBS + """
 els['plan-status'] = { textContent: '', style: {} };
 els['plan-distribution'] = { value: 'polarized' };

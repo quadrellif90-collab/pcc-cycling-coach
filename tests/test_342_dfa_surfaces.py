@@ -192,7 +192,7 @@ const host = mkEl();
   await _renderDfaCard(host, { value: 1.08, n_rides: 3,
                                last_computed_at: '2026-07-13T09:00:00',
                                n_recent_total: 5 });
-  if (host.innerHTML.indexOf('Last ride DFA α1') < 0 ||
+  if (host.innerHTML.indexOf('Ultima uscita DFA α1') < 0 ||
       host.innerHTML.indexOf('1.08') < 0)
     throw new Error('computed value must render: ' + host.innerHTML);
   if (host.innerHTML.indexOf('Indexing rides') >= 0)

@@ -4789,6 +4789,266 @@ async function onboardingSyncIcu(){
 function onboardingGotoFirst(){ var d=window.__onboarding; var f=d&&d.gaps&&d.gaps[0]; onboardingGoto(f?f.goto:'settings'); }
 function dismissOnboarding(){ localStorage.setItem('onboarding-dismissed','1'); var b=document.getElementById('onboarding-banner'); if(b) b.style.display='none'; }
 
+// ==================== ONBOARDING WIZARD JS (Phase 3) ====================
+let _onboardingState = { step: 1, data: {} };
+const OB_DAYS = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+
+function openOnboardingWizard() {
+  const overlay = document.getElementById('onboarding-wizard-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    resetOnboardingWizard();
+  }
+}
+
+function closeOnboardingWizard() {
+  const overlay = document.getElementById('onboarding-wizard-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function resetOnboardingWizard() {
+  _onboardingState = { step: 1, data: {} };
+  document.querySelectorAll('.ob-step').forEach(s => s.style.display = 'none');
+  document.getElementById('ob-step-1').style.display = 'block';
+  updateOnboardingUI();
+}
+
+function updateOnboardingUI() {
+  const step = _onboardingState.step;
+  // Progress bar
+  document.getElementById('ob-progress-bar').style.width = (step * 20) + '%';
+  // Title
+  const titles = ['Profilo Base', 'Metriche Chiave', 'Obiettivi', 'Disponibilità', 'Connetti Intervals.icu'];
+  document.getElementById('ob-title').textContent = titles[step - 1];
+  document.getElementById('ob-subtitle').textContent = 'Passo ' + step + ' di 5';
+  // Steps
+  document.querySelectorAll('.ob-step').forEach(s => s.style.display = 'none');
+  document.getElementById('ob-step-' + step).style.display = 'block';
+  // Navigation
+  document.getElementById('ob-prev').style.display = step > 1 ? 'inline-block' : 'none';
+  document.getElementById('ob-next').style.display = step < 5 ? 'inline-block' : 'none';
+  document.getElementById('ob-finish').style.display = step === 5 ? 'inline-block' : 'none';
+  // Populate Step 4 grids
+  if (step === 4) populateAvailabilityGrids();
+}
+
+function nextOnboardingStep() {
+  if (!validateOnboardingStep(_onboardingState.step)) return;
+  collectOnboardingStep(_onboardingState.step);
+  _onboardingState.step++;
+  updateOnboardingUI();
+}
+
+function prevOnboardingStep() {
+  collectOnboardingStep(_onboardingState.step);
+  _onboardingState.step--;
+  updateOnboardingUI();
+}
+
+function validateOnboardingStep(step) {
+  if (step === 1) {
+    const w = parseFloat(document.getElementById('ob-weight').value);
+    const h = parseFloat(document.getElementById('ob-height').value);
+    const a = parseFloat(document.getElementById('ob-age').value);
+    if (!w || !h || !a) { showToast('Completa tutti i campi del profilo base', 3000, 'warning'); return false; }
+  }
+  if (step === 2) {
+    const ftpUnknown = document.getElementById('ob-ftp-unknown').checked;
+    const lthr = parseFloat(document.getElementById('ob-lthr').value);
+    const maxhr = parseFloat(document.getElementById('ob-maxhr').value);
+    if (!ftpUnknown) {
+      const ftp = parseFloat(document.getElementById('ob-ftp').value);
+      if (!ftp) { showToast('Inserisci FTP o spunta "Non lo so"', 3000, 'warning'); return false; }
+    }
+    if (lthr && maxhr && lthr >= maxhr) { showToast('LTHR deve essere sotto FCmax', 3000, 'warning'); return false; }
+  }
+  if (step === 3) {
+    const goalType = document.getElementById('ob-goal-type').value;
+    if (goalType === 'event') {
+      const date = document.getElementById('ob-event-date').value;
+      const name = document.getElementById('ob-event-name').value;
+      if (!date || !name) { showToast('Compila data e nome evento', 3000, 'warning'); return false; }
+    }
+    const weeks = parseInt(document.getElementById('ob-plan-weeks').value);
+    if (!weeks || weeks < 4 || weeks > 52) { showToast('Settimane piano: 4-52', 3000, 'warning'); return false; }
+  }
+  if (step === 4) {
+    const hours = Array.from(document.querySelectorAll('.ob-hour-btn.selected')).map(b => parseFloat(b.dataset.hours));
+    if (hours.every(h => h === 0)) { showToast('Seleziona almeno un giorno con ore > 0', 3000, 'warning'); return false; }
+  }
+  return true;
+}
+
+function collectOnboardingStep(step) {
+  if (step === 1) {
+    _onboardingState.data.weight = parseFloat(document.getElementById('ob-weight').value);
+    _onboardingState.data.height_cm = parseFloat(document.getElementById('ob-height').value);
+    _onboardingState.data.age = parseFloat(document.getElementById('ob-age').value);
+    _onboardingState.data.sex = document.getElementById('ob-sex').value || null;
+  }
+  if (step === 2) {
+    const ftpUnknown = document.getElementById('ob-ftp-unknown').checked;
+    if (!ftpUnknown) _onboardingState.data.ftp = parseFloat(document.getElementById('ob-ftp').value);
+    else _onboardingState.data.ftp = null;
+    const lthr = parseFloat(document.getElementById('ob-lthr').value);
+    const maxhr = parseFloat(document.getElementById('ob-maxhr').value);
+    _onboardingState.data.lthr = lthr || null;
+    _onboardingState.data.max_hr = maxhr || null;
+    _onboardingState.data.ftp_unknown = ftpUnknown;
+  }
+  if (step === 3) {
+    _onboardingState.data.goal_type = document.getElementById('ob-goal-type').value;
+    if (_onboardingState.data.goal_type === 'event') {
+      _onboardingState.data.event_date = document.getElementById('ob-event-date').value;
+      _onboardingState.data.event_name = document.getElementById('ob-event-name').value;
+      _onboardingState.data.event_km = parseFloat(document.getElementById('ob-event-km').value) || 0;
+      _onboardingState.data.event_climb = parseFloat(document.getElementById('ob-event-climb').value) || 0;
+    }
+    _onboardingState.data.plan_weeks = parseInt(document.getElementById('ob-plan-weeks').value);
+  }
+  if (step === 4) {
+    const hours = {};
+    const rest = {};
+    OB_DAYS.forEach((d, i) => {
+      const hBtn = document.querySelector('.ob-hour-btn[data-day="' + i + '"].selected');
+      const rBtn = document.querySelector('.ob-rest-btn[data-day="' + i + '"].selected');
+      hours[d] = hBtn ? parseFloat(hBtn.dataset.hours) : 0;
+      rest[d] = !!rBtn;
+    });
+    _onboardingState.data.weekly_hours = hours;
+    _onboardingState.data.rest_days = rest;
+  }
+  if (step === 5) {
+    _onboardingState.data.import_recent = document.getElementById('ob-import-recent').checked;
+    _onboardingState.data.icu_connected = !!window._icuOAuthJustCompleted;
+  }
+}
+
+function populateAvailabilityGrids() {
+  const hoursGrid = document.getElementById('ob-hours-grid');
+  const restGrid = document.getElementById('ob-rest-grid');
+  if (!hoursGrid || !restGrid) return;
+  const existingHours = _onboardingState.data.weekly_hours || {};
+  const existingRest = _onboardingState.data.rest_days || {};
+  
+  // Default hours per day (Tue-Sat have hours, Mon/Sun rest)
+  const defaults = [0, 1.5, 1, 1, 0, 3, 2];
+  
+  hoursGrid.innerHTML = OB_DAYS.map((d, i) => {
+    const val = existingHours[d] !== undefined ? existingHours[d] : defaults[i];
+    const btns = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4].map(h => 
+      '<button class="ob-hour-btn' + (h === val ? ' selected' : '') + '" data-day="' + i + '" data-hours="' + h + '" onclick="selectHourBtn(this)">' + h + 'h</button>'
+    ).join('');
+    return '<div><div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px;">' + d + '</div><div style="display:flex;flex-direction:column;gap:2px;">' + btns + '</div></div>';
+  }).join('');
+  
+  restGrid.innerHTML = OB_DAYS.map((d, i) => {
+    const isRest = existingRest[d] !== undefined ? existingRest[d] : (i === 0);
+    return '<button class="ob-rest-btn' + (i === 0 ? ' rest' : '') + (isRest ? ' selected' : '') + '" data-day="' + i + '" onclick="toggleRestBtn(this)">' + d + '</button>';
+  }).join('');
+}
+
+function selectHourBtn(btn) {
+  const day = btn.dataset.day;
+  document.querySelectorAll('.ob-hour-btn[data-day="' + day + '"]').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function toggleRestBtn(btn) {
+  const day = btn.dataset.day;
+  btn.classList.toggle('selected');
+  // Sync: if rest day selected, clear hours for that day
+  if (btn.classList.contains('selected')) {
+    document.querySelectorAll('.ob-hour-btn[data-day="' + day + '"].selected').forEach(b => b.classList.remove('selected'));
+  }
+}
+
+function onGoalTypeChange() {
+  const type = document.getElementById('ob-goal-type').value;
+  document.getElementById('ob-event-fields').style.display = type === 'event' ? 'block' : 'none';
+}
+
+function toggleFtpUnknown(cb) {
+  const ftpInput = document.getElementById('ob-ftp');
+  ftpInput.disabled = cb.checked;
+  ftpInput.style.opacity = cb.checked ? '0.5' : '1';
+  if (cb.checked) ftpInput.value = '';
+}
+
+function connectIcuFromWizard() {
+  closeOnboardingWizard();
+  window.location = '/oauth/icu/start';
+  // Track that we're in OAuth flow from wizard
+  sessionStorage.setItem('icuOAuthFromWizard', '1');
+}
+
+// Called on page load to detect OAuth return from wizard
+function checkIcuOAuthReturn() {
+  if (sessionStorage.getItem('icuOAuthFromWizard') === '1') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('icu') === 'connected') {
+      window._icuOAuthJustCompleted = true;
+      showToast('intervals.icu connesso ✓', 4000, 'success');
+      // Re-open wizard at step 5 if it was active
+      if (localStorage.getItem('onboardingWizardActive') === '1') {
+        setTimeout(() => openOnboardingWizard(), 500);
+        setTimeout(() => { _onboardingState.step = 5; updateOnboardingUI(); }, 600);
+      }
+    }
+    sessionStorage.removeItem('icuOAuthFromWizard');
+  }
+}
+
+async function finishOnboarding() {
+  if (!validateOnboardingStep(5)) return;
+  collectOnboardingStep(5);
+  
+  const btn = document.getElementById('ob-finish');
+  btn.disabled = true;
+  btn.textContent = 'Salvataggio…';
+  
+  try {
+    const res = await fetch('/api/onboarding/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(_onboardingState.data)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.detail || 'Errore salvataggio');
+    
+    showToast('Setup completato! Generazione piano in corso…', 4000, 'success');
+    closeOnboardingWizard();
+    
+    // Trigger plan generation
+    if (typeof generatePlan === 'function') {
+      setTimeout(() => generatePlan(), 500);
+    }
+    // Reload home to show Montis dashboard
+    if (typeof loadHome === 'function') {
+      setTimeout(() => loadHome(), 1000);
+    }
+    
+    localStorage.setItem('onboarding-dismissed', '1');
+    localStorage.removeItem('onboardingWizardActive');
+  } catch (e) {
+    showToast('Errore: ' + e.message, 5000, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Completa setup';
+  }
+}
+
+// Patch onboardingGotoFirst to open the new wizard
+const _origOnboardingGotoFirst = onboardingGotoFirst;
+function onboardingGotoFirst() {
+  localStorage.setItem('onboardingWizardActive', '1');
+  openOnboardingWizard();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(checkIcuOAuthReturn, 200);
+});
+
 // ===== v5.2 banner manager: mostra max 2 banner, il resto nella campanella =====
 var BANNER_PRIORITY=['onboarding-banner','icu-migrate-banner','update-banner','readiness-action-banner','ftp-rise-banner','eftp-auto-banner','icu-sync-banner'];
 var BANNER_MAX=2, _bannerOverflowOpen=false;
@@ -23507,8 +23767,182 @@ document.addEventListener('DOMContentLoaded', function() {
     <h3 style="margin:0 0 8px;font-size:14px;">&#x2B50; Prossimi passi</h3>
     <div id="recs-list" style="display:flex;flex-direction:column;gap:6px;"></div>
   </div>
-</div><!-- /main-content -->
-</div><!-- /app-shell -->
+</div>
+
+  <!-- ==================== ONBOARDING WIZARD (Phase 3) ==================== -->
+  <div id="onboarding-wizard-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:3000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeOnboardingWizard()">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:0;max-width:520px;width:90vw;max-height:90vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+      <!-- Header with progress -->
+      <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:700;color:var(--text);" id="ob-title">Profilo Base</div>
+            <div style="font-size:12px;color:var(--text2);" id="ob-subtitle">Passo 1 di 5</div>
+          </div>
+          <button onclick="closeOnboardingWizard()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;line-height:1;padding:4px;">×</button>
+        </div>
+        <!-- Progress bar -->
+        <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;">
+          <div id="ob-progress-bar" style="height:100%;width:20%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width 0.3s ease;"></div>
+        </div>
+      </div>
+
+      <!-- Step Panels -->
+      <div style="padding:24px;">
+        <!-- STEP 1: Profilo Base -->
+        <div class="ob-step active" id="ob-step-1" data-step="1">
+          <h3 style="margin:0 0 8px;font-size:15px;">Profilo Base</h3>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:20px;">Le tue misure base per calcolare zone, W/kg e stime metaboliche.</          <div class="form-row" style="display:flex;gap:12px;margin-bottom:14px;">
+            <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Peso (kg)</label>
+              <input type="number" id="ob-weight" min="30" max="200" step="0.1" placeholder="70" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+            </div>
+            <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Altezza (cm)</label>
+              <input type="number" id="ob-height" min="140" max="220" step="1" placeholder="175" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+            </div>
+          </div>
+          <div class="form-row" style="display:flex;gap:12px;margin-bottom:14px;">
+            <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Età (anni)</label>
+              <input type="number" id="ob-age" min="10" max="100" step="1" placeholder="30" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+            </div>
+            <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Sesso</label>
+              <select id="ob-sex" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+                <option value="">Preferisco non dirlo</option>
+                <option value="M">Uomo</option>
+                <option value="F">Donna</option>
+                <option value="O">Altro</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Metriche Chiave -->
+        <div class="ob-step" id="ob-step-2" data-step="2" style="display:none;">
+          <h3 style="margin:0 0 8px;font-size:15px;">Metriche Chiave</h3>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:20px;">FTP e LTHR definiscono le tue zone. Se non li conosci, potrai fare un test dopo.</p>
+          <div class="form-row" style="margin-bottom:14px;">
+            <label style="display:block;font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">FTP (W) — Potenza soglia funzionale</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="number" id="ob-ftp" min="50" max="600" step="1" placeholder="250" style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+              <label style="font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:4px;">
+                <input type="checkbox" id="ob-ftp-unknown" onchange="toggleFtpUnknown(this)"> Non lo so — farò il test dopo
+              </label>
+            </div>
+          </div>
+          <div class="form-row" style="display:flex;gap:12px;margin-bottom:14px;">
+            <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">LTHR (bpm)</label>
+              <input type="number" id="ob-lthr" min="100" max="220" step="1" placeholder="175" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+            </div>
+            <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">FCmax (bpm)</label>
+              <input type="number" id="ob-maxhr" min="140" max="220" step="1" placeholder="196" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+            </div>
+          </div>
+          <p style="font-size:11px;color:var(--text3);margin-top:8px;">LTHR = FC alla soglia del lattato (~FC media in 30' TT). FCmax = tua FC massima registrata.</p>
+        </div>
+
+        <!-- STEP 3: Obiettivi -->
+        <div class="ob-step" id="ob-step-3" data-step="3" style="display:none;">
+          <h3 style="margin:0 0 8px;font-size:15px;">Obiettivi</h3>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:20px;">Cosa vuoi ottenere? Il piano si adatta al tuo obiettivo.</          <div class="form-row" style="margin-bottom:14px;">
+            <label style="display:block;font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Tipo piano</label>
+            <select id="ob-goal-type" onchange="onGoalTypeChange()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+              <option value="event">Preparazione evento (data fissata)</option>
+              <option value="general">Forma generale</option>
+              <option value="ftp">Migliora FTP (focus soglia)</option>
+              <option value="vo2max">Migliora VO2max (focus intervalli)</option>
+              <option value="ctl">Costruisci CTL (forma)</option>
+            </select>
+          </div>
+          <div id="ob-event-fields" style="display:none;margin-bottom:14px;">
+            <div class="form-row" style="display:flex;gap:12px;margin-bottom:14px;">
+              <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Data evento</label>
+                <input type="date" id="ob-event-date" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+              </div>
+              <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Nome evento</label>
+                <input type="text" id="ob-event-name" placeholder="es. Granfondo Stelvio" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+              </div>
+            </div>
+            <div class="form-row" style="display:flex;gap:12px;margin-bottom:14px;">
+              <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Distanza (km)</label>
+                <input type="number" id="ob-event-km" min="20" max="500" step="1" placeholder="150" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+              </div>
+              <div class="form-group" style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Dislivello (m)</label>
+                <input type="number" id="ob-event-climb" min="0" max="10000" step="10" placeholder="4300" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+              </div>
+            </div>
+          </div>
+          <div class="form-row" style="margin-bottom:14px;">
+            <label style="display:block;font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Settimane piano</label>
+            <input type="number" id="ob-plan-weeks" min="4" max="52" value="12" style="width:100px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;">
+          </div>
+        </div>
+
+        <!-- STEP 4: Disponibilità -->
+        <div class="ob-step" id="ob-step-4" data-step="4" style="display:none;">
+          <h3 style="margin:0 0 8px;font-size:15px;">Disponibilità</h3>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:20px;">Quante ore puoi allenarti ogni giorno? (Il piano distribuisce il carico sui giorni attivi)
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:20px;" id="ob-hours-grid">
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;" id="ob-rest-grid">
+          </div>
+        </div>
+
+        <!-- STEP 5: Connetti Intervals.icu -->
+        <div class="ob-step" id="ob-step-5" data-step="5" style="display:none;">
+          <h3 style="margin:0 0 8px;font-size:15px;">Connetti Intervals.icu</h3>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:20px;">Collega il tuo account per sync automatico, CTL reale e push piano.
+          <div style="background:rgba(59,130,246,0.1);border:1px solid #3b82f6;border-radius:10px;padding:16px;margin-bottom:16px;">
+            <div style="font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+              <span style="font-size:20px;">🔗</span> Collega intervals.icu
+            </div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5;">
+              <b>Cosa ottieni:</b>
+              <ul style="margin:8px 0 0 18px;line-height:1.8;font-size:12px;color:var(--text2);">
+                <li>Sync automatico attività recenti (ultimi 30 giorni)</li>
+                <li>CTL/ATL/TSB calcolati dalle tue vere uscite</li>
+                <li>Push piano su calendario intervals.icu (Garmin/Wahoo sync)</li>
+                <li>HRV, sonno, RHR se hai Garmin/Oura/Whoop connessi</li>
+              </ul>
+            </div>
+            <button class="btn btn-primary" onclick="connectIcuFromWizard()" style="width:100%;padding:12px;font-size:14px;font-weight:600;">🔗 Connetti intervals.icu (OAuth)</button>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-top:16px;">
+            <input type="checkbox" id="ob-import-recent" checked style="width:16px;height:16px;accent-color:var(--accent);"> Importa attività recenti (30gg) per CTL storico
+          </label>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
+        <button class="btn btn-secondary" id="ob-prev" onclick="prevOnboardingStep()" style="display:none;padding:10px 20px;font-size:13px;">← Indietro</button>
+        <div style="flex:1;"></div>
+        <button class="btn btn-primary" id="ob-next" onclick="nextOnboardingStep()" style="padding:10px 24px;font-size:13px;font-weight:600;">Avanti →</button>
+        <button class="btn btn-success" id="ob-finish" onclick="finishOnboarding()" style="display:none;padding:10px 24px;font-size:13px;font-weight:600;">Completa setup</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.ob-step { animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.ob-step input[type="range"] { width: 100%; accent-color: var(--accent); }
+.ob-hour-btn { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 11px; transition: all 0.15s; }
+.ob-hour-btn:hover { border-color: var(--accent); }
+.ob-hour-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ob-rest-btn { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 11px; transition: all 0.15s; }
+.ob-rest-btn.rest { background: var(--surface2); color: var(--text3); border-color: var(--surface2); }
+.ob-rest-btn.rest.selected { background: var(--yellow); color: #000; border-color: var(--yellow); }
+</style>
 <div id="pcc-confirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;">
   <div role="dialog" aria-modal="true" aria-labelledby="pcc-confirm-msg" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.4);max-width:420px;width:90vw;padding:20px;">
     <div id="pcc-confirm-msg" style="font-size:14px;line-height:1.5;color:var(--text);white-space:pre-wrap;"></div>

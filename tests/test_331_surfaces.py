@@ -154,7 +154,7 @@ def test_b1_load_today_session_wired_to_preview_source():
     assert "const _prevSrc = _todayPreviewSource(d);" in src
     assert "encodeURIComponent(_prevSrc.zwo_file)" in src
     assert "buildPowerBlocks(_prevSrc.session_type, _prevSrc.duration_min" in src
-    assert "Approximate shape — ride to the zone targets above." in src
+    assert "Forma approssimativa — pedala sui target di zona sopra." in src
 
 
 # ═══════════════════════════════════════════════════════════════════════════

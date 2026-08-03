@@ -22971,3 +22971,100 @@ if __name__ == "__main__":
     print("PCC Dashboard - http://localhost:8080")
     uvicorn.run(app, host="127.0.0.1", port=8080, log_level="warning",
                 workers=_UVICORN_WORKERS)
+
+# ─── Onboarding Wizard Complete Endpoint ──────────────────────────────────────
+@app.post("/api/onboarding/complete")
+def api_onboarding_complete(body: dict):
+    """Complete the 5-step onboarding wizard.
+    
+    Receives all wizard data, saves profile + settings, connects ICU if OAuth done,
+    generates initial plan, returns success + plan_id.
+    """
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    
+    # 1) Save profile data (Step 1-2)
+    profile_data = {}
+    if body.get("weight"): profile_data["weight_kg"] = body["weight"]
+    if body.get("height_cm"): profile_data["height_cm"] = body["height_cm"]
+    if body.get("age"): profile_data["age"] = body["age"]
+    if body.get("sex"): profile_data["sex"] = body["sex"]
+    if body.get("ftp") and not body.get("ftp_unknown"): profile_data["ftp"] = body["ftp"]
+    if body.get("lthr"): profile_data["lthr"] = body["lthr"]
+    if body.get("max_hr"): profile_data["max_hr"] = body["max_hr"]
+    
+    if profile_data:
+        pm.save_athlete(profile_data)
+    
+    # 2) Save settings (Step 3-4: hours, rest days, goal, weeks)
+    settings_data = {}
+    if body.get("weekly_hours"):
+        # Convert dict to hours_per_week total
+        total_hours = sum(body["weekly_hours"].values())
+        settings_data["hours_per_week"] = total_hours
+    if body.get("rest_days"):
+        settings_data["rest_days"] = body["rest_days"]
+    if body.get("goal_type"):
+        settings_data["goal_type"] = body["goal_type"]
+    if body.get("plan_weeks"):
+        settings_data["plan_weeks"] = body["plan_weeks"]
+    if body.get("event_date"):
+        settings_data["event_date"] = body["event_date"]
+    if body.get("event_name"):
+        settings_data["event_name"] = body["event_name"]
+    if body.get("event_km"):
+        settings_data["event_km"] = body["event_km"]
+    if body.get("event_climb"):
+        settings_data["event_climb"] = body["event_climb"]
+    
+    if settings_data:
+        pm.save_prefs(settings_data)
+    
+    # 3) ICU OAuth already handled by /oauth/icu/callback - just check status
+    icu_connected = body.get("icu_connected", False)
+    
+    # 4) Import recent activities if requested and ICU connected
+    imported = 0
+    if body.get("import_recent") and icu_connected:
+        try:
+            from icu_calendar_push import reconcile
+            result = reconcile(days_back=30, push_future=False)
+            imported = result.get("imported", 0) + result.get("synced", 0)
+        except Exception as e:
+            # Non-fatal
+            pass
+    
+    # 5) Generate initial plan
+    try:
+        from training_planner import PlanOptions, generate_plan
+        plan_opts = PlanOptions(
+            enable_strength=False,
+            enable_mobility=False,
+            enable_nutrition=False,
+            enable_integrators=False,
+        )
+        # Use weeks from wizard or default 12
+        plan_weeks = body.get("plan_weeks", 12)
+        # The planner calculates weeks from event_date if present
+        plan = generate_plan(pm, plan_opts, weeks=plan_weeks)
+        plan_id = getattr(plan, "id", "generated")
+    except Exception as e:
+        # Non-fatal - plan can be generated later
+        plan_id = None
+    
+    # 6) Mark setup complete
+    try:
+        _setup_marker().write_text("1")
+    except Exception:
+        pass
+    
+    return {
+        "ok": True,
+        "profile_saved": bool(profile_data),
+        "settings_saved": bool(settings_data),
+        "activities_imported": imported,
+        "plan_generated": plan_id is not None,
+        "plan_id": plan_id,
+        "message": "Setup completato con successo"
+    }
+

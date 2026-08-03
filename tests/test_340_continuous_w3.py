@@ -469,7 +469,7 @@ const cur = {{ phase: 'continuous', week_num: 6, is_stepback: false,
                start: '{_iso(-2)}', end: '{_iso(4)}', sessions: [] }};
 let html = _continuousCountdownHtml(cur, planWeeks, today);
 if (html.indexOf('Continuous training') < 0) throw new Error('panel title');
-if (html.indexOf('No end date') < 0) throw new Error('no-end framing');
+if (html.indexOf('Nessuna data di fine') < 0) throw new Error('no-end framing');
 if (html.indexOf('Next deload in 12 days') < 0)
   throw new Error('deload countdown, got: ' + html);
 if (html.indexOf('FTP retest in 9 days') < 0)
@@ -772,7 +772,7 @@ def test_t_deload_advance_chip_renders_reason_revert_and_escapes():
 let html = _deloadAdvanceChipHtml({ deload_advance: {
   reason: 'Training strain high (monotony 2.3) — deload advanced to this week',
   trigger: 'monotony', week_num: 7, reverted: false } });
-if (html.indexOf('Recovery week pulled forward') < 0) throw new Error('headline missing');
+if (html.indexOf('Settimana di recupero anticipata') < 0) throw new Error('headline missing');
 if (html.indexOf('monotony 2.3') < 0) throw new Error('reason missing');
 if (html.indexOf('revertDeloadAdvance()') < 0) throw new Error('revert affordance missing');
 if (html.indexOf('deload-advance-chip') < 0) throw new Error('chip class missing');
