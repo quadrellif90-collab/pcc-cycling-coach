@@ -10106,6 +10106,130 @@ def api_onboarding_status():
     }
 
 
+
+
+# ─── Montis-Style Dashboard Home Endpoint ─────────────────────────────────────
+@app.get("/api/dashboard/home")
+def api_dashboard_home():
+    """Aggregated dashboard data for Montis-style home view.
+    
+    Single endpoint replacing multiple calls: readiness, fitness (CTL/ATL/TSB),
+    today's session, next 3 sessions, recovery metrics, ICU connection status.
+    """
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    
+    # 1) Readiness + Fitness (CTL/ATL/TSB) + Fatigue signal
+    try:
+        r = api_readiness_composite()
+        readiness = r.get("readiness", {})
+        training = r.get("training", {})
+        sleep = r.get("sleep", {})
+    except Exception:
+        readiness, training, sleep = {}, {}, {}
+    
+    severity = readiness.get("severity", "normal")
+    fatigue_signal = {
+        "normal":    {"label": "Normale",     "color": "green", "emoji": "🟢", "action": "Allenamento regolare"},
+        "tier_down": {"label": "Alleggerire", "color": "amber", "emoji": "🟡", "action": "Riduci intensità oggi"},
+        "rest":      {"label": "Riposo",      "color": "red",   "emoji": "🔴", "action": "Giorno di riposo consigliato"},
+    }.get(severity, {"label": "Sconosciuto", "color": "gray", "emoji": "⚪", "action": "—"})
+    
+    today_session = None
+    next_sessions = []
+    try:
+        import json
+        from datetime import date
+        plan_path = _plan_dir() / "current_plan.json"
+        if plan_path.exists():
+            with open(plan_path, encoding="utf-8") as f:
+                plan = json.load(f)
+            today_iso = date.today().isoformat()
+            weeks = plan.get("weeks", [])
+            all_sessions = []
+            for w in weeks:
+                for s in w.get("sessions", []):
+                    all_sessions.append({**s, "week_start": w.get("start"), "week_idx": w.get("week_idx", 0)})
+            all_sessions.sort(key=lambda x: x.get("day", ""))
+            for s in all_sessions:
+                if s.get("day") == today_iso:
+                    today_session = s
+                elif s.get("day", "") > today_iso and len(next_sessions) < 3:
+                    next_sessions.append(s)
+    except Exception:
+        pass
+    
+    hrv = sleep.get("hrv_ms")
+    sleep_h = sleep.get("sleep_h")
+    rhr = sleep.get("rhr_today")
+    
+    def recovery_badge(value, key):
+        if value is None:
+            return {"value": "—", "status": "unknown"}
+        if key == "hrv":
+            if value >= 60: return {"value": f"{value:.1f} ms", "status": "good"}
+            elif value >= 40: return {"value": f"{value:.1f} ms", "status": "fair"}
+            return {"value": f"{value:.1f} ms", "status": "poor"}
+        elif key == "sleep":
+            if value >= 8: return {"value": f"{value:.1f} h", "status": "good"}
+            elif value >= 7: return {"value": f"{value:.1f} h", "status": "fair"}
+            return {"value": f"{value:.1f} h", "status": "poor"}
+        elif key == "rhr":
+            if value <= 55: return {"value": f"{value} bpm", "status": "good"}
+            elif value <= 65: return {"value": f"{value} bpm", "status": "fair"}
+            return {"value": f"{value} bpm", "status": "poor"}
+        return {"value": str(value), "status": "unknown"}
+    
+    recovery = {
+        "hrv": recovery_badge(hrv, "hrv"),
+        "sleep": recovery_badge(sleep_h, "sleep"),
+        "rhr": recovery_badge(rhr, "rhr"),
+    }
+    
+    fitness = {
+        "ctl": training.get("ctl"),
+        "atl": training.get("atl"),
+        "tsb": training.get("tsb"),
+    }
+    
+    env = getattr(pm, "_env", {}) or {}
+    icu_athlete_id = (env.get("ICU_ATHLETE_ID") or "").strip()
+    icu_api_key = (env.get("ICU_API_KEY") or "").strip()
+    icu_connected = bool(icu_athlete_id or icu_api_key)
+    icu_write_ok = False
+    try:
+        from icu_calendar_push import ICUClient
+        if icu_athlete_id and icu_api_key:
+            client = ICUClient(icu_api_key, icu_athlete_id)
+            icu_write_ok = client.check_write_permission()
+    except Exception:
+        pass
+    
+    quick_actions = [
+        {"id": "generate", "label": "Genera Piano", "icon": "📋", "action": "gotoTab('plan');generatePlan()"},
+        {"id": "sync", "label": "Sync Intervals", "icon": "☁️", "action": "icuPushNow()"},
+        {"id": "workout", "label": "Nuovo Workout", "icon": "➕", "action": "gotoTab('picker')"},
+        {"id": "calendar", "label": "Calendario", "icon": "📅", "action": "gotoTab('plan');document.getElementById('plan-calendar-view')?.scrollIntoView()"},
+    ]
+    
+    return {
+        "fitness": fitness,
+        "fatigue_signal": fatigue_signal,
+        "today_session": today_session,
+        "next_sessions": next_sessions,
+        "recovery": recovery,
+        "intervals": {
+            "connected": icu_connected,
+            "athlete_id": icu_athlete_id,
+            "write_ok": icu_write_ok,
+            "method": "apikey" if icu_api_key else ("oauth" if icu_athlete_id else "none"),
+        },
+        "quick_actions": quick_actions,
+        "readiness_score": readiness.get("score"),
+        "readiness_severity": severity,
+    }
+
+
 @app.get("/api/migrations/last-run-result")
 def api_migrations_last_run_result():
     """Return the v1.0.2 startup migration-check result.
