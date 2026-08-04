@@ -1123,6 +1123,12 @@ def get_ride(ride_id: str) -> Optional[dict]:
     except RuntimeError:
         return None  # AC6a: no active profile
     if not path or not path.exists():
+        # v5.4.x fix: ICU-synced rides live under `rides/icu/<external_id>.json`
+        # (bare id, no "icu_" prefix) while the list endpoints emit the
+        # prefixed ride_id ("icu_12345678"). get_icu_ride handles that
+        # mapping; without this fallback those ids 404.
+        if isinstance(ride_id, str) and (ride_id.startswith("icu_") or ride_id.startswith("fit_")):
+            return get_icu_ride(ride_id)
         return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))
