@@ -58,7 +58,7 @@ header h1 { font-size:20px; font-weight:700; background: linear-gradient(135deg,
 .tab.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); color:#fff; }
 
 /* Grid */
-.grid { display:grid; gap:12px; }
+.grid { display:grid; gap:16px; }
 .g2 { grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); }
 .g3 { grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); }
 .g4 { grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); }
@@ -4375,8 +4375,8 @@ function applyTheme(name) {
   localStorage.setItem('pcc-theme', name);
   const sel = $('theme-select'); if (sel) sel.value = name;
 }
-// Ripristina tema salvato all'avvio (default: chiaro)
-(function() { const t = localStorage.getItem('pcc-theme'); if (t === 'dark') { document.documentElement.removeAttribute('data-theme'); } else { document.documentElement.setAttribute('data-theme', 'light'); } })();
+// Ripristina tema salvato all'avvio (default: scuro)
+(function() { const t = localStorage.getItem('pcc-theme'); if (t === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } else { document.documentElement.removeAttribute('data-theme'); } })();
 loadProfileBadge();
 // Pre-load FTP for workout library mini SVGs (don't wait for Settings tab).
 // _targetMode too — red-team F6: it was only set on the Settings tab, so every
@@ -4396,25 +4396,25 @@ function toggleTheme() {
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
   if (isLight) {
     document.documentElement.removeAttribute('data-theme');
-    _lsSet('theme', 'dark');
+    _lsSet('pcc-theme', 'dark');
     $('theme-toggle').textContent = '🌙';
   } else {
     document.documentElement.setAttribute('data-theme', 'light');
-    _lsSet('theme', 'light');
+    _lsSet('pcc-theme', 'light');
     $('theme-toggle').textContent = '☀️';
   }
 }
-// Restore saved theme on load (default: chiaro)
+// Restore saved theme on load (default: scuro)
 (function() {
-  const saved = _lsGet('theme');
-  if (saved === 'dark') {
-    document.documentElement.removeAttribute('data-theme');
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = '🌙';
-  } else {
+  const saved = _lsGet('pcc-theme');
+  if (saved === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
     const btn = document.getElementById('theme-toggle');
     if (btn) btn.textContent = '☀️';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = '🌙';
   }
 })();
 
@@ -24046,6 +24046,22 @@ document.addEventListener('DOMContentLoaded', function() {
 .ob-rest-btn { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 11px; transition: all 0.15s; }
 .ob-rest-btn.rest { background: var(--surface2); color: var(--text3); border-color: var(--surface2); }
 .ob-rest-btn.rest.selected { background: var(--yellow); color: #000; border-color: var(--yellow); }
+</style>
+<style>
+/* Montis-style depth: soft multi-level shadows (applied last, wins cascade) */
+:root {
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.26), 0 2px 6px rgba(0,0,0,0.14);
+  --shadow: 0 4px 14px rgba(0,0,0,0.30), 0 12px 26px rgba(0,0,0,0.16);
+  --shadow-lg: 0 16px 36px rgba(0,0,0,0.36), 0 28px 56px rgba(0,0,0,0.20);
+}
+[data-theme="light"] {
+  --shadow-sm: 0 1px 2px rgba(15,23,42,0.05), 0 3px 8px rgba(15,23,42,0.04);
+  --shadow: 0 4px 14px rgba(15,23,42,0.08), 0 12px 26px rgba(15,23,42,0.06);
+  --shadow-lg: 0 16px 36px rgba(15,23,42,0.10), 0 28px 56px rgba(15,23,42,0.08);
+}
+/* Montis-style micro-interaction: smooth lift on interactive cards */
+.card { transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease; }
+.card:hover { box-shadow: var(--shadow); transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
 </style>
 <div id="pcc-confirm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;">
   <div role="dialog" aria-modal="true" aria-labelledby="pcc-confirm-msg" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.4);max-width:420px;width:90vw;padding:20px;">
