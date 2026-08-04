@@ -265,6 +265,28 @@ def _build_event(s: dict, ext_id: str, pm, classifications: dict,
     }, None
 
 
+def _plan_horizon_days(plan: dict, today: date) -> int:
+    """Horizon covering the WHOLE stored plan (not just the 14-day auto-sync
+    window): the manual "push piano" button and the daily auto-update must
+    mirror every planned session — an event-target plan can start weeks or
+    months in the future and would otherwise never reach the ICU calendar.
+
+    Returns max(HORIZON_DAYS, days until the last week's end), so the default
+    rolling window stays intact when the plan is empty or short.
+    """
+    horizon = HORIZON_DAYS
+    for week in plan.get("weeks") or []:
+        start = str(week.get("start") or "")[:10]
+        try:
+            d = date.fromisoformat(start)
+        except ValueError:
+            continue
+        days = (d - today).days + 7   # +7: cover the week itself
+        if days > horizon:
+            horizon = days
+    return horizon
+
+
 def _desired_events(pm, plan: dict, today: date, horizon_days: int,
                     profile_id: str):
     """Collect the horizon's pushable sessions as ICU bulk-event payloads.
@@ -421,8 +443,12 @@ def _ours_in_window(events: list, profile_id: str, today: date) -> dict:
     return ours
 
 
-def reconcile(horizon_days: int = HORIZON_DAYS) -> dict:
+def reconcile(horizon_days: "int | None" = None) -> dict:
     """Mirror [today, today+horizon] of the stored plan onto the ICU calendar.
+
+    horizon_days=None → derived from the plan itself (whole plan mirrored;
+    an event-target plan starting in the future is fully pushed). Pass an
+    explicit horizon to override (e.g. tests).
 
     Returns {pushed, updated, deleted, skipped:[{day,reason}]} plus at most
     one of needs_reconnect / needs_lthr / error. Never raises.
@@ -442,6 +468,8 @@ def reconcile(horizon_days: int = HORIZON_DAYS) -> dict:
         if plan is None:
             return _result(error="no_plan")
         today = date.today()
+        if horizon_days is None:
+            horizon_days = _plan_horizon_days(plan, today)
         desired, skipped, broken_ids = _desired_events(
             pm, plan, today, horizon_days, profile_id)
         result = _result(skipped=skipped)
@@ -522,8 +550,12 @@ def reconcile(horizon_days: int = HORIZON_DAYS) -> dict:
         return _result(error=f"internal:{type(e).__name__}")
 
 
-def sweep_all(horizon_days: int = HORIZON_DAYS) -> dict:
+def sweep_all(horizon_days: "int | None" = None) -> dict:
     """G-A: delete ALL of our pushed events in [today, today+horizon].
+
+    horizon_days=None → derived from the stored plan (whole plan swept),
+    so turning the sync toggle OFF removes every pushed session, not just
+    the rolling 14-day window. Explicit horizon still honored (tests).
 
     Used when the sync toggle turns OFF and (best-effort, BEFORE the token
     purge) on disconnect. Only our profile-prefixed events are touched.
@@ -538,6 +570,10 @@ def sweep_all(horizon_days: int = HORIZON_DAYS) -> dict:
         if err:
             return _result(error=err)
         today = date.today()
+        if horizon_days is None:
+            plan = _load_plan()
+            horizon_days = (_plan_horizon_days(plan, today) if plan
+                            else HORIZON_DAYS)
         existing, err_res = _get_window_events(athlete_id, today, horizon_days)
         if err_res is not None:
             return err_res

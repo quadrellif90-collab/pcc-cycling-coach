@@ -10918,12 +10918,20 @@ def api_icu_push_status():
         sync_enabled = bool(ProfileManager.get().prefs.get("icu_calendar_sync"))
     except Exception:
         pass
+    horizon_days = _icp.HORIZON_DAYS
+    try:
+        from datetime import date as _date
+        plan = _icp._load_plan()
+        if plan:
+            horizon_days = _icp._plan_horizon_days(plan, _date.today())
+    except Exception:
+        pass
     return {
         "connected": bool(token or key),
         "method": "oauth" if token else ("apikey" if key else "none"),
         "write_ok": _wok,
         "sync_enabled": sync_enabled,
-        "horizon_days": 14,
+        "horizon_days": horizon_days,
         # 3.3.1 hotfix (B3b): outcome of the most recent reconcile (any
         # trigger), incl. error + error_detail — background pushes are no
         # longer silent to the UI.
