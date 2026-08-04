@@ -50,6 +50,18 @@ ICU_OAUTH_CLIENT_SECRET = os.environ.get("ICU_OAUTH_CLIENT_SECRET", "")
 ICU_OAUTH_AUTHORIZE_URL = "https://intervals.icu/oauth/authorize"
 ICU_OAUTH_TOKEN_URL = "https://intervals.icu/api/oauth/token"
 ICU_OAUTH_REDIRECT_URI = "http://localhost:8080/oauth/icu/callback"  # port pinned (launcher.py)
+
+# ── Terra API (Huawei Health / wearables) — global app credentials ───────────
+# Same .oauth.env pattern as ICU: TERRA_CLIENT_ID, TERRA_CLIENT_SECRET,
+# TERRA_API_KEY. The per-user tokens live in the active profile's .env
+# (TERRA_USER_ID / TERRA_ACCESS_TOKEN / ...) — see terra_sync.py.
+TERRA_CLIENT_ID = os.environ.get("TERRA_CLIENT_ID", "")
+TERRA_CLIENT_SECRET = os.environ.get("TERRA_CLIENT_SECRET", "")
+TERRA_API_KEY = os.environ.get("TERRA_API_KEY", "")
+TERRA_BASE = "https://api.tryterra.co"
+TERRA_AUTH_URL = "https://api.tryterra.co/auth/authenticateUser"
+TERRA_TOKEN_URL = "https://api.tryterra.co/auth/getAccessToken"
+TERRA_REDIRECT_URI = "http://localhost:8080/oauth/terra/callback"  # port pinned (launcher.py)
 # CALENDAR:WRITE (v3.0.1, IP_ICU_PUSH): lets the push engine upsert planned
 # workouts onto the athlete's ICU calendar. Pre-existing connections granted
 # only the READ set keep working read-only; the UI offers a one-click

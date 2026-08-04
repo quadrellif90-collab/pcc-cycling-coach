@@ -996,6 +996,73 @@ class TestConcurrentSwitchBlocked(unittest.TestCase):
         self.assertTrue(results["thread_completed"])
 
 
+class TestPersistEnv(unittest.TestCase):
+    """_persist_env() — Terra token persistence in the profile .env.
+
+    Round-trip: seed ICU creds + Terra tokens → _persist_env → reload from
+    disk → verify both survive. Then disconnect (drop Terra keys) → ICU keys
+    must remain. Also verifies unknown keys are preserved (never dropped).
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        _make_base(self.tmp)
+        _bootstrap_default_profile(_make_base(self.tmp))
+        self.pm = _fresh_manager(self.tmp)
+        self.env_path = self.pm.active_dir / ".env"
+
+    def tearDown(self):
+        from profile_manager import ProfileManager
+        ProfileManager._instance = None
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _seed_and_persist(self):
+        self.pm._env.update({
+            "ICU_ATHLETE_ID": "i130499",
+            "ICU_ACCESS_TOKEN": "abc123",
+            "ICU_GRANTED_SCOPES": "ACTIVITY:WRITE,WELLNESS:WRITE",
+            "TERRA_USER_ID": "terra_user_7",
+            "TERRA_ACCESS_TOKEN": "tok9",
+            "TERRA_EXPIRES_AT": "1893456000",
+            "SOME_FUTURE_KEY": "keepme",
+        })
+        self.pm._persist_env()
+
+    def test_persist_round_trip(self):
+        self._seed_and_persist()
+        written = self.env_path.read_text(encoding="utf-8")
+        self.assertIn("TERRA_USER_ID=terra_user_7", written)
+        self.assertIn("TERRA_ACCESS_TOKEN=tok9", written)
+        self.assertIn("ICU_ACCESS_TOKEN=abc123", written)
+        # unknown keys survive too
+        self.assertIn("SOME_FUTURE_KEY=keepme", written)
+        # reload like _load_active_profile does
+        env = self.pm._load_env_file(self.env_path)
+        self.assertEqual(env.get("TERRA_USER_ID"), "terra_user_7")
+        self.assertEqual(env.get("ICU_ACCESS_TOKEN"), "abc123")
+        self.assertEqual(env.get("SOME_FUTURE_KEY"), "keepme")
+
+    def test_disconnect_keeps_icu(self):
+        self._seed_and_persist()
+        # simulate terra_sync.disconnect()
+        for k in ("TERRA_USER_ID", "TERRA_ACCESS_TOKEN", "TERRA_EXPIRES_AT"):
+            self.pm._env.pop(k, None)
+        self.pm._persist_env()
+        written = self.env_path.read_text(encoding="utf-8")
+        self.assertNotIn("TERRA_", written)
+        self.assertIn("ICU_ACCESS_TOKEN=abc123", written)
+        self.assertIn("ICU_ATHLETE_ID=i130499", written)
+
+    def test_creds_with_newline_rejected(self):
+        # embedded newlines would inject KEY=VALUE lines — must be dropped
+        self.pm._env["ICU_ACCESS_TOKEN"] = "abc\nICU_ATHLETE_ID=hijack"
+        self.pm._env["TERRA_ACCESS_TOKEN"] = "tok\r\nINJECT=1"
+        self.pm._persist_env()
+        written = self.env_path.read_text(encoding="utf-8")
+        self.assertNotIn("hijack", written)
+        self.assertNotIn("INJECT=1", written)
+
+
 # ==============================================================================
 # Entry point
 # ==============================================================================

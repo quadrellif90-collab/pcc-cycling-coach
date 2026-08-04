@@ -1403,6 +1403,28 @@ class ProfileManager:
         except OSError:
             pass
 
+    def _persist_env(self) -> None:
+        """Rewrite the active profile's .env from the in-memory ``_env`` dict.
+
+        Used by integrations that mutate ``_env`` directly (Terra tokens,
+        extra per-profile credentials) without going through ``save_env``.
+        Known keys are written in a stable order; any other keys present in
+        the in-memory dict are appended afterwards so nothing is ever dropped.
+        """
+        self._require_active()
+        ordered = ("ICU_ATHLETE_ID", "ICU_API_KEY", "ICU_ACCESS_TOKEN",
+                   "ICU_REFRESH_TOKEN", "ICU_TOKEN_EXPIRES_AT",
+                   "ICU_GRANTED_SCOPES", "TERRA_USER_ID",
+                   "TERRA_ACCESS_TOKEN", "TERRA_EXPIRES_AT")
+        lines = []
+        for key in ordered + tuple(k for k in self._env if k not in ordered):
+            if key not in self._env:
+                continue
+            v = (self._env.get(key) or "").strip()
+            if not any(c in v for c in "\n\r"):
+                lines.append(f"{key}={v}")
+        self._write_env_atomic(self.active_dir / ".env", "\n".join(lines) + "\n")
+
     def _load_env_file(self, path: Path) -> dict:
         result = {}
         if path.exists():

@@ -11149,6 +11149,87 @@ def api_icu_athlete_numbers():
     return out
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Terra API (Huawei Health / wearables) — wellness + activity pull
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/terra/status")
+def api_terra_status():
+    """Connection status for the Terra (Huawei Health) integration.
+
+    ``configured`` = global app credentials present (.oauth.env);
+    ``connected``  = active profile has a bound Terra user + token.
+    """
+    import terra_sync
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    env = pm._env or {}
+    return {
+        "configured": terra_sync.is_configured(),
+        "connected": terra_sync.get_connected(env),
+        "user_id": (env.get("TERRA_USER_ID") or ""),
+        "expires_at": (env.get("TERRA_EXPIRES_AT") or ""),
+    }
+
+
+@app.get("/oauth/terra/start")
+def api_terra_start(return_to: str = Query("/")):
+    """Start the Terra auth flow — redirect to Huawei consent page."""
+    from fastapi.responses import RedirectResponse
+    import terra_sync
+    url = terra_sync.build_auth_url(return_to)
+    _log.info("EVENT=terra_auth_start url_prefix=%s", url[:60])
+    return RedirectResponse(url)
+
+
+@app.get("/oauth/terra/callback")
+def api_terra_callback(user_id: str = Query(""), reference_id: str = Query(""),
+                       error: str = Query("")):
+    """Terra redirects here after Huawei consent. Exchange + bounce to app."""
+    from fastapi.responses import RedirectResponse
+    import terra_sync
+    ok, return_to, reason = terra_sync.handle_callback(user_id, reference_id)
+    _log.info("EVENT=terra_callback ok=%s reason=%s", ok, reason or "-")
+    sep = "&" if "?" in return_to else "?"
+    if error:
+        return RedirectResponse(url=f"{return_to}{sep}terra=error&reason=denied")
+    if not ok:
+        return RedirectResponse(url=f"{return_to}{sep}terra=error&reason={reason}")
+    return RedirectResponse(url=f"{return_to}{sep}terra=connected")
+
+
+@app.post("/api/terra/sync")
+async def api_terra_sync(request: Request):
+    """Pull the last N days of sleep/body/activity from Terra into PCC."""
+    import terra_sync
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    env = pm._env or {}
+    if not terra_sync.get_connected(env):
+        return {"ok": False, "error": "Terra non collegato"}
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+    days = int(body.get("days") or 14)
+    days = max(1, min(days, 90))
+    w = terra_sync.sync_wellness(env, days)
+    a = terra_sync.sync_activities(env, days)
+    return {"ok": True, **w, **a, "days": days}
+
+
+@app.post("/api/terra/disconnect")
+def api_terra_disconnect():
+    """Remove the Terra user/tokens from the active profile."""
+    import terra_sync
+    from profile_manager import ProfileManager
+    pm = ProfileManager.get()
+    terra_sync.disconnect(pm._env or {})
+    _log.info("EVENT=terra_disconnect")
+    return {"ok": True}
+
+
 @app.get("/api/update/check")
 def api_update_check(force: int = Query(0)):
     """Live GitHub-Releases poll with 6h cache + platform-specific asset.

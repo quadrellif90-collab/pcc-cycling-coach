@@ -3990,6 +3990,37 @@ window.addEventListener('unhandledrejection', function(e) {
       </div>
     </div>
 
+    <!-- v5.4.x: Terra API — Huawei Health (watch/band). Wellness pull only
+         (HRV, sleep, RHR, weight, workouts — no cycling power). -->
+    <div style="padding:12px;border:1px solid var(--border);border-radius:8px;margin-top:12px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <strong style="font-size:14px;">Huawei Health <span style="font-size:11px;color:var(--text3);">(Terra API)</span></strong>
+        <span id="terra-conn-status" style="font-size:12px;color:var(--text3);margin-left:auto;">verifica…</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">
+        Collega il tuo account Huawei Health (Watch Fit 5 Pro, Band, Watch GT…) per
+        importare <b>sonno, HRV, frequenza a riposo e allenamenti</b> nel tuo
+        punteggio di prontezza. Non serve per i dati di potenza (TSS/power) — quelli
+        restano su rullino / intervals.icu.
+      </div>
+      <div id="terra-auth-block" style="margin-bottom:8px;">
+        <button class="btn btn-primary btn-sm" id="terra-connect-btn" onclick="window.location='/oauth/terra/start?return_to=%2F%3Ftab%3Dsettings'">Collega Huawei Health</button>
+        <button class="btn btn-sm" id="terra-disconnect-btn" style="display:none;" onclick="terraDisconnect()">Disconnetti</button>
+        <div id="terra-conn-error" style="display:none;font-size:12px;color:var(--red);margin-top:6px;"></div>
+      </div>
+      <div id="terra-sync-block" style="display:none;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="terra-days" style="padding:4px 6px;font-size:12px;">
+            <option value="7">Ultimi 7 giorni</option>
+            <option value="14" selected>Ultimi 14 giorni</option>
+            <option value="30">Ultimi 30 giorni</option>
+          </select>
+          <button class="btn btn-sm btn-primary" onclick="terraSyncNow()">Sincronizza ora</button>
+        </div>
+        <div id="terra-sync-msg" style="font-size:12px;margin-top:6px;"></div>
+      </div>
+    </div>
+
     <!-- v1.1.0 IMPL-HRV-RECOVERY — HRV4Training CSV import + manual HRV entry.
          Locked CSV columns (PATCH G16): date, rmssd, hrv_baseline, recovery_points.
          Rows missing date or rmssd are skipped server-side. -->
@@ -4429,7 +4460,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(t => {
                         initAvailCalendar();
                        loadCapabilityProjection();
                        icuPushRefreshButton();
-                     }, settings:()=>{loadSettings();loadIcuConnection();icuCalSyncRefresh();}, library:loadWorkouts,
+                     }, settings:()=>{loadSettings();loadIcuConnection();icuCalSyncRefresh();loadTerraConnection();}, library:loadWorkouts,
                      analysis:()=>{ if (typeof loadAnalysisTab === 'function') loadAnalysisTab(); },
                      dfa:()=>{ if (typeof loadDfaTab === 'function') loadDfaTab(); },
                      nutrition:()=>{ if (typeof loadNutriPlan === 'function') { loadNutriPlan(); renderNutriCompare(); } },
@@ -18895,6 +18926,79 @@ async function icuSaveApiKey() {
     loadIcuConnection();
     try { icuPushRefreshButton(); } catch (_) {}
   } catch (e) { if (msg) { msg.textContent = 'Errore: ' + e.message; msg.style.color = 'var(--red)'; } }
+}
+
+// ═══ v5.4.x — Terra API (Huawei Health) connection + sync ════════════════════
+
+async function loadTerraConnection() {
+  const statusEl = $('terra-conn-status');
+  const errEl = $('terra-conn-error');
+  const authBlock = $('terra-auth-block');
+  const syncBlock = $('terra-sync-block');
+  const discBtn = $('terra-disconnect-btn');
+  const connBtn = $('terra-connect-btn');
+  if (!statusEl) return;
+  try {
+    const s = await (await fetch('/api/terra/status')).json();
+    if (!s.configured) {
+      statusEl.textContent = 'non configurato';
+      statusEl.style.color = 'var(--text3)';
+      if (connBtn) { connBtn.disabled = true; connBtn.title = 'Aggiungi le credenziali Terra (TERRA_CLIENT_ID/SECRET/API_KEY) in .oauth.env'; }
+      if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Credenziali Terra mancanti: aggiungi TERRA_CLIENT_ID, TERRA_CLIENT_SECRET e TERRA_API_KEY nel file .oauth.env accanto a config.py.'; }
+      return;
+    }
+    if (s.connected) {
+      statusEl.textContent = '✓ collegato' + (s.user_id ? ' (' + s.user_id + ')' : '');
+      statusEl.style.color = 'var(--green)';
+      if (discBtn) discBtn.style.display = 'inline-flex';
+      if (connBtn) connBtn.style.display = 'none';
+      if (authBlock) authBlock.style.display = 'none';
+      if (syncBlock) syncBlock.style.display = 'block';
+    } else {
+      statusEl.textContent = 'non collegato';
+      statusEl.style.color = 'var(--text3)';
+      if (discBtn) discBtn.style.display = 'none';
+      if (connBtn) connBtn.style.display = 'inline-flex';
+      if (syncBlock) syncBlock.style.display = 'none';
+    }
+  } catch (e) {
+    statusEl.textContent = 'errore verifica';
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+async function terraDisconnect() {
+  try {
+    await fetch('/api/terra/disconnect', { method: 'POST' });
+    showToast('Huawei Health disconnesso', 3000);
+    loadTerraConnection();
+  } catch (e) { showToast('Disconnect fallito', 3000, 'error'); }
+}
+
+async function terraSyncNow() {
+  const msgEl = $('terra-sync-msg');
+  const days = ($('terra-days') || {}).value || '14';
+  if (msgEl) { msgEl.textContent = 'Sincronizzazione in corso…'; msgEl.style.color = 'var(--text3)'; }
+  try {
+    const res = await fetch('/api/terra/sync', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({days: parseInt(days, 10)})
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.ok) {
+      if (msgEl) { msgEl.textContent = 'Errore: ' + (j.error || res.status); msgEl.style.color = 'var(--red)'; }
+      return;
+    }
+    const parts = [];
+    if (j.sleep) parts.push(j.sleep + ' notti');
+    if (j.activities) parts.push(j.activities + ' attività');
+    if (j.body) parts.push(j.body + ' misure');
+    if (msgEl) { msgEl.textContent = '✓ Importati: ' + (parts.join(', ') || 'nessun nuovo dato'); msgEl.style.color = 'var(--green)'; }
+    showToast('Sincronizzazione Huawei Health completata', 3500, 'success');
+    try { loadReadiness(); } catch (_) {}
+  } catch (e) {
+    if (msgEl) { msgEl.textContent = 'Errore: ' + e.message; msgEl.style.color = 'var(--red)'; }
+  }
 }
 
 // ═══ v3.0.1 IP_ICU_PUSH — calendar push button + keep-in-sync toggle ═══════
