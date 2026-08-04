@@ -6082,6 +6082,22 @@ def _wellness_record_to_api_dict(w: dict) -> dict:
     atl = w.get("atl")
     sport_info = w.get("sportInfo") or []
     eftp = (sport_info[0].get("eftp") if sport_info and isinstance(sport_info[0], dict) else None)
+    # v5.5.0 — wellness "Come stai" fields. ICU live records carry these
+    # top-level; the SQLite fallback nests them in raw_json — read both.
+    _raw = w.get("raw_json") or {}
+    if isinstance(_raw, str) and _raw:
+        try:
+            import json as _json
+            _raw = _json.loads(_raw)
+        except Exception:
+            _raw = {}
+    if not isinstance(_raw, dict):
+        _raw = {}
+    def _g(key: str):
+        v = w.get(key)
+        if v is None:
+            v = _raw.get(key)
+        return v
     return {
         "date": w.get("id"),
         "ctl": ctl,
@@ -6092,6 +6108,19 @@ def _wellness_record_to_api_dict(w: dict) -> dict:
         "sleep_h": round(w.get("sleepSecs", 0) / 3600, 2) if w.get("sleepSecs") else None,
         "sleep_score": w.get("sleepScore"),
         "eftp": eftp,
+        # v5.5.0 — recovery/wellness signals (already synced, now surfaced)
+        "hrv_sdnn": _g("hrvSDNN"),
+        "avg_sleeping_hr": _g("avgSleepingHR"),
+        "stress": _g("stress"),
+        "mood": _g("mood"),
+        "soreness": _g("soreness"),
+        "fatigue": _g("fatigue"),
+        "spo2": _g("spO2"),
+        "respiration": _g("respiration"),
+        "steps": _g("steps"),
+        "weight": _g("tempWeight") or _g("weight"),
+        "body_fat": _g("bodyFat"),
+        "readiness": _g("readiness"),
         # v1.0.6 — 3D Banister components (None when not yet computed)
         "cp_fitness": w.get("cp_fitness"),
         "cp_fatigue": w.get("cp_fatigue"),
@@ -6179,6 +6208,9 @@ def api_wellness(days: int = Query(28),
                 "sleepSecs": r.get("sleep_secs"),
                 "sleepScore": r.get("sleep_score"),
                 "sportInfo": [{"eftp": r.get("eftp")}] if r.get("eftp") is not None else [],
+                # v5.5.0 — carry the stored ICU payload so the serializer can
+                # surface stress/mood/soreness/etc. on the SQLite fallback path.
+                "raw_json": r.get("raw_json") or {},
             }
             for r in rows
         ]

@@ -76,3 +76,6 @@ IP_*.md
 scripts/scrape_*.py
 workouts/.scrape_progress.json
 workouts/.ftp_tests_manifest.json
+
+# Montis QA screenshots
+montis_test_artifacts/

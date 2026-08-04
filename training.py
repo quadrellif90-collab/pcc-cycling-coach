@@ -773,6 +773,12 @@ def get_today_metrics() -> dict:
             "kilojoules": kilojoules,
             "calories": calories,
             "weighted_average_watts": weighted_watts,
+            # v5.5.0 — intensity metrics from ICU raw payload (NP/IF/VI/decoupling)
+            "np": weighted_watts,
+            "if": (a.get("icu_intensity") or raw.get("icu_intensity")),
+            "vi": (a.get("icu_variability_index") or raw.get("icu_variability_index")),
+            "decoupling": (a.get("decoupling") or raw.get("decoupling")),
+            "max_power": (a.get("max_watts") or raw.get("max_watts")),
             "moving_time_sec": moving_time_sec,
             "elevation_gain": elevation_gain,
         })

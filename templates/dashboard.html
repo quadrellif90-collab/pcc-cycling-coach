@@ -1921,6 +1921,15 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
   </div>
 
+  <!-- v5.5.0 — "Come stai" wellness card: 7-day recovery signals from
+       Intervals.icu wellness (stress/mood/soreness/HRV-SDNN/spO2/sonno).
+       Rendered by renderHomeComeStai() from the /api/wellness payload. -->
+  <div class="card" id="home-come-stai-card" style="margin-bottom:12px;">
+    <h3 style="margin:0 0 2px;">Come stai? 🩺</h3>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Segnali di recupero dagli ultimi 7 giorni · Intervals.icu</div>
+    <div id="home-come-stai-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;"></div>
+  </div>
+
   <!-- v5.2 first-run checklist -->
   <div id="first-run-checklist" class="card" style="margin-bottom:12px;display:none;">
     <h3 style="margin:0 0 4px;">Benvenuto in PCC - 4 passi per iniziare</h3>
@@ -4701,8 +4710,15 @@ function renderRecentActivities(filter){
     var click=id?('onclick="openActivityModal(\''+escJs(id)+'\')" style="cursor:pointer;"'):'';
     var load=a.effective_load&&a.effective_load!==a.tss?('Load '+a.effective_load):(a.tss?('TSS '+a.tss):'');
     return '<div class="activity" '+click+'><div><span class="act-name">'+esc(a.name||'Activity')+'</span>'+
-      '<div style="font-size:11px;color:var(--text3);">'+esc((a.date||a.start_date||'').slice(0,10))+'</div></div>'+
-      '<div style="font-size:12px;color:var(--accent);font-weight:600;">'+load+'</div></div>';
+          '<div style="font-size:11px;color:var(--text3);">'+esc((a.date||a.start_date||'').slice(0,10))+'</div>'+
+          (a.if!=null||a.vi!=null||a.decoupling!=null?'<div style="font-size:10px;color:var(--text2);margin-top:2px;">'+
+            (a.np?'NP '+Math.round(a.np)+'W':'')+
+            (a.if!=null?' · IF '+Number(a.if).toFixed(2):'')+
+            (a.vi!=null?' · VI '+Number(a.vi).toFixed(2):'')+
+            (a.decoupling!=null?' · Decoup '+Number(a.decoupling).toFixed(0)+'%':'')+
+          '</div>':'')+
+          '</div>'+
+          '<div style="font-size:12px;color:var(--accent);font-weight:600;">'+load+'</div></div>';
   }).join('');
 }
 
@@ -7266,6 +7282,57 @@ function renderHomeFitnessSparkline(wellness) {
   }
 }
 
+// v5.5.0 — "Come stai" home card: last-7-days recovery signals from the
+// /api/wellness payload (stress, mood, soreness, HRV-SDNN, spO2, sonno).
+// Each metric renders as a mini bar-sparkline with today's value + 7d label.
+function renderHomeComeStai(wellness) {
+  const grid = document.getElementById('home-come-stai-grid');
+  if (!grid) return;
+  const rows = (wellness || []).slice(-7);
+  const today = rows[rows.length - 1] || {};
+  const hasData = rows.some(d => d && (d.stress != null || d.mood != null || d.soreness != null || d.hrv_sdnn != null || d.spo2 != null || d.sleep_h != null));
+  if (!hasData) {
+    grid.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 2px;">Ancora pochi segnali di recupero — sincronizza Intervals.icu (☁️ Sync Intervals) e torna qui. I dati di stress/sonno/mood arrivano da lì.</div>';
+    return;
+  }
+  const metrics = [
+    { key:'stress',   label:'Stress',       fmt:v => v,           good: v => v <= 30, mid: v => v <= 60, unit:'' },
+    { key:'mood',     label:'Umore',        fmt:v => v,           good: v => v >= 4,  mid: v => v >= 2.5, unit:'/5' },
+    { key:'soreness', label:'Muscoli',      fmt:v => v,           good: v => v <= 3,  mid: v => v <= 5, unit:'/7' },
+    { key:'hrv_sdnn', label:'HRV SDNN',     fmt:v => Math.round(v), good: v => v >= 60, mid: v => v >= 40, unit:'ms' },
+    { key:'spo2',     label:'SpO₂',         fmt:v => v,           good: v => v >= 95, mid: v => v >= 92, unit:'%' },
+    { key:'sleep_h',  label:'Sonno',        fmt:v => v,           good: v => v >= 8,  mid: v => v >= 7, unit:'h' },
+  ];
+  function spark(series, goodFn, midFn) {
+    const vals = series.filter(v => v != null && !isNaN(v));
+    if (vals.length < 2) return '';
+    const W = 120, H = 26, pad = 2;
+    const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    const range = (mx - mn) || 1;
+    const pts = series.map((v, i) => v == null || isNaN(v) ? null : (pad + (i / (series.length - 1)) * (W - 2 * pad)).toFixed(1) + ',' + (H - pad - ((v - mn) / range) * (H - 2 * pad)).toFixed(1));
+    const d = pts.filter(Boolean).join(' ');
+    let color = 'var(--text3)';
+    const last = vals[vals.length - 1];
+    if (last != null) color = goodFn(last) ? 'var(--green)' : midFn(last) ? 'var(--yellow)' : 'var(--red)';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:' + H + 'px;display:block;">'
+      + '<polyline points="' + d + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+      + '<circle cx="' + pts[pts.length - 1].split(',')[0] + '" cy="' + pts[pts.length - 1].split(',')[1] + '" r="2.5" fill="' + color + '"/></svg>';
+  }
+  grid.innerHTML = metrics.map(m => {
+    const series = rows.map(d => d && d[m.key] != null ? Number(d[m.key]) : null);
+    const lastVal = (() => { for (let i = series.length - 1; i >= 0; i--) if (series[i] != null) return series[i]; return null; })();
+    const color = lastVal == null ? 'var(--text3)' : m.good(lastVal) ? 'var(--green)' : m.mid(lastVal) ? 'var(--yellow)' : 'var(--red)';
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;">'
+      + '<span style="font-size:11px;color:var(--text2);font-weight:600;">' + m.label + '</span>'
+      + '<span style="font-size:16px;font-weight:800;color:' + color + ';">' + (lastVal != null ? m.fmt(lastVal) + ' <span style="font-size:10px;font-weight:500;color:var(--text3);">' + m.unit + '</span>' : '—') + '</span>'
+      + '</div>'
+      + spark(series, m.good, m.mid)
+      + '<div style="font-size:9px;color:var(--text3);margin-top:2px;">7 giorni</div>'
+      + '</div>';
+  }).join('');
+}
+
 // v1.3.0 IMPL-DASHBOARD — feature flags. Per PATCH G14: each panel checks
 // its flag before rendering. If a sibling backend agent stalls (FATIGUE or
 // PR-DETECTION endpoint not yet live), the dashboard ships partial without
@@ -8756,7 +8823,11 @@ async function loadHome() {
     // boot). Home keeps a compact CTL/TSB sparkline fed by this same
     // wellness payload — no extra fetch.
     try { renderHomeFitnessSparkline(wellness); }
-    catch (e) { try { window._diagFrontendError('E_FRONTEND_FITNESS_RENDER', {msg: String(e && e.message || e)}); } catch(_) {} }
+        catch (e) { try { window._diagFrontendError('E_FRONTEND_FITNESS_RENDER', {msg: String(e && e.message || e)}); } catch(_) {} }
+
+        // v5.5.0 — Come stai wellness card (same /api/wellness payload, no extra fetch)
+        try { renderHomeComeStai(wellness); }
+        catch (e) { try { window._diagFrontendError('E_FRONTEND_COME_STAI_RENDER', {msg: String(e && e.message || e)}); } catch(_) {} }
 
     try {
       // v1.8.8 Bug 8 — gauge consumes the canonical score_0_100 field from
