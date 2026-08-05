@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="it" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,7 +17,7 @@
   --card: #1e1e28;
   --text: #f0f0f5; --text2: #c0c0d0; --text3: #808090;
   /* PCC Pro RACING palette — rosso primario + arancio secondario (energia, velocità). */
-  --accent: #ef4444; --accent2: #f97316;
+  --accent: #dc2626; --accent2: #f97316;
   --green: #22c55e; --yellow: #eab308; --orange: #f97316; --red: #ef4444; --purple: #a855f7;
   --z1: #64748b; --z2: #ef4444; --z3: #22c55e; --z4: #eab308; --z5: #f97316; --z6: #ef4444; --z7: #e2e8f0;
   --radius: 10px;
@@ -139,6 +139,15 @@ tr:hover { background:rgba(79,156,247,0.04); }
        font-size:12px; font-weight:600; cursor:pointer; border:1px solid var(--border);
        background:var(--surface2); color:var(--text); transition:all 0.15s; }
 .btn:hover { border-color:var(--accent); background:var(--accent); color:#fff; }
+/* PCC 5.4.7 — stati disabled visibili (prima assenti: un bottone disabled
+   appariva identico a enabled — #terra-connect-btn osservato da QA). */
+.btn:disabled, .btn[disabled], button:disabled, button[disabled] {
+  opacity:0.45; cursor:not-allowed; filter:grayscale(0.4);
+  pointer-events:none; box-shadow:none; transform:none !important;
+}
+.btn:disabled:hover, .btn[disabled]:hover, button:disabled:hover {
+  border-color:var(--border); background:var(--surface2); color:var(--text);
+}
 .btn-sm { padding:4px 10px; font-size:11px; }
 .btn-primary { background:var(--accent); border-color:var(--accent); color:#fff; }
 .btn-primary:hover { background:var(--accent2); }
@@ -554,13 +563,24 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; h
   border-radius: 5px; cursor: pointer;
 }
 .cal-toolbar .cal-jump-btn:hover { background: var(--accent); color: #fff; }
+/* v5.4.7 — QA: #upstream-badge (versione, es. "✅ Domestique v3.7.0") è l'ultimo
+   item della toolbar flex e con min-width:auto contribuisce al min-content
+   della card → overflow orizzontale su mobile. Ellipsis + contenimento. */
+#upstream-badge {
+  display: inline-block; min-width: 0; max-width: 45vw;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 .cal-scroll {
-  max-height: 70vh; overflow-y: auto; overflow-x: hidden;
+  max-height: 70vh; overflow-y: auto; overflow-x: auto;
   padding: 0 2px; scroll-behavior: smooth;
 }
+/* v5.4.7 — QA: su viewport stretti la grid .cal-row (130px + 7×1fr) espande
+   le colonne al min-content del testo → #cal-overlay deborda (637px su 390).
+   overflow-x:auto riduce il min-content del contenitore a 0: la griglia
+   scrolla DENTRO la card invece di allargare la pagina. */
 .cal-week-grid {
-  display: grid; grid-template-columns: 130px repeat(7, 1fr);
+  display: grid; grid-template-columns: 130px repeat(7, minmax(0, 1fr));
   gap: 3px; margin-bottom: 4px; padding: 0 2px;
   font-size: 10px; color: var(--text3); position: sticky; top: 0;
   background: var(--surface); z-index: 5; padding-top: 4px; padding-bottom: 4px;
@@ -568,7 +588,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; h
 }
 .cal-week-grid > div { text-align: center; font-weight: 600; }
 .cal-row {
-  display: grid; grid-template-columns: 130px repeat(7, 1fr);
+  display: grid; grid-template-columns: 130px repeat(7, minmax(0, 1fr));
   gap: 3px; margin-bottom: 4px; padding: 4px 2px; border-radius: 6px;
   border-left: 3px solid transparent;
   transition: background 0.15s;
@@ -610,6 +630,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; h
   font-size: 10px; min-height: 64px; display: flex; flex-direction: column;
   position: relative; border-left: 3px solid transparent;
   cursor: pointer; transition: background 0.15s;
+  min-width: 0; overflow: hidden;
 }
 .cal-day:hover { background: var(--border); }
 .cal-day.cal-rest { cursor: default; opacity: 0.5; align-items: center; justify-content: center; }
@@ -631,6 +652,11 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; h
    app thinks today is 19 July") — label it instead of restyling. Same pill
    pattern as .twk-today-badge; text set in renderCalDay: EVENT on event
    goals, PLAN END otherwise. The red .cal-today ring stays the today marker. */
+.cal-day .cal-planned-type {
+  font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 2px;
+  display: inline-block; letter-spacing: 0.04em;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .cal-day .cal-goal-badge {
   align-self: flex-start; background: var(--green, #22c55e); color: #fff;
   font-size: 8px; font-weight: 700; letter-spacing: 0.06em;
@@ -686,10 +712,6 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; h
 
 .cal-day .cal-planned {
   flex: 1; padding: 2px 0; min-height: 28px;
-}
-.cal-day .cal-planned-type {
-  font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 2px;
-  display: inline-block; letter-spacing: 0.04em;
 }
 .cal-day .cal-planned-meta {
   font-size: 8px; color: var(--text2); margin-top: 1px;
@@ -1400,7 +1422,33 @@ details > summary:hover::before { color: var(--accent); }
 .pg-strat-chip { font-size:8px; line-height:1.2; padding:1px 4px; border-radius:3px;
   background:var(--surface2); border:1px solid var(--border); color:var(--text2);
   white-space:nowrap; cursor:help; }
-@media (max-width:780px){ .app-shell{flex-direction:column;} .sidebar-tabs{flex-direction:row;flex-wrap:wrap;width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);} }
+@media (max-width:780px){ .app-shell{flex-direction:column;} .sidebar-tabs{flex-direction:row;flex-wrap:wrap;width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);} .main-content{width:100%;max-width:100%;box-sizing:border-box;} }
+/* PCC 5.4.7 — fix responsive header: sotto ~1050px header-stats + bottoni
+   (Disposizione / ? / Import FIT / tema) escono dal viewport e diventano
+   irraggiungibili su mobile/tablet (scroll orizzontale bloccato). Wrap del
+   blocco destro + header-stats compattabile. */
+@media (max-width:1050px){
+  header { flex-wrap:wrap; gap:10px; }
+  header > div:last-child { width:100%; flex-wrap:wrap; justify-content:flex-start; }
+  .header-stats { flex-wrap:wrap; gap:10px 16px; }
+}
+@media (max-width:600px){
+  .header-stats { display:none; }
+  header > div:first-child { gap:8px; }
+  /* v5.4.7 — la week strip (7 colonne) deborda oltre il viewport su mobile
+     (QA: celle twk-day fino a x=634 su viewport 390). Scroll contenuto
+     nella card invece di far scoppiare la pagina. */
+  #weekly-calendar { overflow-x:auto; }
+  #weekly-calendar > .twk-day, #weekly-calendar > div { min-width:74px; }
+  /* v5.4.7 — barre W' expo / TSS (min-width 160px) spingono il layout
+     oltre il viewport su mobile (QA: .wr-expo-bar right=395 su 390). */
+  .wr-expo-bar, .wr-tss-bar { min-width:0; }
+  /* v5.4.7 — filtri library: la riga durata (2 input 72px + 2 slider
+     min-width:56px + gap ≈ 280px) supera la card su mobile → scroll
+     interno nella card filtri invece di overflow di pagina (QA: body
+     406px su 390, #wk-dur-max-num right=406). */
+  #sec-library > .card:first-child { overflow-x:auto; }
+}
 
 /* ═══ PCC 5.x — Design System Pro (elevazione + tipografia + micro-interazioni) ═══
    Solo presentazione: nessun cambiamento a logica/dati. Classi additive;
@@ -1906,7 +1954,7 @@ window.addEventListener('unhandledrejection', function(e) {
        to the Analysis tab; this strip keeps CTL/TSB glanceable on Home.
        Rendered by renderHomeFitnessSparkline() from the same /api/wellness
        payload loadHome() already fetches. Click → opens the Analysis tab. -->
-  <div class="card" data-card=" class="card" id="home-fitness-sparkline-card" style="margin-bottom:12px;cursor:pointer;" role="link" aria-label="Fitness and form trend — open the Analysis tab" title="Open Analysis — full Fitness &amp; Form chart" onclick="document.querySelector('.tab[data-tab=analysis]').click()"" id="home-fitness-sparkline-card" style="margin-bottom:12px;cursor:pointer;" role="link" aria-label="Fitness and form trend — open the Analysis tab" title="Open Analysis — full Fitness &amp; Form chart" onclick="document.querySelector('.tab[data-tab=analysis]').click()">
+  <div class="card" data-card="home-fitness-sparkline" id="home-fitness-sparkline-card" style="margin-bottom:12px;cursor:pointer;" role="link" aria-label="Fitness and form trend — open the Analysis tab" title="Open Analysis — full Fitness &amp; Form chart" onclick="document.querySelector('.tab[data-tab=analysis]').click()">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
       <div style="min-width:150px;">
         <h3 style="margin:0;">Fitness &amp; Form</h3>
@@ -1953,7 +2001,7 @@ window.addEventListener('unhandledrejection', function(e) {
        in v2.2.5); the deprecated /api/readiness/composite is no longer used. -->
   <!-- Oggi + Questa settimana affiancati (metà larghezza ciascuno su desktop) -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;">
-  <div class="card" data-card=" class="card" style="margin-bottom:0;" id="today-card"" style="margin-bottom:0;" id="today-card">
+  <div class="card" data-card="today" style="margin-bottom:0;" id="today-card">
     <h3>Oggi</h3>
     <!-- PCC 5.x — Fatigue traffic-light (RLGL-style). Backed by /api/readiness
          fatigue_signal; single source of truth = readiness engine severity. -->
@@ -1998,7 +2046,7 @@ window.addEventListener('unhandledrejection', function(e) {
         <svg onclick="document.querySelector('.tab[data-tab=settings]').click()" style="cursor:pointer;opacity:0.5;transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </div>
     </div>
-    <div id="weekly-calendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;"></div>
+    <div id="weekly-calendar" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:8px;"></div>
     <div id="weekly-rollup"></div>
     <div class="weekly-bar" id="weekly-summary" style="margin-top:8px;"></div>
   </div>
@@ -2016,7 +2064,7 @@ window.addEventListener('unhandledrejection', function(e) {
        this panel makes the CAUSE legible so the user knows why today's
        prescription was adjusted — and one-clicks the tier-down button above
        when the prior week was an overreach. -->
-  <div class="card" data-card=" class="card" style="margin-bottom:12px;" id="last-week-feedback-card"" style="margin-bottom:12px;" id="last-week-feedback-card">
+  <div class="card" data-card="last-week-feedback" style="margin-bottom:12px;" id="last-week-feedback-card">
     <h3>Settimana scorsa — confronto carico effettivo</h3>
     <div id="last-week-feedback-content" style="font-size:12px;color:var(--text2);">
       Loading…
@@ -2043,7 +2091,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 
   <!-- BETA: heatmap TID settimanale (POL 80/20) -->
-  <div class="card" data-card=" class="card" style="margin-top:12px;" id="tid-heatmap-card"" style="margin-top:12px;" id="tid-heatmap-card">
+  <div class="card" data-card="tid-heatmap" style="margin-top:12px;" id="tid-heatmap-card">
     <h3 data-tip="Distribuzione intensità settimanale (TID). Ogni riga = una settimana di allenamento: verde = facile (Z1-Z2, ~80%), giallo = soglia moderata (Z3, da evitare), rosso = duro (Z4+). Obiettivo polarizzato 80/0/20 (Stöggl & Sperlich 2014).">Distribuzione intensità settimanale <button class="btn btn-sm" style="font-size:10px;padding:2px 6px;" onclick="loadTidHeatmap()">Aggiorna</button></h3>
     <div id="tid-heatmap" style="display:flex;flex-direction:column;gap:4px;"></div>
     <div style="font-size:10px;color:var(--text3);margin-top:6px;">Verde = facile (Z1-Z2) · Giallo = Z3 (soglia) · Rosso = duro (Z4+)</div>
@@ -2075,13 +2123,13 @@ window.addEventListener('unhandledrejection', function(e) {
     <div id="supplement-plan" style="font-size:12px;color:var(--text2);margin-top:6px;">Caricamento…</div>
   </details>
 
-  <div class="card" data-card=" class="card" style="margin-top:12px;" id="daily-adapt-card"" style="margin-top:12px;" id="daily-adapt-card">
+  <div class="card" data-card="daily-adapt" style="margin-top:12px;" id="daily-adapt-card">
     <h3 data-tip="Adattamento giornaliero (BETA): combina HRV (rMSSD), DFA a1, sonno e TSB del giorno in un fattore di carico 0.80-1.10. HRV-guided training (Casanova-Lizon 2025), Hooper 1995, DFA a1 (Rogers 2021).">Adattamento giornaliero</h3>
     <div id="daily-adapt" style="font-size:12px;color:var(--text2);">Calcolo…</div>
   </div>
 
   <!-- BETA Fase 7a: Forza e Mobilita -->
-    <div class="card" data-card=" class="card" style="margin-top:12px;" id="strength-card"" style="margin-top:12px;" id="strength-card">
+    <div class="card" data-card="strength" style="margin-top:12px;" id="strength-card">
       <h3 data-tip="Forza in palestra (Llanos-Lagos 2025, meta-analisi 17 studi/262 ciclisti: la forza pesante migliora efficienza di pedalata + TT). Mobilità quotidiana 15 min (Warneke 2025) riduce infortuni.">Forza & Mobilità</h3>
       <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
         <select id="strength-phase" style="font-size:11px;padding:3px 6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;">
@@ -2550,7 +2598,7 @@ window.addEventListener('unhandledrejection', function(e) {
       <h3 style="margin:0;font-size:14px;">Season Timeline</h3>
       <span id="st-period-label" style="font-size:11px;color:var(--text3);"></span>
     </div>
-    <div id="st-timeline-wrap" style="position:relative;overflow-x:auto;padding:4px 0;">
+    <div id="st-timeline-wrap" style="position:relative;overflow-x:auto;min-width:0;padding:4px 0;">
       <div id="st-timeline" style="position:relative;width:100%;min-width:600px;height:80px;background:var(--surface2);border-radius:8px;overflow:hidden;">
         <div id="st-bars" style="position:absolute;top:0;left:0;right:0;bottom:0;"></div>
         <div id="st-labels" style="position:absolute;bottom:2px;left:0;right:0;display:flex;font-size:9px;color:var(--text3);"></div>
@@ -2656,7 +2704,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 
   <div class="grid g2" style="margin-bottom:12px;">
-    <div class="card" data-card=" class="card" id="plan-config"" id="plan-config">
+    <div class="card" data-card="plan-config" id="plan-config">
       <h3>Configurazione piano</h3>
       <!-- 3.4.2 M6 §5 — dichotomous MODE chooser leads the form. "Continuous"
            left the Goal dropdown: the two cards are the goal-vs-continuous
@@ -3401,7 +3449,7 @@ window.addEventListener('unhandledrejection', function(e) {
        Read-only grid over /api/rider-stats; every value carries provenance
        {value, source, source_date} and greys out when its source_date is
        stale. Empty-states render "—" + a calibrate hint, never numbers. -->
-  <div class="card" data-card=" class="card" id="rider-stats-card"" style="margin-bottom:12px;" id="rider-stats-card" style="margin-bottom:12px;">
+  <div class="card" data-card="rider-stats" id="rider-stats-card" style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <h3 style="margin:0;">Profilo ciclista</h3>
       <span style="font-size:10px;color:var(--text3);">picchi: finestra 90g · grigio = obsoleto</span>
@@ -3576,7 +3624,7 @@ window.addEventListener('unhandledrejection', function(e) {
        the only surviving filter; "an effort = an effort"). Backfill toast
        fires when n_rides<30 + ICU has more list entries than locally cached
        (PATCH G3 single-flight). Feature flag: window.FEATURES.power_curve. -->
-  <div class="card" data-card=" class="card" style="margin-bottom:12px;" id="power-curve-card"" style="margin-bottom:12px;" id="power-curve-card">
+  <div class="card" data-card="power-curve" style="margin-bottom:12px;" id="power-curve-card">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <h3 style="margin:0;">Power Curve</h3>
@@ -3943,7 +3991,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 
   <!-- Connections (Intervals.icu) -->
-  <div class="card" data-card=" class="card" style="margin-top:12px;" id="icu-connection-card"" style="margin-top:12px;" id="icu-connection-card">
+  <div class="card" data-card="icu-connection" style="margin-top:12px;" id="icu-connection-card">
     <h3>Connessioni</h3>
 
     <!-- Intervals.icu — OAuth "Connect" is primary; API key is the manual fallback. -->
@@ -4541,7 +4589,7 @@ function _createToast(entry) {
     tc.id = 'toast-container';
     tc.setAttribute('aria-live', 'polite');
     tc.setAttribute('role', 'status');
-    tc.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    tc.style.cssText = 'position:fixed;bottom:24px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
     document.body.appendChild(tc);
   }
   const t = document.createElement('div');
@@ -9062,8 +9110,10 @@ async function loadHome() {
 // BETA — heatmap TID settimanale (POL 80/20). Legge /api/tid-weekly e disegna
 // una riga per settimana: barre verdi (Z1-Z2), gialle (Z3), rosse (Z4+).
 async function loadTidHeatmap() {
+  if (window._tidLoading) return;   // v5.4.7: guard anti-doppio-click
+  window._tidLoading = true;
   const host = document.getElementById('tid-heatmap');
-  if (!host) return;
+  if (!host) { window._tidLoading = false; return; }
   try {
     const res = await fetch('/api/tid-weekly?weeks=8');
     if (!res.ok) return;
@@ -9088,6 +9138,7 @@ async function loadTidHeatmap() {
       </div>`;
     }).join('');
   } catch (e) { /* non bloccare il resto della UI */ }
+  finally { window._tidLoading = false; }   // v5.4.7: reset guard anti-doppio-click
   loadDailyAdapt();
   loadNutrition();
   loadMyCalendar();
@@ -9782,8 +9833,10 @@ async function injectStrength() {
 }
 
 async function loadMyCalendar() {
+  if (window._myCalLoading) return;   // v5.4.7: guard anti-doppio-click
+  window._myCalLoading = true;
   const host = document.getElementById('my-calendar');
-  if (!host) return;
+  if (!host) { window._myCalLoading = false; return; }
   try {
     const j = await (await fetch('/api/my-calendar')).json();
     const rows = j.rows || [];
@@ -9810,6 +9863,7 @@ async function loadMyCalendar() {
     }).join('');
     host.innerHTML = `<div style="font-size:10px;color:var(--text3);margin-bottom:4px;">■ pianificato &nbsp; ■ eseguito</div>` + body + (j.note? `<div style="font-size:10px;color:var(--text3);margin-top:6px;">${esc(j.note)}</div>`:'');
   } catch (e) { host.textContent = 'Calendario non disponibile'; }
+  finally { window._myCalLoading = false; }   // v5.4.7: reset guard anti-doppio-click
 }
 async function myPushPlan() {
   const host = document.getElementById('my-calendar');

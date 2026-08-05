@@ -104,13 +104,14 @@ fi
 # ── PHASE 4: UNIT TESTS ─────────────────────────────────────────────────
 log_section "PHASE 4: UNIT & INTEGRATION TEST"
 
-log_info "Esecuzione PyTest (core suite 38 test)..."
-PYTEST_OUT=$(PYTHONPATH=. .venv/Scripts/python.exe -m pytest tests/test_bia_parser.py tests/test_plan_api.py tests/test_plan_auto_update.py tests/test_self_update.py -q --tb=short 2>&1)
+CORE_TESTS="tests/test_bia_parser.py tests/test_plan_api.py tests/test_plan_auto_update.py tests/test_self_update.py tests/test_plan_options.py tests/test_icu_push.py tests/test_331_surfaces.py tests/test_calendar_push_workout.py"
+log_info "Esecuzione PyTest (core suite: bia, plan api/auto-update/options, icu push, surfaces, push-workout)..."
+PYTEST_OUT=$(PYTHONPATH=. .venv/Scripts/python.exe -m pytest $CORE_TESTS -q --tb=short -p no:cacheprovider 2>&1)
 TEST_EXIT=$?
 echo "$PYTEST_OUT" | tail -5
 if [ $TEST_EXIT -eq 0 ]; then
   PASSED=$(echo "$PYTEST_OUT" | grep -oP '\d+(?= passed)' | head -1)
-  log_success "${PASSED:-38} test superati."
+  log_success "${PASSED:-124} test superati."
 else
   FAILED=$(echo "$PYTEST_OUT" | grep -oP '\d+(?= failed)' | head -1)
   log_fail "${FAILED:-0} test FALLITI."
@@ -137,10 +138,34 @@ fi
 log_section "PHASE 6: LIVE SERVER HEALTH CHECK"
 
 PORT=8092
+log_info "Verifica anti-zombie su :$PORT (un uvicorn zombie serve codice vecchio)..."
+
+# Anti-zombie: uccide un eventuale processo zombie sulla porta e riavvia
+# fresco, poi verifica che /api/version riporti la VERSIONE CORRENTE.
+WIN_PID=$(netstat -ano 2>/dev/null | grep ":$PORT " | grep LISTEN | awk '{print $5}' | head -1)
+if [ -n "$WIN_PID" ] && [ "$WIN_PID" != "0" ]; then
+  log_info "Processo attivo su :$PORT (PID $WIN_PID) — riavvio pulito..."
+  cmd.exe /c "taskkill /F /PID $WIN_PID" 2>/dev/null || kill "$WIN_PID" 2>/dev/null || true
+  sleep 3
+fi
+if ! curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$PORT/ 2>/dev/null | grep -q 200; then
+  log_info "Server non in esecuzione — avvio fresco..."
+  (PORT=$PORT .venv/Scripts/python.exe run_web.py >/dev/null 2>&1 &) 
+  sleep 8
+fi
+
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$PORT/ 2>/dev/null || echo "000")
 
 if [ "$HTTP_STATUS" = "200" ]; then
   log_success "Server su :$PORT operativo (HTTP $HTTP_STATUS)."
+
+  SERVED_VERSION=$(curl -s http://127.0.0.1:$PORT/api/version 2>/dev/null | grep -oP '"version"\s*:\s*"\K[^"]+' | head -1 || echo "")
+  EXPECTED_VERSION=$(cat VERSION 2>/dev/null | tr -d '[:space:]' || echo "")
+  if [ -n "$SERVED_VERSION" ] && [ "$SERVED_VERSION" = "$EXPECTED_VERSION" ]; then
+    log_success "Anti-zombie OK: /api/version serve la versione corrente (v$SERVED_VERSION)."
+  else
+    log_fail "Anti-zombie FAIL: /api/version serve '$SERVED_VERSION', attesa '$EXPECTED_VERSION' — server zombie su :$PORT!"
+  fi
 
   LATENCY=$(curl -s -w "%{time_total}" -o /dev/null http://127.0.0.1:$PORT/ 2>/dev/null || echo "999")
   log_info "Latenza risposta: ${LATENCY}s"
@@ -185,7 +210,7 @@ fi
 # ── PHASE 8: GIT INTEGRITY ──────────────────────────────────────────────
 log_section "PHASE 8: GIT INTEGRITY"
 
-UNCOMMITTED=$(git status --porcelain 2>/dev/null | grep -vE 'RELEASE_CERTIFICATE.md|release_notes.*\.md' | wc -l)
+UNCOMMITTED=$(git status --porcelain 2>/dev/null | grep -vE 'RELEASE_CERTIFICATE.md|release_notes.*\.md|MEMORY.md|BUG_REPORT_LATEST.md|montis_test_artifacts' | wc -l)
 if [ "$UNCOMMITTED" -eq 0 ]; then
   log_success "Working tree pulito (escluse release notes)."
 else

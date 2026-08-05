@@ -23269,12 +23269,15 @@ def api_onboarding_complete(body: dict):
     icu_connected = body.get("icu_connected", False)
     
     # 4) Import recent activities if requested and ICU connected
+    # v5.4.7 fix: prima chiamava reconcile(days_back=30, push_future=False) —
+    # firma inesistente (TypeError inghiottito da except) → l'import non
+    # importava MAI nulla. Ora usa db.run_sync (pattern canonico di sync ICU).
     imported = 0
     if body.get("import_recent") and icu_connected:
         try:
-            from icu_calendar_push import reconcile
-            result = reconcile(days_back=30, push_future=False)
-            imported = result.get("imported", 0) + result.get("synced", 0)
+            import db as _db
+            result = _db.run_sync(days=30)
+            imported = int(result.get("activities", 0) or 0) + int(result.get("wellness", 0) or 0)
         except Exception as e:
             # Non-fatal
             pass
