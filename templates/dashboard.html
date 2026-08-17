@@ -1823,6 +1823,7 @@ window.addEventListener('unhandledrejection', function(e) {
   <div class="tab" data-tab="plan">Piano di allenamento</div>
   <div class="tab" data-tab="analysis">Analisi</div>
   <div class="tab" data-tab="dfa">DFA α1</div>
+  <div class="tab" data-tab="hrv">HRV</div>
   <div class="tab" data-tab="nutrition">Alimentazione</div>
   <div class="tab" data-tab="bia">Composizione</div>
   <div class="tab" data-tab="settings">Impostazioni</div>
@@ -2201,6 +2202,36 @@ window.addEventListener('unhandledrejection', function(e) {
       <h3>Attività recenti</h3>
       <input id="recent-activities-search" type="text" placeholder="🔍 Cerca tra le tue uscite…" oninput="renderRecentActivities(this.value)" style="width:100%;margin:0 0 10px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:12px;" />
       <div id="recent-activities" class="loading">Caricamento...</div>
+    </div>
+  </div>
+
+  <!-- v5.5.0 — Huawei Health / HRV card (task #20). Mostra ultimo RMSSD,
+       baseline 7d/30d, deviazione %, qualità, sorgente. Caricata da
+       /api/huawei/hrv/daily. Se vuoto → CTA import export. -->
+  <div class="card" id="card-hrv" style="grid-column: span 4;">
+    <h3>❤️ Huawei Health / HRV</h3>
+    <div id="hrv-empty" style="font-size:12px;color:var(--text2);">
+      Nessun dato HRV importato.
+      <button class="btn" style="margin-top:8px;font-size:11px;padding:6px 10px;"
+              onclick="openHuaweiImport()">📥 Importa export Huawei</button>
+    </div>
+    <div id="hrv-content" style="display:none;">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+        <div><div style="font-size:11px;color:var(--text3);">RMSSD oggi</div>
+             <div id="hrv-rmssd" style="font-size:24px;font-weight:700;color:var(--accent);">—</div></div>
+        <div><div style="font-size:11px;color:var(--text3);">Baseline 7d</div>
+             <div id="hrv-base7" style="font-size:20px;font-weight:600;">—</div></div>
+        <div><div style="font-size:11px;color:var(--text3);">Baseline 30d</div>
+             <div id="hrv-base30" style="font-size:20px;font-weight:600;">—</div></div>
+        <div><div style="font-size:11px;color:var(--text3);">Deviazione</div>
+             <div id="hrv-dev" style="font-size:20px;font-weight:600;">—</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);">
+        Qualità: <span id="hrv-quality">—</span> ·
+        Campioni: <span id="hrv-samples">—</span> ·
+        Sorgente: <span id="hrv-source">—</span>
+      </div>
+      <canvas id="hrv-chart" height="80" style="margin-top:10px;width:100%;"></canvas>
     </div>
   </div>
 
@@ -3748,6 +3779,81 @@ window.addEventListener('unhandledrejection', function(e) {
   <div id="dfa-perride-host" style="display:none;"></div>
 </div>
 
+<!-- ═══ HRV (Huawei Health / Intervals.icu) — PCC v5.5.0 ═══════════════ -->
+<div class="section" id="sec-hrv">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+    <h2 style="margin:0;">HRV &amp; Huawei Health</h2>
+    <span id="hrv-source-badge" class="badge" style="font-size:11px;color:var(--text2);"></span>
+  </div>
+  <p style="color:var(--text2);font-size:13px;max-width:780px;">
+    Elaborazione HRV locale da export Huawei Health: intervalli RR/NN →
+    pulizia artefatti → RMSSD/SDNN calcolati localmente → baseline 7/14/30g.
+    I dati grezzi restano solo nel database locale; verso Intervals.icu
+    vengono inviate solo le metriche aggregate (rmssd/sdnn).
+    <b>Indicatore di training/recovery, non diagnosi medica.</b>
+  </p>
+
+  <!-- KPI cards -->
+  <div class="grid g3" style="margin:14px 0 18px;">
+    <div class="card" id="hrv-card-today">
+      <div style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">RMSSD oggi</div>
+      <div id="hrv-today-rmssd" style="font-size:34px;font-weight:800;line-height:1.1;">—</div>
+      <div id="hrv-today-meta" style="font-size:12px;color:var(--text3);"></div>
+    </div>
+    <div class="card" id="hrv-card-baseline">
+      <div style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">Baseline 7g / 30g</div>
+      <div id="hrv-baseline" style="font-size:24px;font-weight:700;line-height:1.3;">—</div>
+      <div id="hrv-deviation" style="font-size:13px;"></div>
+    </div>
+    <div class="card" id="hrv-card-quality">
+      <div style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">Qualità &amp; dettaglio</div>
+      <div id="hrv-quality" style="font-size:20px;font-weight:700;">—</div>
+      <div id="hrv-detail" style="font-size:12px;color:var(--text3);"></div>
+    </div>
+  </div>
+
+  <!-- Grafico RMSSD giornaliero + rolling 7d + baseline -->
+  <div class="card" style="margin-bottom:18px;">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:6px;">
+      RMSSD giornaliero · media mobile 7g · baseline
+    </div>
+    <canvas id="hrvChart" height="120"></canvas>
+  </div>
+
+  <!-- Tabella metriche avanzate (local-only) -->
+  <div class="card">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:8px;">
+      Metriche calcolate (archivio locale — non tutte sincronizzate con Intervals)
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="color:var(--text3);text-align:left;">
+          <th style="padding:4px 8px;">Metrica</th>
+          <th style="padding:4px 8px;">Valore</th>
+          <th style="padding:4px 8px;">Unità</th>
+          <th style="padding:4px 8px;">Sync ICU</th>
+        </tr>
+      </thead>
+      <tbody id="hrv-metrics-body">
+        <tr><td colspan="4" style="padding:8px;color:var(--text3);">Caricamento…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Import Huawei -->
+  <div class="card" style="margin-top:18px;">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:8px;">Import export Huawei</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <input id="hrv-import-path" type="text" placeholder="C:/percorso/export_huawei.zip"
+             style="flex:1;min-width:220px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);">
+      <button id="hrv-import-btn" class="btn" onclick="hrvImport()">Importa e calcola</button>
+      <button class="btn btn-ghost" onclick="hrvExport()">Esporta CSV</button>
+    </div>
+    <div id="hrv-import-status" style="font-size:12px;color:var(--text3);margin-top:6px;"></div>
+  </div>
+</div>
+
+
 <!-- ═══ ALIMENTAZIONE (PCC — scheda dedicata) ═══════════════════════════ -->
 <div class="section" id="sec-nutrition">
   <!-- PCC 5.x — Metabolic decoder (INSCYD-style lab->training view). Backed by
@@ -4520,6 +4626,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(t => {
                      }, settings:()=>{loadSettings();loadIcuConnection();icuCalSyncRefresh();loadTerraConnection();}, library:loadWorkouts,
                      analysis:()=>{ if (typeof loadAnalysisTab === 'function') loadAnalysisTab(); },
                      dfa:()=>{ if (typeof loadDfaTab === 'function') loadDfaTab(); },
+                     hrv:()=>{ if (typeof loadHrvTab === 'function') loadHrvTab(); },
                      nutrition:()=>{ if (typeof loadNutriPlan === 'function') { loadNutriPlan(); renderNutriCompare(); } },
                      bia:()=>{ if (typeof loadBIAHistory === 'function') loadBIAHistory(); },
                      whatsnew:()=>{ if (typeof loadWhatsNew === 'function') loadWhatsNew(); },
@@ -9090,6 +9197,8 @@ async function loadHome() {
     loadBodyPerf();
     // v1.1.0 IMPL-HRV-RECOVERY — Readiness today (composite, 0-10).
     loadReadinessComposite();
+    // v5.5.0 — Huawei Health / HRV card (task #20). Non bloccante.
+    try { loadHrvCard(); } catch(_) {}
     // v1.8.8 Bug 3 — last ride DFA α1 snapshot in the readiness card.
     try { loadHomeSnapshotDfa(activities); } catch(_) {}
     // v1.7.6 — last week feedback panel (planned vs actual + overreach).
@@ -10256,6 +10365,80 @@ async function _renderDfaCard(host, d) {
     diag = parts.length ? parts.join('; ') : 'no DFA computed yet';
   }
   host.innerHTML = `<span style="color:var(--text3);">DFA α1 — no recent HRV rides <span style="color:var(--text3);font-size:11px;">(${esc(diag)})</span></span>`;
+}
+
+// ── v5.5.0 — Huawei Health / HRV card (task #20) ──────────────────────────
+async function loadHrvCard() {
+  const empty = document.getElementById('hrv-empty');
+  const content = document.getElementById('hrv-content');
+  if (!empty || !content) return;
+  try {
+    const res = await fetch('/api/huawei/hrv/daily?start=2000-01-01&end=2100-01-01');
+    if (!res.ok) return;
+    const d = await res.json();
+    const rows = (d.rows || []).filter(r => r.rmssd_ms != null);
+    if (!rows.length) { empty.style.display = 'block'; content.style.display = 'none'; return; }
+    empty.style.display = 'none'; content.style.display = 'block';
+    const today = rows[rows.length - 1];
+    document.getElementById('hrv-rmssd').textContent = today.rmssd_ms.toFixed(1) + ' ms';
+    document.getElementById('hrv-quality').textContent = today.quality_category || '—';
+    document.getElementById('hrv-samples').textContent = today.sample_count || '—';
+    document.getElementById('hrv-source').textContent = today.source || '—';
+    // baseline 7d / 30d dalla serie storica
+    const last7 = rows.slice(-7), last30 = rows.slice(-30);
+    const avg = a => a.reduce((s, r) => s + r.rmssd_ms, 0) / a.length;
+    document.getElementById('hrv-base7').textContent = avg(last7).toFixed(1) + ' ms';
+    document.getElementById('hrv-base30').textContent = avg(last30).toFixed(1) + ' ms';
+    const dev = (today.rmssd_ms - avg(last7)) / avg(last7) * 100;
+    const devEl = document.getElementById('hrv-dev');
+    devEl.textContent = (dev >= 0 ? '+' : '') + dev.toFixed(0) + '%';
+    devEl.style.color = dev < -10 ? 'var(--red)' : (dev > 10 ? 'var(--green)' : 'var(--text2)');
+    drawHrvChart(rows);
+  } catch (e) { /* non bloccante */ }
+}
+
+function drawHrvChart(rows) {
+  const cv = document.getElementById('hrv-chart');
+  if (!cv || typeof Chart === 'undefined') return;
+  const labels = rows.map(r => r.date);
+  const data = rows.map(r => r.rmssd_ms);
+  if (window._hrvChart) window._hrvChart.destroy();
+  window._hrvChart = new Chart(cv.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'RMSSD (ms)', data,
+      borderColor: getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#dc2626',
+      fill: false, tension: 0.3, pointRadius: 2 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { maxTicksLimit: 8, font: { size: 9 } } },
+                y: { ticks: { font: { size: 9 } } } } }
+  });
+}
+
+// Dialog import export Huawei (task #3/#34)
+function openHuaweiImport() {
+  const path = prompt('Percorso dell\'export Huawei (ZIP/CSV/JSON/XML o cartella):');
+  if (!path) return;
+  const btn = event && event.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Importazione…'; }
+  fetch('/api/huawei/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, source: 'huawei_health', sync_to_icu: false })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      const rmssd = d.daily_hrv && d.daily_hrv.rmssd_ms;
+      alert('Import completato.\nRR/NN: ' + d.rr_count + '\nRMSSD: ' +
+            (rmssd != null ? rmssd.toFixed(1) + ' ms' : 'n/d') +
+            (d.icu_sync && d.icu_sync.ok ? '\nSync ICU: OK' : ''));
+      loadHrvCard();
+    } else {
+      alert('Errore import: ' + (d.error || 'sconosciuto') +
+            (d.warnings && d.warnings.length ? '\n' + d.warnings.join('\n') : ''));
+    }
+  }).catch(e => alert('Errore: ' + e)).finally(() => {
+    if (btn) { btn.disabled = false; btn.textContent = '📥 Importa export Huawei'; }
+  });
 }
 
 async function loadHomeSnapshotDfa(_activitiesUnused) {
@@ -23927,6 +24110,128 @@ document.addEventListener('DOMContentLoaded', function() {
   footer.innerHTML = '<a href="#" onclick="event.preventDefault();openDiagnosticsModal();" style="color:var(--text3);text-decoration:none;">Diagnostica</a>';
   container.appendChild(footer);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HRV / Huawei Health tab (PCC v5.5.0) — task #10/#20
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _hrvChart = null;
+
+async function loadHrvTab() {
+  try {
+    const res = await fetch('/api/huawei/hrv/summary');
+    const d = await res.json();
+    if (!d.ok || !d.has_data) {
+      document.getElementById('hrv-today-rmssd').textContent = '—';
+      document.getElementById('hrv-baseline').textContent = '—';
+      document.getElementById('hrv-quality').textContent = '—';
+      document.getElementById('hrv-metrics-body').innerHTML =
+        '<tr><td colspan="4" style="padding:8px;color:var(--text3);">'
+        + (d.message || 'Nessun dato HRV. Usa "Importa e calcola" con un export Huawei.') + '</td></tr>';
+      return;
+    }
+    const L = d.latest;
+    document.getElementById('hrv-today-rmssd').textContent =
+      (L.rmssd_ms != null ? L.rmssd_ms.toFixed(1) : '—') + ' ms';
+    document.getElementById('hrv-today-meta').textContent =
+      'SDNN ' + (L.sdnn_ms != null ? L.sdnn_ms.toFixed(1) : '—') + ' ms · ' + (L.date || '');
+    document.getElementById('hrv-source-badge').textContent =
+      (L.source || '') + ' · ' + (L.calculation_method || '');
+
+    const b7 = d.baselines['7d'], b30 = d.baselines['30d'];
+    document.getElementById('hrv-baseline').textContent =
+      (b7.mean_rmssd != null ? b7.mean_rmssd.toFixed(1) : '—') + ' / '
+      + (b30.mean_rmssd != null ? b30.mean_rmssd.toFixed(1) : '—') + ' ms';
+    const dev = d.deviation && d.deviation.vs_7d;
+    const devEl = document.getElementById('hrv-deviation');
+    if (dev && dev.deviation_pct != null) {
+      const up = dev.deviation_pct >= 0;
+      devEl.style.color = up ? 'var(--green)' : '#f97316';
+      devEl.textContent = (up ? '▲ +' : '▼ ') + dev.deviation_pct + '% vs 7g';
+    } else { devEl.textContent = ''; }
+
+    document.getElementById('hrv-quality').textContent =
+      (L.quality_category || '—') + ' (' + (L.quality_score != null ? L.quality_score.toFixed(2) : '—') + ')';
+    document.getElementById('hrv-detail').textContent =
+      'n=' + (L.sample_count != null ? L.sample_count : '—') + ' · '
+      + (L.duration_seconds != null ? Math.round(L.duration_seconds) : '—') + 's · '
+      + 'HR ' + (L.mean_hr != null ? L.mean_hr.toFixed(0) : '—');
+
+    renderHrvMetricsTable(L);
+    renderHrvChart(d.trend_7d);
+  } catch (e) {
+    console.error('loadHrvTab', e);
+  }
+}
+
+function renderHrvMetricsTable(L) {
+  const rows = [
+    ['RMSSD', L.rmssd_ms, 'ms', 'Sì'],
+    ['SDNN', L.sdnn_ms, 'ms', 'Sì'],
+    ['Mean HR', L.mean_hr, 'bpm', 'No'],
+    ['pNN50', L.pnn50_pct, '%', 'No'],
+    ['SDANN', L.sdann_ms, 'ms', 'No'],
+    ['HRV triangular', L.hrv_triangular_index, 'index', 'No'],
+    ['LF', L.lf_ms2, 'ms²', 'No'],
+    ['HF', L.hf_ms2, 'ms²', 'No'],
+    ['LF/HF', L.lf_hf_ratio, 'ratio', 'No'],
+  ];
+  const body = document.getElementById('hrv-metrics-body');
+  body.innerHTML = rows.map(r => {
+    const val = (r[1] == null) ? '<span style="color:var(--text3)">n/d</span>' : r[1];
+    const synced = r[3] === 'Sì'
+      ? '<span style="color:var(--green)">Sì</span>'
+      : '<span style="color:var(--text3)">locale</span>';
+    return '<tr><td style="padding:4px 8px;">' + r[0] + '</td>'
+      + '<td style="padding:4px 8px;font-weight:600;">' + val + '</td>'
+      + '<td style="padding:4px 8px;color:var(--text3);">' + r[2] + '</td>'
+      + '<td style="padding:4px 8px;">' + synced + '</td></tr>';
+  }).join('');
+}
+
+function renderHrvChart(trend) {
+  const canvas = document.getElementById('hrvChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const labels = (trend || []).map(t => t.date);
+  const data = (trend || []).map(t => t.rolling_7d);
+  if (_hrvChart) _hrvChart.destroy();
+  _hrvChart = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'RMSSD rolling 7g', data,
+      borderColor: 'rgba(220,38,38,0.9)', backgroundColor: 'rgba(220,38,38,0.12)',
+      fill: true, tension: 0.3, pointRadius: 2,
+    }]},
+    options: { responsive: true, maintainAspectRatio: false,
+      scales: { y: { title: { display: true, text: 'ms' } } },
+      plugins: { legend: { display: false } } }
+  });
+}
+
+async function hrvImport() {
+  const path = document.getElementById('hrv-import-path').value.trim();
+  const status = document.getElementById('hrv-import-status');
+  if (!path) { status.textContent = 'Inserisci il percorso dell\'export.'; return; }
+  status.textContent = 'Import in corso…';
+  try {
+    const res = await fetch('/api/huawei/import', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ path, source: 'huawei_health', sync_to_icu: false })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      status.textContent = 'Import OK — RR=' + d.rr_count
+        + (d.daily_hrv ? ' · RMSSD=' + (d.daily_hrv.rmssd_ms||0).toFixed(1) + 'ms' : '');
+      loadHrvTab();
+    } else {
+      status.textContent = 'Errore: ' + (d.error || JSON.stringify(d));
+    }
+  } catch (e) { status.textContent = 'Errore: ' + e.message; }
+}
+
+function hrvExport() {
+  window.open('/api/huawei/hrv/export?format=csv', '_blank');
+}
 </script>
 <div class="section" id="sec-whatsnew">
   <h2 style="margin:0 0 4px;">Novita di PCC 5.2</h2>

@@ -11120,6 +11120,115 @@ def api_calendar_push_workout(body: "dict | None" = None):
         return {"error": f"internal:{type(e).__name__}"}
 
 
+# ════════════════════════════════════════════════════════════════════════════
+# HUAWEI HEALTH / HRV ENGINE  (v5.5.0 — task #10/#25)
+# Motore HRV riutilizzabile: import export → RR/NN → cleaning → RMSSD/SDNN
+# → DailyHRV → baseline → sync Intervals (solo metriche aggregate).
+# Import lazy per non gravare sul boot del server.
+# ════════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/huawei/hrv")
+def api_huawei_hrv_calc(body: dict = Body(default={})):
+    """POST /api/huawei/hrv — calcola metriche HRV da RR/NN inviati.
+
+    Body: {"timestamp": "...", "rr_intervals": [812, 804, ...], "source": "..."}
+    o:     {"rr_points": [{"timestamp", "interval_ms"}, ...]}
+    Restituisce RMSSD/SDNN/quality calcolati LOCALMENTE (task #25/#38).
+    """
+    try:
+        from huawei_api import api_huawei_hrv_calculate
+        return api_huawei_hrv_calculate(body)
+    except Exception as e:
+        _log.exception("huawei hrv calc failed")
+        return {"error": f"internal:{type(e).__name__}"}
+
+
+@app.post("/api/huawei/import")
+def api_huawei_import(body: dict = Body(default={})):
+    """POST /api/huawei/import — importa un export Huawei dal disco.
+
+    Body: {"path": "/path/export.zip", "source": "huawei_health",
+           "sync_to_icu": false}
+    Flusso: RAW → extract RR → clean → RMSSD → DailyHRV → store → (ICU).
+    """
+    try:
+        from huawei_api import api_huawei_import as _imp
+        path = body.get("path")
+        if not path or not os.path.exists(path):
+            return {"error": "path_non_trovato", "path": path}
+        return _imp(
+            path,
+            source=body.get("source", "huawei_health"),
+            sync_to_icu=bool(body.get("sync_to_icu", False)),
+            athlete_id=body.get("athlete_id"),
+            api_key=body.get("api_key"),
+        )
+    except Exception as e:
+        _log.exception("huawei import failed")
+        return {"error": f"internal:{type(e).__name__}"}
+
+
+@app.get("/api/huawei/hrv/daily")
+def api_huawei_daily(start: str = Query("2000-01-01"),
+                      end: str = Query("2100-01-01")):
+    """GET DailyHRV in un range di date."""
+    try:
+        from huawei_api import api_huawei_daily
+        return {"rows": api_huawei_daily(start, end)}
+    except Exception as e:
+        _log.exception("huawei daily failed")
+        return {"error": f"internal:{type(e).__name__}"}
+
+
+@app.get("/api/huawei/hrv/export")
+def api_huawei_export_ep(format: str = Query("csv"),
+                         start: str = Query("2000-01-01"),
+                         end: str = Query("2100-01-01")):
+    """GET export DailyHRV come CSV o JSON (task #19)."""
+    try:
+        from huawei_api import api_huawei_export
+        data = api_huawei_export(format=format, start=start, end=end)
+        if format == "json":
+            return Response(content=data, media_type="application/json")
+        return Response(content=data, media_type="text/csv")
+    except Exception as e:
+        _log.exception("huawei export failed")
+        return {"error": f"internal:{type(e).__name__}"}
+
+
+@app.get("/api/huawei/hrv/debug")
+def api_huawei_debug_ep(path: str = Query(...)):
+    """GET trace debug SOURCE→FIELD→RAW→NORM→CALC→DEST (task #21)."""
+    try:
+        from huawei_api import api_huawei_debug
+        return api_huawei_debug(path)
+    except Exception as e:
+        _log.exception("huawei debug failed")
+        return {"error": f"internal:{type(e).__name__}"}
+
+
+@app.post("/api/huawei/health-sync")
+def api_huawei_health_sync(body: dict = Body(default={})):
+    """POST normalizza un record Health Sync (task #24)."""
+    try:
+        from huawei_api import health_sync_to_hrv
+        return health_sync_to_hrv(body)
+    except Exception as e:
+        _log.exception("huawei health-sync failed")
+        return {"error": f"internal:{type(e).__name__}"}
+
+
+@app.get("/api/huawei/hrv/summary")
+def api_huawei_summary_ep(end: str = Query("2100-01-01")):
+    """GET riepilogo HRV: ultimo valore + baseline 7/14/30 + deviazione + trend."""
+    try:
+        from huawei_api import api_huawei_summary
+        return api_huawei_summary(end=end)
+    except Exception as e:
+        _log.exception("huawei summary failed")
+        return {"error": f"internal:{type(e).__name__}"}
+
+
 @app.get("/api/icu/athlete-numbers")
 def api_icu_athlete_numbers():
     """Pull FTP / weight / LTHR / max-HR from the linked intervals.icu athlete so
