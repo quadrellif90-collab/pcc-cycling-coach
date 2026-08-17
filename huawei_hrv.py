@@ -316,6 +316,76 @@ def get_daily_hrv_range(start: str, end: str, db=None) -> List[Dict[str, Any]]:
     return [dict(zip(cols, r)) for r in cur.fetchall()]
 
 
+def import_icu_hrv(db=None) -> Dict[str, Any]:
+    """
+    Legge i dati HRV da Intervals.icu (già sincronizzati nel DB locale wellness)
+    e li normalizza rispettando la regola #15/#31:
+
+      * Intervals espone `hrv` (aggregato, AMBIGUO) → NON è rMSSD automatico.
+        Viene registrato come 'icu_hrv' (baseline di riferimento), mai come
+        rmssd_ms calcolato.
+      * Intervals espone `hrvSDNN` nel raw_json (quando il device lo misura) →
+        campo esplicito, utilizzabile come sdnn di confronto.
+      * RR/NN grezzi NON sono disponibili da Intervals → non possiamo calcolare
+        RMSSD/SDNN da zero; la metrica primaria resta quella calcolata da Huawei.
+
+    Restituisce un riepilogo dei giorni importati e il conteggio di quali campi
+    erano presenti. Utile per popolare hrv_baseline come confronto.
+    """
+    if get_db is None:
+        return {"ok": False, "error": "db non disponibile"}
+    conn = db or get_db()
+    try:
+        rows = conn.execute(
+            "SELECT date, hrv, raw_json FROM wellness ORDER BY date"
+        ).fetchall()
+    except sqlite3.Error as e:
+        return {"ok": False, "error": f"query wellness: {e}"}
+
+    imported = 0
+    hrv_present = 0
+    sdnn_present = 0
+    for date_s, hrv_val, raw_json in rows:
+        if not date_s:
+            continue
+        sdnn = None
+        if raw_json:
+            try:
+                rj = json.loads(raw_json)
+                sdnn = rj.get("hrvSDNN")
+            except (json.JSONDecodeError, TypeError):
+                pass
+        # registra solo se c'è almeno un dato HRV da Intervals
+        if hrv_val is None and sdnn is None:
+            continue
+        if hrv_val is not None:
+            hrv_present += 1
+        if sdnn is not None:
+            sdnn_present += 1
+        # NON inseriamo in daily_hrv (quello è per RMSSD calcolato localmente).
+        # Memorizziamo il riferimento Intervals in hrv_baseline come fonte esterna.
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO hrv_baseline
+                   (computed_on, window_days, mean_rmssd, median_rmssd, std_rmssd, cv_pct, count)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (f"icu:{date_s}", 1,
+                 float(hrv_val) if hrv_val is not None else None,
+                 None, None, None, 1),
+            )
+            imported += 1
+        except sqlite3.Error:
+            pass
+    conn.commit()
+    return {
+        "ok": True,
+        "days_with_icu_hrv": imported,
+        "icu_hrv_aggregated_present": hrv_present,
+        "icu_hrv_sdnn_present": sdnn_present,
+        "note": "Campo 'hrv' Intervals NON è rMSSD calcolato; usato solo come riferimento.",
+    }
+
+
 def export_csv(daily_list: List[Dict[str, Any]], path: str) -> None:
     """Esporta DailyHRV in CSV (task #19)."""
     import csv

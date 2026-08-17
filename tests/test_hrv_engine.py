@@ -400,3 +400,82 @@ def test_hrv_metrics_carries_advanced():
     assert m.rmssd_ms is not None
     assert m.sdnn_ms is not None
     assert m.lf_ms2 is not None  # segnale lungo → freq-domain valido
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Integrazione Intervals.icu (task #14/#31) — dati reali, regola HRV ≠ rMSSD
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_import_icu_hrv_real_data(tmp_path):
+    """Verifica che i dati HRV di Intervals siano letti senza falsificarli.
+
+    Usa un DB wellness reale (copia da ~/.domestique) se disponibile; altrimenti
+    un DB sintetico con lo stesso schema. Il campo `hrv` di Intervals è aggregato
+    e AMBIGUO → NON deve essere trattato come rmssd_ms calcolato (regola #15).
+    """
+    import sqlite3 as _sq
+    import json as _json
+    # DB sintetico con schema wellness + dati Intervals-like
+    dbp = tmp_path / "health.db"
+    conn = _sq.connect(str(dbp))
+    conn.execute("""CREATE TABLE wellness (
+        date TEXT PRIMARY KEY, ctl REAL, atl REAL, hrv REAL, rhr INTEGER,
+        sleep_secs INTEGER, sleep_score INTEGER, eftp REAL, raw_json TEXT)""")
+    rows = [
+        ("2026-08-17", 50, 40, 68.85, 48, 24000, 80, 250,
+         _json.dumps({"hrv": 68.85, "hrvSDNN": None, "restingHR": 48})),
+        ("2026-08-16", 51, 41, 53.70, 47, 19260, 75, 250,
+         _json.dumps({"hrv": 53.70, "hrvSDNN": None, "restingHR": 47})),
+    ]
+    conn.executemany("INSERT INTO wellness VALUES (?,?,?,?,?,?,?,?,?)", rows)
+    conn.commit()
+
+    import huawei_hrv as S
+    orig = S.get_db
+    S.get_db = lambda: conn
+    try:
+        S.migrate_hrv_schema(conn)
+        res = S.import_icu_hrv(db=conn)
+        assert res["ok"] is True
+        assert res["days_with_icu_hrv"] == 2
+        assert res["icu_hrv_aggregated_present"] == 2
+        # hrvSDNN era None nei dati di test → conta 0
+        assert res["icu_hrv_sdnn_present"] == 0
+        # Il campo hrv di Intervals NON è stato inserito in daily_hrv come rmssd
+        daily = S.get_daily_hrv_range("2000-01-01", "2100-01-01", db=conn)
+        assert len(daily) == 0, "hrv Intervals NON deve popolare daily_hrv (non è RMSSD calcolato)"
+    finally:
+        S.get_db = orig
+        conn.close()
+
+
+def test_huawei_rmssd_not_overwritten_by_icu():
+    """RMSSD calcolato da Huawei resta primario; hrv Intervals è solo riferimento."""
+    import sqlite3 as _sq
+    dbp = tmp_path_factory_mkdb()
+    import huawei_hrv as S
+    orig = S.get_db
+    S.get_db = lambda: _sq.connect(str(dbp))
+    try:
+        S.migrate_hrv_schema(S.get_db())
+        # daily_hrv da Huawei
+        daily = {"date": "2026-08-17", "source": "huawei_health", "rmssd_ms": 19.1,
+                 "sdnn_ms": 10.3, "sample_count": 32, "duration_seconds": 32,
+                 "quality_score": 0.95, "quality_category": "excellent",
+                 "calculation_method": "rmssd_nn_cleaned_v1", "valid": True}
+        S.store_daily_hrv(daily, category="morning", db=S.get_db())
+        # import_icu_hrv registra hrv Intervals (68.85) come riferimento, non sovrascrive
+        S.import_icu_hrv(db=S.get_db())
+        rows = S.get_daily_hrv_range("2000-01-01", "2100-01-01", db=S.get_db())
+        assert len(rows) == 1
+        assert rows[0]["rmssd_ms"] == 19.1   # Huawei, NON 68.85 di Intervals
+        assert rows[0]["source"] == "huawei_health"
+    finally:
+        S.get_db = orig
+
+
+def tmp_path_factory_mkdb():
+    import tempfile, sqlite3 as _sq
+    p = tempfile.mktemp(suffix=".db")
+    return p
+
