@@ -11120,6 +11120,22 @@ def api_calendar_push_workout(body: "dict | None" = None):
         return {"error": f"internal:{type(e).__name__}"}
 
 
+@app.post("/api/huawei/hrv/manual")
+def api_huawei_manual_hrv(body: dict = Body(default={})):
+    """POST scrittura manuale dati HRV su Intervals.icu (task #25/#31).
+    
+    Scrive dati HRV aggiuntivi oltre i soli hrvRmssd/hrvSdnn,
+    rispettando la regola #15 (hrv generico ≠ rMSSD).
+    """
+    try:
+        from huawei_api import api_huawei_manual_hrv
+        return api_huawei_manual_hrv(body)
+    except Exception as e:
+        _log.exception("huawei manual hrv failed")
+        return {"error": f"internal:{type(e).__name__}"}
+
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # HUAWEI HEALTH / HRV ENGINE  (v5.5.0 — task #10/#25)
 # Motore HRV riutilizzabile: import export → RR/NN → cleaning → RMSSD/SDNN
