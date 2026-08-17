@@ -563,7 +563,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; h
   border-radius: 5px; cursor: pointer;
 }
 .cal-toolbar .cal-jump-btn:hover { background: var(--accent); color: #fff; }
-/* v5.4.7 — QA: #upstream-badge (versione, es. "✅ Domestique v3.7.0") è l'ultimo
+/* v5.4.7 — QA: #upstream-badge (versione, es. "✅ PCC v3.7.0") è l'ultimo
    item della toolbar flex e con min-width:auto contribuisce al min-content
    della card → overflow orizzontale su mobile. Ellipsis + contenimento. */
 #upstream-badge {
@@ -3781,11 +3781,11 @@ window.addEventListener('unhandledrejection', function(e) {
 
 <!-- ═══ HRV (Huawei Health / Intervals.icu) — PCC v5.5.0 ═══════════════ -->
 <div class="section" id="sec-hrv">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-    <h2 style="margin:0;">HRV &amp; Huawei Health</h2>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+    <h2 style="margin:0;">HRV & Huawei Health</h2>
     <span id="hrv-source-badge" class="badge" style="font-size:11px;color:var(--text2);"></span>
   </div>
-  <p style="color:var(--text2);font-size:13px;max-width:780px;">
+  <p style="color:var(--text2);font-size:12px;max-width:780px;margin-bottom:12px;">
     Elaborazione HRV locale da export Huawei Health: intervalli RR/NN →
     pulizia artefatti → RMSSD/SDNN calcolati localmente → baseline 7/14/30g.
     I dati grezzi restano solo nel database locale; verso Intervals.icu
@@ -3794,48 +3794,48 @@ window.addEventListener('unhandledrejection', function(e) {
   </p>
 
   <!-- KPI cards -->
-  <div class="grid g3" style="margin:14px 0 18px;">
+  <div class="grid g3" style="margin:8px 0 12px;">
     <div class="card" id="hrv-card-today">
-      <div style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">RMSSD oggi</div>
-      <div id="hrv-today-rmssd" style="font-size:34px;font-weight:800;line-height:1.1;">—</div>
-      <div id="hrv-today-meta" style="font-size:12px;color:var(--text3);"></div>
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">RMSSD oggi</div>
+      <div id="hrv-today-rmssd" style="font-size:28px;font-weight:800;line-height:1.1;">—</div>
+      <div id="hrv-today-meta" style="font-size:11px;color:var(--text3);"></div>
     </div>
     <div class="card" id="hrv-card-baseline">
-      <div style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">Baseline 7g / 30g</div>
-      <div id="hrv-baseline" style="font-size:24px;font-weight:700;line-height:1.3;">—</div>
-      <div id="hrv-deviation" style="font-size:13px;"></div>
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">Baseline 7g / 30g</div>
+      <div id="hrv-baseline" style="font-size:20px;font-weight:700;line-height:1.3;">—</div>
+      <div id="hrv-deviation" style="font-size:12px;"></div>
     </div>
     <div class="card" id="hrv-card-quality">
-      <div style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">Qualità &amp; dettaglio</div>
-      <div id="hrv-quality" style="font-size:20px;font-weight:700;">—</div>
-      <div id="hrv-detail" style="font-size:12px;color:var(--text3);"></div>
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">Qualità & dettaglio</div>
+      <div id="hrv-quality" style="font-size:18px;font-weight:700;">—</div>
+      <div id="hrv-detail" style="font-size:11px;color:var(--text3);"></div>
     </div>
   </div>
 
   <!-- Grafico RMSSD giornaliero + rolling 7d + baseline -->
-  <div class="card" style="margin-bottom:18px;">
-    <div style="font-size:13px;color:var(--text2);margin-bottom:6px;">
+  <div class="card" style="margin-bottom:12px;">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">
       RMSSD giornaliero · media mobile 7g · baseline
     </div>
-    <canvas id="hrvChart" height="120"></canvas>
+    <canvas id="hrvChart" height="100" style="max-height:120px;"></canvas>
   </div>
 
   <!-- Tabella metriche avanzate (local-only) -->
   <div class="card">
-    <div style="font-size:13px;color:var(--text2);margin-bottom:8px;">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">
       Metriche calcolate (archivio locale — non tutte sincronizzate con Intervals)
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead>
         <tr style="color:var(--text3);text-align:left;">
-          <th style="padding:4px 8px;">Metrica</th>
-          <th style="padding:4px 8px;">Valore</th>
-          <th style="padding:4px 8px;">Unità</th>
-          <th style="padding:4px 8px;">Sync ICU</th>
+          <th style="padding:3px 6px;">Metrica</th>
+          <th style="padding:3px 6px;">Valore</th>
+          <th style="padding:3px 6px;">Unità</th>
+          <th style="padding:3px 6px;">Sync ICU</th>
         </tr>
       </thead>
       <tbody id="hrv-metrics-body">
-        <tr><td colspan="4" style="padding:8px;color:var(--text3);">Caricamento…</td></tr>
+        <tr><td colspan="4" style="padding:6px;color:var(--text3);">Caricamento…</td></tr>
       </tbody>
     </table>
   </div>
@@ -17027,7 +17027,7 @@ function renderCalDay(d, wi, di, phaseKey, today) {
     // duration + score so power-users can see provenance.
     const cellTip = calCellTooltip(planned, actual);
     const tipAttr = cellTip ? ` title="${esc(cellTip)}"` : '';
-    // v5.3.6 (backport Domestique v3.7.0): day label — "Today" vs "Sat 18 Jul"
+    // v5.3.6 (backport PCC v3.7.0): day label — "Today" vs "Sat 18 Jul"
     const _dateLabel = isToday
       ? '<div class="cal-day-label" style="font-size:9px;font-weight:700;color:var(--accent);margin-bottom:2px;text-transform:uppercase;">OGGI</div>'
       : (d.date
@@ -22982,7 +22982,7 @@ function dismissUpdateBanner(latest) {
   if (el) el.style.display = 'none';
 }
 
-// v5.3.6 — upstream (Domestique) update check badge
+// v5.3.6 — upstream (PCC upstream) update check badge
 async function loadUpstreamCheck() {
   const badge = document.getElementById('upstream-badge');
   if (!badge) return;
@@ -22992,7 +22992,7 @@ async function loadUpstreamCheck() {
     const d = await r.json();
     if (!d.has_update || !d.upstream_tag) { badge.style.display = 'none'; return; }
     const riskIcon = d.risk === 'safe' ? '✅ ' : (d.risk === 'review' ? '⚠️ ' : '🔴 ');
-    badge.textContent = riskIcon + 'Domestique ' + d.upstream_tag;
+    badge.textContent = riskIcon + 'PCC upstream ' + d.upstream_tag;
     badge.style.display = 'inline-block';
     window.__upstreamData = d;
   } catch (_) { badge.style.display = 'none'; }
