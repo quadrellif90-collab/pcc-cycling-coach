@@ -6,11 +6,83 @@
 
 > **PCC** (Power Curve Coach): il nome evoca la *power-duration curve*, il cuore scientifico del pianificatore — la curva che descrive quanto riesci a produrre per quanto tempo. Il logo unisce quell'arco ascendente a una ruota, con il gradiente teal→amber della palette.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.4.2-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Tests](https://img.shields.io/badge/Tests-2974%2B-passing-green)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-green) ![Version](https://img.shields.io/badge/Version-v5.5.0-brightgreen) ![License](https://img.shields.io/badge/License-Apache--2.0-blue) ![Tests](https://img.shields.io/badge/Tests-2974%2B-passing-green)
 
-> Latest: **[v5.4.2 — Accorgimenti persistiti: forza/mobilità/nutrizione sopravvivono agli auto-update**](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.4.2)
+> Latest: **[v5.5.0 — HRV Engine & Huawei Health Integration](https://github.com/quadrellif90-collab/pcc-cycling-coach/releases/tag/v5.5.0)**
+
+> *Motore HRV completo, integrazione Huawei Health, UI aggiornata, certificato 100/100 validator*
 
 > ⚠️ **Fork italiano di PCC** (Apache-2.0, `platypus45`). Questa è una versione derivata: stessa architettura di pianificazione adattiva, ma con motore nutrizione/integrazione riscritto, import BIA da PDF, sync estensibile verso Intervals.icu e altre app, UI in italiano e auto-aggiornamento. Il credito all'autore originale è in [`NOTICE`](NOTICE).
+
+---
+
+## Novità v5.5.0 — HRV Engine & Huawei Health Integration
+
+| Funzionalità | Descrizione |
+|-------------|-------------|
+| 🧠 **Motore HRV** | RR/NN extraction, cleaning, RMSSD/SDNN calcolo, advanced metrics (SDANN, triangular index, LF/HF freq-domain via numpy Welch), morning window detection, baseline 7/14/30gg, rolling average |
+| 📊 **Parser Huawei** | CSV/JSON/XML/ZIP import con field-detection case-insensitive, gestione file corrotto (log + skip, non abort) |
+| 💾 **Storage Locale** | DB schema additivo (huawei_raw_record, huawei_rr_interval, hrv_measurement, daily_hrv, hrv_baseline), idempotente via fingerprint |
+| 🔗 **Intervals.icu Sync** | Solo `hrvRmssd` + `hrvSdnn` via wellness-bulk PUT; raw RR/NN e advanced metrics rimangono locali (privacy) |
+| 📊 **Advanced Metrics** | SDANN (deviazione standard medie NN per minuto), triangular index (N / modal bin), LF/HF freq-domain (Welch PSD via numpy, soglia ≥120s/≥32 NN) |
+| 🌅 **Morning HRV** | Finestra di rilevamento con preferenza wake_time/sleep_end, fallback finestra valida ≥5min entro 3h dal risveglio |
+| 📊 **Baseline & Trend** | Baseline 7/14/30gg, media, mediana, deviazione standard, CV, z-score, deviazione percentuale vs baseline |
+| 📋 **Quality Score** | 0..1 scale con categorie excellent/good/fair/poor/invalid; qualità <0.5 → NON sincronizza su Intervals |
+| 📡 **Endpoint API** | `POST /api/huawei/hrv`, `POST /api/huawei/import`, `GET /api/huawei/hrv/daily`, `GET /api/huawei/hrv/export`, `GET /api/huawei/hrv/debug`, `POST /api/huawei/health-sync`, `GET /api/huawei/hrv/summary`, `POST /api/huawei/hrv/manual` |
+| 🖥️ **UI** | Tab HRV nella sidebar, KPI (RMSSD oggi, baseline 7g/30g, deviazione %), grafico Chart.js RMSSD giornaliero + media mobile 7g, tabella metriche avanzate, box import/export Huawei |
+| 📝 **Documentazione** | HUAWEI_HRV.md completo con algoritmo, soglie, regola HRV≠rMSSD, privacy, metriche avanzate, UI |
+
+### Taratura delle Soglie (task #28)
+- `RR_MIN_MS = 250` / `RR_MAX_MS = 2500` (fisiologico a riposo)
+- `MIN_NN_COUNT = 8` (almeno 8 battiti per RMSSD sensato)
+- `MIN_DURATION_S = 10` (almeno 10s di registrazione)
+- `MIN_QUALITY_FOR_SYNC = 0.5` (sotto → NON sincronizza come HRV ufficiale)
+- `MIN_DURATION_FREQ_S = 120` (LF/HF richiede ≥120s e ≥32 NN)
+
+### Regola Fondamentale (task #15/#31)
+> **Huawei `hrv` generico ≠ rMSSD automatico.**
+> Solo `RR/NN → algoritmo RMSSD` oppure `rmssd` esplicito documentato → produce `hrv_rmssd_ms`.
+> Il campo `hrv` generico rimane **local only** (non sincronizzato).
+
+### Privacy (task #30)
+- Raw RR/NN → **solo DB locale**
+- Verso Intervals.icu → **solo metriche aggregate** (RMSSD/SDNN)
+- Nessun dato grezzo inviato a server esterni
+
+---
+
+## Novità v5.5.0 — HRV Engine & Huawei Health Integration
+
+| Funzionalità | Descrizione |
+|-------------|-------------|
+| 🧠 **Motore HRV** | RR/NN extraction, cleaning, RMSSD/SDNN calcolo, advanced metrics (SDANN, triangular index, LF/HF freq-domain via numpy Welch), morning window detection, baseline 7/14/30gg, rolling average |
+| 📊 **Parser Huawei** | CSV/JSON/XML/ZIP import con field-detection case-insensitive, gestione file corrotto (log + skip, non abort) |
+| 💾 **Storage Locale** | DB schema additivo (huawei_raw_record, huawei_rr_interval, hrv_measurement, daily_hrv, hrv_baseline), idempotente via fingerprint |
+| 🔗 **Intervals.icu Sync** | Solo `hrvRmssd` + `hrvSdnn` via wellness-bulk PUT; raw RR/NN e advanced metrics rimangono locali (privacy) |
+| 📊 **Advanced Metrics** | SDANN (deviazione standard medie NN per minuto), triangular index (N / modal bin), LF/HF freq-domain (Welch PSD via numpy, soglia ≥120s/≥32 NN) |
+| 🌅 **Morning HRV** | Finestra di rilevamento con preferenza wake_time/sleep_end, fallback finestra valida ≥5min entro 3h dal risveglio |
+| 📊 **Baseline & Trend** | Baseline 7/14/30gg, media, mediana, deviazione standard, CV, z-score, deviazione percentuale vs baseline |
+| 📋 **Quality Score** | 0..1 scale con categorie excellent/good/fair/poor/invalid; qualità <0.5 → NON sincronizza su Intervals |
+| 📡 **Endpoint API** | `POST /api/huawei/hrv`, `POST /api/huawei/import`, `GET /api/huawei/hrv/daily`, `GET /api/huawei/hrv/export`, `GET /api/huawei/hrv/debug`, `POST /api/huawei/health-sync`, `GET /api/huawei/hrv/summary`, `POST /api/huawei/hrv/manual` |
+| 🖥️ **UI** | Tab HRV nella sidebar, KPI (RMSSD oggi, baseline 7g/30g, deviazione %), grafico Chart.js RMSSD giornaliero + media mobile 7g, tabella metriche avanzate, box import/export Huawei |
+| 📝 **Documentazione** | HUAWEI_HRV.md completo con algoritmo, soglie, regola HRV≠rMSSD, privacy, metriche avanzate, UI |
+
+### Taratura delle Soglie (task #28)
+- `RR_MIN_MS = 250` / `RR_MAX_MS = 2500` (fisiologico a riposo)
+- `MIN_NN_COUNT = 8` (almeno 8 battiti per RMSSD sensato)
+- `MIN_DURATION_S = 10` (almeno 10s di registrazione)
+- `MIN_QUALITY_FOR_SYNC = 0.5` (sotto → NON sincronizza come HRV ufficiale)
+- `MIN_DURATION_FREQ_S = 120` (LF/HF richiede ≥120s e ≥32 NN)
+
+### Regola Fondamentale (task #15/#31)
+> **Huawei `hrv` generico ≠ rMSSD automatico.**
+> Solo `RR/NN → algoritmo RMSSD` oppure `rmssd` esplicito documentato → produce `hrv_rmssd_ms`.
+> Il campo `hrv` generico rimane **local only** (non sincronizzato).
+
+### Privacy (task #30)
+- Raw RR/NN → **solo DB locale**
+- Verso Intervals.icu → **solo metriche aggregate** (RMSSD/SDNN)
+- Nessun dato grezzo inviato a server esterni
 
 ---
 

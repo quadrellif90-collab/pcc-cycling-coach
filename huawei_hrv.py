@@ -123,6 +123,9 @@ CREATE TABLE IF NOT EXISTS hrv_baseline (
     count         INTEGER,
     created_at    TEXT DEFAULT (datetime('now'))
 );
+
+-- Aggiunge colonna hrv_sdnn alla tabella wellness se non esiste
+-- (eseguito separatamente in migrate_hrv_schema per evitare errori)
 """
 
 
@@ -133,6 +136,14 @@ def migrate_hrv_schema(db=None) -> None:
         return
     conn = db or get_db()
     conn.executescript(MIGRATION_SQL)
+    # Aggiunge colonna hrv_sdnn se non esiste
+    try:
+        conn.execute("ALTER TABLE wellness ADD COLUMN hrv_sdnn REAL")
+        conn.commit()
+        log.info("Colonna hrv_sdnn aggiunta alla tabella wellness")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e):
+            log.warning(f"Impossibile aggiungere colonna hrv_sdnn: {e}")
     conn.commit()
     log.info("Schema HRV migrato (tabelle huawei_*, hrv_*, daily_hrv, hrv_baseline)")
 
@@ -329,6 +340,8 @@ def import_icu_hrv(db=None) -> Dict[str, Any]:
       * RR/NN grezzi NON sono disponibili da Intervals → non possiamo calcolare
         RMSSD/SDNN da zero; la metrica primaria resta quella calcolata da Huawei.
 
+    Popola i campi `hrv` e `hrvSDNN` nella tabella `wellness` se presenti nei dati importati.
+    
     Restituisce un riepilogo dei giorni importati e il conteggio di quali campi
     erano presenti. Utile per popolare hrv_baseline come confronto.
     """
@@ -345,23 +358,40 @@ def import_icu_hrv(db=None) -> Dict[str, Any]:
     imported = 0
     hrv_present = 0
     sdnn_present = 0
+    updated = 0
     for date_s, hrv_val, raw_json in rows:
         if not date_s:
             continue
         sdnn = None
+        new_hrv = hrv_val
         if raw_json:
             try:
                 rj = json.loads(raw_json)
+                # Estrae hrv e hrvSDNN dal raw_json se presenti
+                if rj.get("hrv") is not None:
+                    new_hrv = rj.get("hrv")
                 sdnn = rj.get("hrvSDNN")
             except (json.JSONDecodeError, TypeError):
                 pass
-        # registra solo se c'è almeno un dato HRV da Intervals
-        if hrv_val is None and sdnn is None:
+        # Registra solo se c'è almeno un dato HRV da Intervals
+        if new_hrv is None and sdnn is None:
             continue
-        if hrv_val is not None:
+        if new_hrv is not None:
             hrv_present += 1
         if sdnn is not None:
             sdnn_present += 1
+        # Aggiorna la tabella wellness con i dati HRV estratti
+        if new_hrv != hrv_val or sdnn is not None:
+            try:
+                conn.execute(
+                    "UPDATE wellness SET hrv = ?, hrv_sdnn = ? WHERE date = ?",
+                    (float(new_hrv) if new_hrv is not None else None,
+                     float(sdnn) if sdnn is not None else None,
+                     date_s)
+                )
+                updated += 1
+            except sqlite3.Error:
+                pass
         # NON inseriamo in daily_hrv (quello è per RMSSD calcolato localmente).
         # Memorizziamo il riferimento Intervals in hrv_baseline come fonte esterna.
         try:
@@ -370,7 +400,7 @@ def import_icu_hrv(db=None) -> Dict[str, Any]:
                    (computed_on, window_days, mean_rmssd, median_rmssd, std_rmssd, cv_pct, count)
                    VALUES (?,?,?,?,?,?,?)""",
                 (f"icu:{date_s}", 1,
-                 float(hrv_val) if hrv_val is not None else None,
+                 float(new_hrv) if new_hrv is not None else None,
                  None, None, None, 1),
             )
             imported += 1
@@ -382,7 +412,8 @@ def import_icu_hrv(db=None) -> Dict[str, Any]:
         "days_with_icu_hrv": imported,
         "icu_hrv_aggregated_present": hrv_present,
         "icu_hrv_sdnn_present": sdnn_present,
-        "note": "Campo 'hrv' Intervals NON è rMSSD calcolato; usato solo come riferimento.",
+        "wellness_rows_updated": updated,
+        "note": "Campo 'hrv' Intervals NON è rMSSD calcolato; usato solo come riferimento. Popolato hrv e hrv_sdnn in wellness.",
     }
 
 

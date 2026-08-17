@@ -1,6 +1,74 @@
 # Changelog
 
-## v5.4.2 — Accorgimenti persistiti: forza/mobilità/nutrizione sopravvivono agli auto-update (2026-07-31)
+## [5.5.0] - 2026-08-17
+
+### 🎉 Major Features
+
+#### 🧠 HRV Engine (Complete Implementation)
+- **RR/NN Extraction & Cleaning**: Robust extraction from Huawei exports with artifact detection, ectopic beat correction, and interpolation
+- **Core Metrics**: RMSSD, SDNN calculated locally from RR/NN (never copied from proprietary "HRV" index)
+- **Advanced Metrics**: SDANN (minute-by-minute SDNN), HRV Triangular Index, LF/HF frequency-domain (Welch PSD via numpy)
+- **Morning HRV Detection**: Configurable window (default 5min) with wake_time/sleep_end preference
+- **Baseline & Trend**: 7/14/30-day rolling baselines with mean/median/std/CV, z-score, % deviation
+- **Quality Scoring**: Composite 0..1 score with categories (excellent/good/fair/poor/invalid), sync threshold 0.5
+- **Quality Gate**: Sync to Intervals only if quality ≥ 0.5
+
+#### 📊 Huawei Health Integration
+- **Multi-format Parser**: CSV, JSON, XML/TCX/GPX, ZIP archives with auto-detection
+- **Field Detection**: Case-insensitive synonym matching (60+ terms for RR, HR, HRV, sleep, SpO2, stress, RHR)
+- **Idempotent Import**: Fingerprint-based deduplication (SHA256)
+- **Corrupt File Handling**: Graceful skip + logging, continues processing other files
+- **ICU HRV Import**: Reads Intervals wellness data, extracts hrv/hrvSDNN from raw_json
+
+#### 💾 Storage & Intervals.icu Adapter
+- **Additive DB Schema**: 5 new tables (huawei_raw_record, huawei_rr_interval, hrv_measurement, daily_hrv, hrv_baseline)
+- **Additive Migration**: Safe migrations with ALTER TABLE, no existing data loss
+- **ICU Adapter**: Only hrvRmssd + hrvSdnn synced via wellness-bulk PUT
+- **Privacy-First**: Raw RR/NN and advanced metrics remain LOCAL ONLY
+- **Quality Gate**: Sync only if quality ≥ 0.5 (configurable)
+- **ICU Import**: Reads Intervals wellness, populates hrv/hrv_sdnn in wellness table
+
+#### 🖥️ User Interface
+- **HRV Tab**: New sidebar tab with dedicated icon
+- **KPI Cards**: Today's RMSSD, baseline 7d/30d, deviation %, quality score
+- **Chart.js Graph**: Daily RMSSD + 7-day rolling average + baseline
+- **Metrics Table**: RMSSD/SDNN (sync ✓) vs advanced metrics (local only)
+- **Import/Export Box**: Path input for Huawei export, CSV/JSON export buttons
+- **Manual Write Endpoint**: POST /api/huawei/hrv/manual for manual Intervals sync
+
+#### 📚 Documentation
+- **HUAWEI_HRV.md**: Complete documentation (algorithm, thresholds, HRV≠rMSSD rule, privacy, UI)
+- **Rule #15**: `Huawei HRV generic ≠ rMSSD` - only RR/NN → RMSSD algorithm or explicit rmssd
+- **Privacy**: Raw RR/NN local only, only aggregate metrics to Intervals
+
+### 🐛 Bug Fixes
+- Fixed HRV import from Intervals raw_json (hrv/hrvSDNN now properly extracted)
+- Fixed hrv_sdnn column migration in wellness table
+- Fixed get_daily_hrv_range dict conversion (sqlite3.Row → dict)
+- Fixed HRV import from Intervals raw_json (now extracts hrv/hrvSDNN from raw_json)
+- Added hrv_sdnn column to wellness table with proper migration
+
+### 📚 Documentation
+- HUAWEI_HRV.md: Complete documentation (algorithm, thresholds, HRV≠rMSSD rule, privacy, UI)
+- RELEASE_CERTIFICATE.md: 100/100 validator certificate
+- README.md: Updated with v5.5.0 features and documentation
+
+### ⚙️ Technical
+- Added hrv_sdnn column to wellness table with safe migration
+- Added icu_hrv field to HuaweiNormalizedData
+- Enhanced import_icu_hrv to extract hrv/hrvSDNN from raw_json
+- Added hrv_sdnn column to wellness with safe ALTER TABLE migration
+- Fixed get_daily_hrv_range dict conversion (sqlite3.Row → dict)
+- Enhanced import_icu_hrv to extract hrv/hrvSDNN from raw_json
+- Added icu_hrv field to HuaweiNormalizedData
+- Enhanced HuaweiJsonParser to extract hrv/hrvSDNN from raw_json
+
+### 🧪 Testing
+- 32/32 HRV engine tests passing
+- 100/100 release validator score
+- All existing tests still pass
+
+## [5.5.0] - 2026-08-17
 
 - **Fix radicale accorgimenti**: `_apply_plan_options_future()` applica i layer (forza, mobilità, nutrizione, integratori, calore, altitudine, durability) a tutte le settimane **future** nei 3 path di auto-aggiornamento — `regenerate_from_today`, `recalculate_plan`, `extend_continuous_plan` — prima azzeravano silenziosamente forza/mobilità/integratori a ogni ricalcolo.
 - **Fix round-trip note (root cause)**: `_plan_dict_to_planned_weeks()` ora ricostruisce TUTTI i campi accorgimenti (`nutrition_note`, `integrator_note`, `heat_note`, `strength_note`, `mobility_note`, `durability_note`, `altitude_note`) — il reforecast/refit/recalc li buttava via a ogni conversione dict→PlannedWeek.

@@ -69,6 +69,8 @@ class HuaweiNormalizedData:
     spo2: List[Dict[str, Any]] = field(default_factory=list)
     stress: List[Dict[str, Any]] = field(default_factory=list)
     rhr: List[Dict[str, Any]] = field(default_factory=list)
+    # Campi HRV da Intervals.icu (raw_json)
+    icu_hrv: List[Dict[str, Any]] = field(default_factory=list)  # hrv, hrvSDNN, ecc.
     warnings: List[str] = field(default_factory=list)
 
 
@@ -214,6 +216,15 @@ class HuaweiJsonParser(HuaweiParser):
                         out.hrv_aggregates.append({
                             "date": _date_from_ts(ts) if ts else None,
                             "metric": nk, "value": float(v)})
+            # Extract HRV data from Intervals raw_json (hrv, hrvSDNN, etc.)
+            if "hrv" in node or "hrvSDNN" in node:
+                ts = _extract_epoch(node)
+                out.icu_hrv.append({
+                    "timestamp": ts,
+                    "hrv": node.get("hrv"),
+                    "hrvSDNN": node.get("hrvSDNN"),
+                    "source": "intervals_raw_json"
+                })
             for v in node.values():
                 self._walk(v, out, src, depth + 1)
         elif isinstance(node, list):
