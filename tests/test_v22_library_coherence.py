@@ -14,10 +14,10 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "src" / "scripts"))
 import classify_library_content as C  # noqa: E402
 
-CACHE = ROOT / "workouts" / ".content_classification.json"
+CACHE = ROOT / "src" / "workouts" / ".content_classification.json"
 
 
 class TestCoherenceUnit(unittest.TestCase):
@@ -58,7 +58,7 @@ class TestCoherenceInCache(unittest.TestCase):
         full recoveries on an IF-0.64 endurance ride is surges/strides, not
         a VO2 main set. The label now discloses the intervals; the old
         incoherent+suffix state was the pre-v2.4.4 stopgap."""
-        sg = self.cls.get("endurance_5x2min_120min.zwo")
+        sg = self.cls.get("endurance_5x90s-3min_110pct_120min.zwo")
         self.assertIsNotNone(sg, "smoking-gun fixture missing from library")
         self.assertEqual(sg.get("primary"), "endurance_intervals",
                          "reviewed verdict: surges on an endurance base")
@@ -66,7 +66,7 @@ class TestCoherenceInCache(unittest.TestCase):
                       "display name must disclose the interval content")
 
     def test_clean_long_z2_is_coherent(self):
-        clean = self.cls.get("endurance_clean_210min.zwo")
+        clean = self.cls.get("endurance_steady_62pct_210min.zwo")
         self.assertIsNotNone(clean)
         self.assertTrue(clean.get("objective_coherent"))
         self.assertNotIn("+", clean.get("display_name", ""))

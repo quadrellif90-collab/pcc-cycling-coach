@@ -1,0 +1,1168 @@
+#!/usr/bin/env python3
+"""
+Domestique Launcher — entry point for the packaged desktop app.
+
+Starts the FastAPI server IN-PROCESS (not as subprocess, to avoid PyInstaller
+fork issues), opens the browser, and shows a system tray icon.
+
+Works both in dev mode (python launcher.py) and frozen mode (PyInstaller).
+"""
+
+import base64
+import multiprocessing
+import os
+import sys
+import threading
+import time
+import webbrowser
+import signal
+
+# Prevent PyInstaller frozen multiprocessing fork bomb
+multiprocessing.freeze_support()
+
+# WIN-ENCODING-FIX: make stdout/stderr bulletproof BEFORE any print(). Two
+# Windows-only failure modes this prevents — each crashes the launcher with an
+# unhandled exception → silent exit(1) → "the app doesn't start at all":
+#   1. Frozen *windowed* build (console=False): sys.stdout/err are None, so
+#      ANY print() raises AttributeError on None.write.
+#   2. Frozen *console* build: stdout is cp1252, so a non-ASCII glyph in a
+#      status line (we use → and — liberally) raises UnicodeEncodeError —
+#      this is the exact crash a Windows user hit at "Server ready → …".
+# Normalize both: None → a discarding stream; real streams → UTF-8 with
+# errors="replace" so an un-encodable glyph degrades to '?' instead of killing
+# the process. macOS/Linux already default to UTF-8, so this is a no-op there.
+def _harden_std_streams():
+    for _name in ("stdout", "stderr"):
+        _stream = getattr(sys, _name, None)
+        if _stream is None:
+            try:
+                setattr(sys, _name, open(os.devnull, "w", encoding="utf-8"))
+            except Exception:
+                pass
+            continue
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+_harden_std_streams()
+
+
+# WIN-TLS-FIX (v2.1.0) + MAC-TLS-FIX (v2.1.0): a frozen build's bundled Python has
+# no usable CA store for urllib's default SSL context, so HTTPS to intervals.icu
+# fails cert verification → URLError → "ICUNetworkError" on every credential save /
+# sync. (httpx works because it bundles certifi; urllib uses the empty default.)
+# This was assumed Windows-only, but the NOTARIZED macOS .app hits it too (reported
+# on Mac mini + MacBook Air): the frozen .app ships its own Python with no Keychain
+# bridge for urllib. Point urllib's default context at certifi's bundled CA via
+# SSL_CERT_FILE on frozen Windows AND frozen macOS; dev macOS/Linux keep the system
+# store. Must run before any HTTPS call (before start_server) — top-level guarantees it.
+def configure_tls_ca(platform=None, frozen=None):
+    """Set SSL_CERT_FILE/SSL_CERT_DIR to certifi's CA bundle on every FROZEN
+    build so urllib can verify HTTPS. Returns the CA path set, or None when not
+    applicable. setdefault respects a user-provided SSL_CERT_FILE.
+
+    LINUX WAS EXCLUDED HERE ON A FALSE PREMISE — "the system store works". It
+    works on the distro we BUILD on, which is the trap. The AppImage ships its
+    own libcrypto, PyInstaller puts _internal on LD_LIBRARY_PATH so that copy
+    wins over the host's, and its compiled-in OPENSSLDIR is Debian's
+    /usr/lib/ssl. That path does not exist on Fedora, RHEL, Rocky, Alma
+    (certs live under /etc/pki), and differs again on Arch and openSUSE — so
+    urllib fails cert verification on those distros even with an up-to-date
+    ca-certificates installed.
+
+    The failure was ugly precisely because it was PARTIAL: the OAuth token
+    exchange runs on httpx, which carries its own certifi and succeeds, so the
+    app reported "intervals.icu connected" — and then every sync, FIT upload
+    and calendar push, all of which go through urllib, failed forever with
+    CERTIFICATE_VERIFY_FAILED. Connected, and permanently empty.
+
+    Measured A/B on one binary in a container: no reachable CA store gives
+    CERTIFICATE_VERIFY_FAILED, a reachable one gives a clean HTTP 401 from the
+    bogus test key. Pointing urllib at the bundle's own certifi removes the
+    host CA store from the picture entirely, on all three platforms.
+    """
+    plat = platform if platform is not None else sys.platform
+    froz = frozen if frozen is not None else getattr(sys, "frozen", False)
+    # win32: patch always (frozen + dev — harmless). Everything else: only when
+    # frozen, because a dev checkout runs on the system Python whose OpenSSL
+    # paths match the machine it is running on.
+    if not (plat == "win32" or froz):
+        return None
+    try:
+        import certifi
+        ca = certifi.where()
+    except Exception:
+        return None
+    os.environ.setdefault("SSL_CERT_FILE", ca)
+    os.environ.setdefault("SSL_CERT_DIR", os.path.dirname(ca))
+    return ca
+
+
+configure_tls_ca()
+
+# PORT SELECTION. 8080 was pinned so single-instance detection always knew
+# where to look; the cost was that 8080 is one of the most contested ports on
+# a Linux desktop, and losing it meant Domestique showed a stranger's web UI
+# (a Pop!_OS tester got a camera app's page) or refused to start.
+#
+# The pin is no longer needed: /api/version answers {"app": "domestique"}, so
+# the launcher can positively identify its own instance and a fallback is safe
+# rather than ambiguous.
+#
+# WHY THESE NUMBERS, AND WHY NOT SOMETHING HIGHER. Picking a "high, out of the
+# way" port is the intuitive move and the wrong one. Outbound connections draw
+# a source port from the OS ephemeral pool, so a listener inside that pool
+# fails to bind whenever a connection happens to hold it — an intermittent
+# failure that survives every "the port was free when I checked" test. The
+# default pools are 32768-60999 (Linux ip_local_port_range) and 49152-65535
+# (macOS ip.portrange.first, Windows dynamic range), so the band safe on all
+# three is 1024-32767. All three candidates sit well inside it.
+#
+# 22400 is IANA-unassigned on TCP and UDP, absent from nmap-services (whose
+# neighbours 22406/22408/22412 DO carry observed frequencies, so that silence
+# is data and not a coverage hole), and no software was found binding it. The
+# memorable constants were all worse: 31415 is MATLAB Connector's default,
+# 14142 is IANA-assigned to icpp, 16180 is the Ingen synthesis host.
+PORT_CANDIDATES = (22400, 21055, 26214)
+DEFAULT_PORT = PORT_CANDIDATES[0]
+
+
+def is_domestique_at(url: str) -> bool:
+    """True only if the server answering ``url`` is actually Domestique.
+
+    A bare "did something answer on 8080?" is not an identity check, and on a
+    Linux desktop 8080 is a crowded port. A tester on Pop!_OS had a camera
+    web UI there: the probe got its 200, we declared ourselves already
+    running, and pointed the window at it — so Domestique's own window showed
+    someone else's app, with no intervals.icu prompt, no error and no crash
+    file, because from the launcher's point of view nothing had gone wrong.
+
+    ``app == "domestique"`` is the marker. Instances predating it are still
+    recognised by the shape of /api/version (version + data_dir), so a new
+    launcher probing an older running instance does not mistake it for a
+    stranger and refuse to start.
+    """
+    import json
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"{url}/api/version", timeout=2) as r:
+            body = json.loads(r.read().decode("utf-8", "replace"))
+    except Exception:
+        return False
+    if not isinstance(body, dict):
+        return False
+    return (body.get("app") == "domestique"
+            or ("version" in body and "data_dir" in body))
+
+
+def _port_memo():
+    """Where the last successfully-bound port is remembered."""
+    from user_home import domestique_home
+    return domestique_home() / "port.txt"
+
+
+def _port_is_available(port: int) -> bool:
+    """Free, or already serving Domestique.
+
+    "Already ours" counts as available on purpose: it is what keeps
+    single-instance detection working. Without it, launching a second copy
+    while the first holds 22400 would skip to 21055 and start a SECOND server
+    instead of focusing the running window.
+
+    No SO_REUSEADDR — uvicorn does not set it either, so probing without it
+    means a successful probe predicts a successful bind.
+    """
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", port))
+        return True
+    except OSError:
+        return is_domestique_at(f"http://127.0.0.1:{port}")
+    finally:
+        try:
+            s.close()
+        except OSError:
+            pass
+
+
+def _resolve_port() -> int:
+    """The port to serve on. Never asks the user; never blocks startup.
+
+    Order: an explicit DOMESTIQUE_PORT wins outright (a deliberate override
+    must not be silently overruled, so it gets no fallback). Otherwise the
+    port we bound last time is tried first — a stable URL is what makes
+    bookmarks and desktop shortcuts survive restarts — then the candidates in
+    order. If every one is taken we still return the default so the caller
+    reaches _ensure_port_free_or_die() and reports the failure properly,
+    rather than dying here with no diagnostics.
+    """
+    env = os.environ.get("DOMESTIQUE_PORT", "").strip()
+    if env:
+        try:
+            return int(env)
+        except ValueError:
+            pass  # a typo'd override falls through to the normal search
+
+    order = list(PORT_CANDIDATES)
+    try:
+        remembered = int(_port_memo().read_text(encoding="utf-8").strip())
+        if remembered not in order:
+            order.insert(0, remembered)
+        else:
+            order.remove(remembered)
+            order.insert(0, remembered)
+    except (OSError, ValueError):
+        pass
+
+    for port in order:
+        if _port_is_available(port):
+            return port
+    return DEFAULT_PORT
+
+
+def _remember_port(port: int) -> None:
+    """Persist the bound port so the next launch reuses the same URL."""
+    try:
+        memo = _port_memo()
+        memo.parent.mkdir(parents=True, exist_ok=True)
+        if memo.read_text(encoding="utf-8").strip() != str(port):
+            memo.write_text(f"{port}\n", encoding="utf-8")
+    except OSError:
+        pass  # a URL we cannot remember is not worth failing a launch over
+
+
+PORT = _resolve_port()
+# 127.0.0.1, not localhost. RFC 8252 §8.3 calls the localhost form NOT
+# RECOMMENDED for OAuth loopback redirects: it can resolve to a non-loopback
+# interface, and it breaks on a mangled hosts file or a client firewall. The
+# IP literal is also the form §7.3's "MUST allow any port" is scoped to.
+URL = f"http://127.0.0.1:{PORT}"
+# The one source of truth for every child: app.py's config reads this to build
+# the OAuth redirect URI, so the callback always matches the port we bound.
+os.environ["DOMESTIQUE_PORT"] = str(PORT)
+
+
+def _log():
+    """Best-effort launcher logger that writes to ~/.domestique/logs/.
+
+    v2.0.2 WIN-START-FIX: a frozen *windowed* build (console=False) has a
+    dead stdout, so every startup `print()` here vanishes. Mirroring the
+    diagnostics through log_config leaves a trace on disk
+    (~/.domestique/logs/domestique_<ts>.log) so a "nothing happened"
+    Windows launch is actually diagnosable. Returns None if log_config
+    can't be imported (e.g. partial bundle) — callers must tolerate that.
+    """
+    try:
+        import log_config
+        return log_config.get_logger("domestique.app")
+    except Exception:
+        return None
+
+
+def _is_server_only() -> bool:
+    """True when the launcher should run headless (server, no window/tray).
+
+    v2.0.2 WIN-CI-SMOKE: CI needs to confirm a frozen Windows build actually
+    boots and serves the right version, but a headless GitHub runner has no
+    display — calling webview.start() or run_with_tray() would block forever
+    waiting on a GUI/tray loop that can never appear. When DOMESTIQUE_SERVER_ONLY=1
+    (or --server-only is passed) we start the server via the normal path, wait
+    for it to come up, then keep-alive without ever touching pywebview/pystray.
+    The flag is opt-in: when it is unset every existing path is unchanged.
+    """
+    return os.environ.get("DOMESTIQUE_SERVER_ONLY") == "1" or "--server-only" in sys.argv
+
+
+def _ensure_port_free_or_die() -> None:
+    """Last line of defence: die visibly if the resolved port is taken.
+
+    _resolve_port() has already walked the candidate list, so reaching this
+    with a busy port means EVERY candidate was occupied, or an explicit
+    DOMESTIQUE_PORT override points at something in use. The single-instance
+    branch in `main()` has also already run, so a listener here is not another
+    Domestique — it is an unrelated app. Report it properly instead of
+    floating to an unbounded port nobody can find afterwards.
+
+    NOTE — we deliberately do NOT set SO_REUSEADDR on this probe. With
+    REUSEADDR a Linux TIME_WAIT socket from a prior crashed instance lets
+    the bind succeed; uvicorn (which doesn't set REUSEADDR by default) then
+    fails immediately afterwards with a less-clear error than the FATAL
+    message advertised here. Probing without REUSEADDR matches uvicorn's
+    own bind semantics so a successful probe predicts a successful uvicorn
+    start. There is still a tiny TOCTOU window between this probe and
+    uvicorn's bind, but if some other process grabs 8080 in that window
+    uvicorn's "address already in use" error is itself a clear signal.
+    """
+    import socket
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", PORT))
+    except OSError as e:
+        tried = ", ".join(str(p) for p in PORT_CANDIDATES)
+        msg = (
+            f"Domestique could not find a free port.\n\n"
+            f"It tried {tried}, and something is using all of them.\n\n"
+            f"Close whatever is using them and start Domestique again."
+        )
+        detail = (
+            f"cannot bind 127.0.0.1:{PORT} ({e})\n\n"
+            f"Tried in order: {tried}.\n"
+            f"Set DOMESTIQUE_PORT to choose one yourself, e.g.\n"
+            f"  DOMESTIQUE_PORT=23500 domestique\n\n"
+            f"To see what holds a port:\n"
+            f"  Linux/macOS:  ss -ltnp | grep {PORT}   (or lsof -i :{PORT})\n"
+            f"  Windows:      netstat -ano | findstr :{PORT}\n"
+        )
+        # A windowed build's stdout is dead and a desktop launch has no
+        # terminal, so print + sys.exit(2) was an invisible death — the exact
+        # shape of the Pop!_OS report. Route it through every channel.
+        _fatal_report(msg, detail)
+    finally:
+        try:
+            s.close()
+        except OSError:
+            pass
+
+
+_server_thread = None
+_shutdown_event = threading.Event()
+# Holds the last exception raised inside the uvicorn thread, if any.
+# The main thread polls this after wait_for_server() fails so the user
+# sees the real traceback instead of a generic "server didn't start".
+_server_error: "Exception | None" = None
+# Holds the FULL formatted traceback (traceback.format_exc()) from the
+# uvicorn thread. str(_server_error) loses the stack; in a frozen windowed
+# build the uvicorn/app-startup traceback is the single most useful artifact
+# for diagnosing a silent "connection refused" startup death, so capture it
+# verbatim for the on-disk log and CI stdout.
+_server_traceback: "str | None" = None
+# CON5: handle to the running uvicorn Server so SIGTERM/SIGINT can flip
+# `should_exit = True` and let the FastAPI lifespan run to completion
+# instead of sys.exit() killing the process mid-shutdown.
+_uvicorn_server = None
+
+
+def _win_strip_motw():
+    """v2.2.x WIN-CLR-MOTW (structural fix): clear the Mark-of-the-Web from the
+    bundled pythonnet managed assemblies so the native window starts first-try.
+
+    Files extracted from an internet-downloaded zip inherit a ``Zone.Identifier``
+    alternate-data-stream tagging them "Internet zone". When pywebview's
+    EdgeChromium backend has pythonnet reflect into the MANAGED ``Python.Runtime.dll``,
+    .NET restricts the load of an untrusted-zone assembly → "Failed to resolve
+    Python.Runtime.Loader.Initialize" on the first launch (it self-heals on a later
+    run once Defender/SmartScreen settle). Deleting the Zone.Identifier ADS removes
+    that block at the root — no code-signing or installer required.
+
+    Windows-only, best-effort, idempotent: a no-op when there's no ADS (already
+    unblocked, or installed to Program Files where the installer stripped it)."""
+    if sys.platform != "win32":
+        return
+    base = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(sys.executable))
+    try:
+        for root, _dirs, files in os.walk(base):
+            _low_root = root.lower()
+            for fn in files:
+                _low = fn.lower()
+                # Target the .NET managed assemblies pythonnet reflects into —
+                # the named culprit + anything under a pythonnet dir.
+                if _low.endswith(".dll") and (
+                    _low.startswith("python.runtime") or "pythonnet" in _low_root):
+                    try:
+                        os.remove(os.path.join(root, fn) + ":Zone.Identifier")
+                    except OSError:
+                        pass  # no ADS (already clean) / no perms — fine
+    except Exception:
+        pass  # never let unblocking break startup
+
+
+def _win_hard_exit(platform=None):
+    """WIN-RELAUNCH-FIX (v2.1.0): on Windows, force the process to die when the
+    window closes.
+
+    webview's EdgeChromium/WinForms (CLR) backend leaves FOREGROUND native
+    threads + child msedgewebview2 processes after webview.start() returns, and
+    uvicorn's loop + the bound :8080 socket are never stopped — so the process
+    LINGERS after the window closes. The next launch then sees the orphan server
+    (is_already_running() True) but no window, and opens a browser tab instead of
+    reopening the app — the user's "kill it in Task Manager every single time".
+
+    Safe to hard-exit: every DB write already db.commit()s (write-through, no
+    buffer), and the only lifespan teardown is db.stop_sync(), which just joins a
+    daemon sync thread that os._exit reclaims anyway. should_exit is a best-effort
+    graceful signal first. Win32-only — macOS (Cocoa, no CLR) exits cleanly and is
+    left byte-for-byte unchanged (returns False so main() finishes normally).
+    """
+    plat = platform if platform is not None else sys.platform
+    if plat != "win32":
+        return False
+    try:
+        if _uvicorn_server is not None:
+            _uvicorn_server.should_exit = True
+    except Exception:
+        pass
+    os._exit(0)  # immediate; reclaims hung CLR threads + frees :8080. (Mocked in tests.)
+    return True  # unreachable in prod; preserves the contract under a mocked os._exit
+
+
+
+def get_app_dir():
+    """Return the app directory — handles both dev and frozen (PyInstaller) mode."""
+    if getattr(sys, "frozen", False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def start_server():
+    """Start the FastAPI server in a background thread."""
+    app_dir = get_app_dir()
+
+    # Ensure app_dir is on sys.path so imports work
+    if app_dir not in sys.path:
+        sys.path.insert(0, app_dir)
+
+    # Set working directory to app_dir for file-relative paths
+    os.chdir(app_dir)
+
+    def _run():
+        global _server_error, _server_traceback, _uvicorn_server
+        try:
+            import uvicorn
+            # Import the app module — this triggers all the FastAPI setup
+            from app import app
+            # CON5: use Config/Server so the signal handler can request a
+            # graceful shutdown (which runs the FastAPI lifespan teardown)
+            # instead of sys.exit() hard-killing the process.
+            config = uvicorn.Config(
+                app, host="127.0.0.1", port=PORT, log_level="warning"
+            )
+            _uvicorn_server = uvicorn.Server(config)
+            _uvicorn_server.run()
+        except Exception as e:
+            # Daemon threads swallow exceptions silently, producing a
+            # confusing "server didn't start" with no traceback. Capture
+            # the FULL traceback (not just str(e)) into _server_traceback
+            # and log here so the main thread can surface the real cause —
+            # in a frozen windowed build this on-disk traceback is the only
+            # window into a silent uvicorn/app-startup failure.
+            import traceback
+            _server_error = e
+            _server_traceback = traceback.format_exc()
+            # WIN-DIAG: dead-simple crash dump that depends on NOTHING —
+            # not log_config (may fail to init on Windows) and not stdout
+            # capture (CI's Start-Process redirect came back empty). Plain
+            # write_text to a fixed path so the cause is ALWAYS recoverable
+            # by CI and by users on a silent windowed build.
+            try:
+                from pathlib import Path as _P
+                _crash = _P.home() / ".domestique" / "startup_crash.txt"
+                _crash.parent.mkdir(parents=True, exist_ok=True)
+                _crash.write_text(_server_traceback, encoding="utf-8")
+            except Exception:
+                pass
+            try:
+                import log_config
+                log_config.get_logger(__name__).exception(
+                    "uvicorn server thread crashed"
+                )
+            except Exception:
+                # Fall back to stderr if log_config fails during import
+                traceback.print_exc()
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return t
+
+
+def wait_for_server(timeout=30):
+    """Wait until the server is responding.
+
+    Bumped default timeout to 30s — cold-start on slow disks (first frozen
+    import of FastAPI + webview) can exceed 15s on low-end hardware.
+    Bails out early if the uvicorn thread already raised.
+    """
+    import urllib.request
+    start = time.time()
+    while time.time() - start < timeout:
+        if _server_error is not None:
+            return False
+        try:
+            urllib.request.urlopen(URL, timeout=2)
+            return True
+        except Exception:
+            time.sleep(0.5)
+    return False
+
+
+def _open_url(url, platform=None):
+    """Open `url` in the user's default browser. The ONLY webbrowser entry point.
+
+    LINUX-APPIMAGE (master decisions §12): PyInstaller's bootloader prepends the
+    bundle's own lib dir to LD_LIBRARY_PATH, and every process we spawn inherits
+    it — so the user's Firefox/Chrome would link against OUR Qt/glibc-era
+    libraries and die on launch. The bootloader stashes the pre-launch value in
+    LD_LIBRARY_PATH_ORIG (absent when the user had none), so restore that around
+    the spawn. Mutating os.environ is the only lever here: webbrowser.open()
+    offers no `env` hook, and the child inherits at fork time.
+
+    Non-Linux platforms have no such variable and take the untouched
+    `webbrowser.open(url)` — macOS/Windows behaviour is byte-identical.
+    """
+    plat = platform if platform is not None else sys.platform
+    if plat != "linux":
+        webbrowser.open(url)
+        return
+    orig = os.environ.get("LD_LIBRARY_PATH_ORIG")
+    saved = os.environ.get("LD_LIBRARY_PATH")
+    if orig is None:
+        os.environ.pop("LD_LIBRARY_PATH", None)
+    else:
+        os.environ["LD_LIBRARY_PATH"] = orig
+    try:
+        webbrowser.open(url)
+    finally:
+        # Restore ours immediately — the bundled Qt window is still running in
+        # this process and needs the bundle's libs for anything it loads lazily.
+        if saved is None:
+            os.environ.pop("LD_LIBRARY_PATH", None)
+        else:
+            os.environ["LD_LIBRARY_PATH"] = saved
+
+
+def run_with_tray():
+    """Run system tray icon (requires pystray + Pillow)."""
+    try:
+        from pystray import Icon, MenuItem, Menu
+        from PIL import Image, ImageDraw
+
+        # Create icon: blue circle with white "H"
+        img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        draw.ellipse([4, 4, 60, 60], fill=(79, 108, 247))
+        draw.text((22, 16), "H", fill="white")
+
+        def open_browser(icon, item):
+            _open_url(URL)
+
+        def quit_app(icon, item):
+            _shutdown_event.set()
+            icon.stop()
+
+        menu = Menu(
+            MenuItem("Open Dashboard", open_browser, default=True),
+            MenuItem("Quit", quit_app),
+        )
+
+        icon = Icon("Domestique", img, "Domestique", menu)
+        icon.run()
+
+    except ImportError:
+        # pystray not installed — block until Ctrl+C
+        print("(pystray not installed — running without system tray)")
+        print(f"Domestique → {URL}")
+        print("Press Ctrl+C to quit.")
+        try:
+            _shutdown_event.wait()
+        except KeyboardInterrupt:
+            pass
+
+
+def is_already_running():
+    """Check if another DOMESTIQUE instance is already serving on our port.
+
+    Differentiates failure modes so operators can distinguish:
+      - URLError: connection refused → port is free, not already running.
+      - PermissionError (EACCES): firewall / app-sandbox blocks localhost.
+
+    A foreign server on the port returns False here, which drops through to
+    _ensure_port_free_or_die() and its FATAL message — the loud failure
+    master decisions §3 asks for, rather than silently adopting its UI.
+    """
+    import urllib.request
+    import urllib.error
+    try:
+        urllib.request.urlopen(URL, timeout=1)
+        return is_domestique_at(URL)
+    except urllib.error.URLError as e:
+        reason = getattr(e, "reason", e)
+        if isinstance(reason, PermissionError):
+            print(
+                f"Cannot probe {URL}: permission denied "
+                f"({reason}). Check firewall / sandbox settings."
+            )
+            return False
+        # ConnectionRefusedError or generic URLError — port is free
+        return False
+    except Exception:
+        # Unknown error; treat as "not running" but note it.
+        return False
+
+
+def _activate_existing_window() -> bool:
+    """Bring the existing Domestique native window to the foreground.
+
+    Returns True on success, False if we should fall back to opening a browser.
+    """
+    if sys.platform == "darwin":
+        # The pywebview native app registers as "Domestique" (see BUNDLE
+        # in domestique.spec). Tell System Events to activate it. This
+        # avoids the annoying browser-tab fallback when the user double-clicks
+        # the .app while a previous instance is still running.
+        try:
+            import subprocess
+            # Try bundle id first (set in domestique.spec Info.plist)
+            res = subprocess.run(
+                ["osascript", "-e",
+                 'tell application id "com.platypus45.domestique" to activate'],
+                capture_output=True, timeout=3,
+            )
+            if res.returncode == 0:
+                return True
+            # Fallback: activate by process name
+            subprocess.run(
+                ["osascript", "-e",
+                 'tell application "System Events" to '
+                 'set frontmost of first process whose name is "Domestique" to true'],
+                capture_output=True, timeout=3,
+            )
+            return True
+        except Exception:
+            return False
+    elif sys.platform == "win32":
+        # On Windows, pywebview creates a window with the app title. Use
+        # user32.SetForegroundWindow via ctypes so we don't need a new dep.
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            hwnd = user32.FindWindowW(None, "Domestique")
+            if hwnd:
+                user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                user32.SetForegroundWindow(hwnd)
+                return True
+        except Exception:
+            return False
+    return False
+
+
+class JsApi:
+    """Native-save bridge exposed to dashboard JS as ``window.pywebview.api``.
+
+    WKWebView (pywebview's macOS backend) silently ignores the HTML5
+    ``<a download>`` attribute — clicking a "Download ZWO" link just
+    navigates to the URL and renders the ZWO inline as text, and a
+    synthetic anchor click in ``downloadFIT()`` does nothing at all. This
+    bridge lets the JS hand a payload to Python and pop a native save
+    dialog instead.
+
+    Only ``save_zwo`` / ``save_fit`` are exposed — pywebview makes every
+    public attribute of the api object callable from JS, so we
+    deliberately don't add anything else here.
+    """
+
+    def _save(self, filename: str, data: bytes, file_types) -> dict:
+        # issue #5 — never pop a save dialog for an empty payload; a 0-byte file
+        # is worse than a clear error (the reported symptom was empty downloads).
+        if not data:
+            return {"ok": False, "error": "empty content (nothing to save)"}
+        try:
+            import webview
+
+            # webview.windows is populated by webview.start() — at the
+            # moment JS calls in, there's exactly one window (the main one).
+            if not webview.windows:
+                return {"ok": False, "error": "no window"}
+            window = webview.windows[0]
+            result = window.create_file_dialog(
+                webview.SAVE_DIALOG,
+                save_filename=filename,
+                file_types=file_types,
+            )
+            if not result:
+                return {"ok": False, "error": "cancelled"}
+            # pywebview returns either a string (some platforms) or a
+            # sequence of strings — normalise.
+            path = result if isinstance(result, str) else result[0]
+            with open(path, "wb") as f:
+                f.write(data)
+            return {"ok": True, "path": path}
+        except Exception as e:
+            return {"ok": False, "error": f"{type(e).__name__}: {e}"}
+
+    def _read_zwo_serverside(self, filename: str) -> bytes:
+        """issue #5 — read the ZWO straight off disk. We run IN-PROCESS with the
+        FastAPI app (launcher imports it), so when the JS-side bridge fetch()
+        hands us an empty body (the WKWebView download-interception failure mode)
+        we can still produce the real bytes instead of saving 0 bytes."""
+        try:
+            import app
+            p = app._safe_path(app.WORKOUT_DIR, filename)
+            if p and p.exists():
+                return p.read_bytes()
+        except Exception as e:
+            log = _log()
+            if log is not None:
+                log.warning("save_zwo server-side read failed: %s", e)
+        return b""
+
+    def _build_fit_serverside(self, session_type, duration_min,
+                              name, zwo_file, view=None) -> bytes:
+        """issue #5 — generate the FIT in-process when the JS bridge handed us an
+        empty body. Mirrors /api/export/fit-workout via the shared helper."""
+        try:
+            import app
+            if not (name and (zwo_file or (session_type and duration_min))):
+                return b""
+            return app.build_fit_workout_bytes(
+                session_type or "z2", int(duration_min or 0), name, zwo_file,
+                view=(view or None)) or b""
+        except Exception as e:
+            log = _log()
+            if log is not None:
+                log.warning("save_fit server-side build failed: %s", e)
+        return b""
+
+    def save_zwo(self, filename: str, content: str = "",
+                 source_file: str = "") -> dict:
+        # filename = suggested save name (may be "<x>_outdoor.zwo"); source_file
+        # = the real library filename for the server-side fallback read.
+        data = (content or "").encode("utf-8")
+        if not data:
+            data = self._read_zwo_serverside(source_file or filename)
+        if not data:
+            return {"ok": False, "error": "empty workout (could not read file)"}
+        return self._save(
+            filename, data,
+            ("ZWO Workout (*.zwo)", "All files (*.*)"),
+        )
+
+    def save_fit(self, filename: str, content_b64: str = "",
+                 session_type: str = "", duration_min: int = 0,
+                 name: str = "", zwo_file: str = "", view: str = "") -> dict:
+        data = b""
+        b64_err = None
+        if content_b64:
+            try:
+                data = base64.b64decode(content_b64, validate=True)
+            except Exception as e:
+                b64_err = str(e)
+                data = b""
+        if not data:
+            data = self._build_fit_serverside(
+                session_type, duration_min, name or filename, zwo_file or None,
+                view=view or None)
+        if not data:
+            # If the JS body was malformed base64 AND we couldn't regenerate
+            # server-side, surface the specific decode error (more useful).
+            if b64_err is not None:
+                return {"ok": False, "error": f"base64 decode failed: {b64_err}"}
+            return {"ok": False, "error": "empty FIT (could not generate)"}
+        return self._save(
+            filename, data,
+            ("FIT Workout (*.fit)", "All files (*.*)"),
+        )
+
+
+def _linux_gui_fatal(reason: str) -> None:
+    """Linux: a dead GUI backend is FATAL and VISIBLE. Never returns.
+
+    LINUX-QT (master decisions §7). The browser fallback below is a *worse than
+    useless* outcome on Linux, and it was the DEFAULT one: pywebview's guilib
+    raises WebViewException (not ImportError) → the generic handler in main()
+    → _fallback_to_browser() → a print to a frozen build's dead stdout, a
+    MessageBox that is win32-guarded, then run_with_tray(), where pystray's
+    ImportError blocks on _shutdown_event.wait() forever. A live process
+    holding :8080 with no window, no tray, no error and no exit.
+
+    The native window IS the product on Linux, so a failure to open one is not
+    a degraded mode to limp along in — it is a crash, and it must look like a
+    crash on all three channels a Linux user might be watching: a file they can
+    attach to a bug report, a dialog if a desktop session is there to show one,
+    and stderr for anyone who launched from a terminal. Then exit non-zero.
+    """
+    import traceback
+    # Called from inside the except block, so this is the live backend failure.
+    detail = traceback.format_exc()
+    msg = f"Domestique could not open its window: {reason}"
+
+    # guilib swallows the backend's real ImportError and re-raises a generic
+    # WebViewException, so the one fact worth having — WHICH library is missing,
+    # e.g. "libxcb-cursor.so.0: cannot open shared object file" — is absent from
+    # `detail`. Redo the import here, where the side effects no longer matter
+    # because we are on our way out.
+    try:
+        import webview.platforms.qt  # noqa: F401
+    except Exception:
+        detail += "\nBackend import:\n" + traceback.format_exc()
+
+    _fatal_report(msg, detail)
+
+
+def _fatal_report(msg: str, detail: str) -> "None":
+    """Report a startup death on every channel, then exit non-zero.
+
+    Split out of _linux_gui_fatal because a dead GUI backend is not the only
+    way to die before there is a window: a foreign server squatting :8080 kills
+    startup just as dead, and its only channels were a print to a frozen
+    build's dead stdout and sys.exit(2) — invisible from a desktop icon. Same
+    three channels either way: a file to attach to a bug report, a dialog if a
+    desktop session can show one, and stderr for a terminal launch.
+    """
+    crash = None
+    try:
+        from user_home import domestique_home
+        crash = domestique_home() / "startup_crash.txt"
+        crash.parent.mkdir(parents=True, exist_ok=True)
+        crash.write_text(f"{msg}\n\n{detail}", encoding="utf-8")
+    except Exception:
+        crash = None  # a report we can't write must not mask the real failure
+
+    log = _log()
+    if log is not None:
+        log.error("%s\n%s", msg, detail)
+
+    # stderr BEFORE the dialog: constructing a QApplication without a usable
+    # platform plugin makes Qt abort() the process outright — not something we
+    # can catch — so anything we want the user to read has to be out first.
+    print(msg, file=sys.stderr)
+    if crash is not None:
+        print(f"Details: {crash}", file=sys.stderr)
+    print(detail, file=sys.stderr)
+
+    # An AppImage launched from a desktop icon has no terminal, so a dialog is
+    # the only channel the user actually sees. Best-effort by necessity: when
+    # Qt itself is what failed to load, this fails too.
+    try:
+        from PySide6.QtCore import QTimer
+        from PySide6.QtWidgets import QApplication, QMessageBox
+        _qapp = QApplication.instance() or QApplication([])  # bound: must outlive the box
+        box = QMessageBox()
+        box.setIcon(QMessageBox.Icon.Critical)
+        # NOT "Domestique": the CI smoke test proves a native window exists
+        # by searching X for a mapped window of that name, and this dialog
+        # would satisfy it — the release would go green while the app was
+        # dying in front of it. The title must be one no success path emits.
+        box.setWindowTitle("Domestique — startup failure")
+        box.setText(msg)
+        box.setInformativeText(
+            f"Details written to {crash}." if crash is not None
+            else "Run Domestique from a terminal to see the full error."
+        )
+        box.setDetailedText(detail)
+        # Auto-close: a modal nobody is there to dismiss (CI under Xvfb, a
+        # headless session) would block here forever — re-creating the exact
+        # zero-UI hang this function exists to prevent. Long enough to read.
+        QTimer.singleShot(60_000, box.close)
+        box.exec()
+    except Exception:
+        pass
+
+    sys.exit(1)
+
+
+def _fallback_to_browser(reason: str) -> None:
+    """Open the dashboard in the default browser when the native window fails.
+
+    v2.0.2 WIN-START-FIX: the native pywebview window is the normal UI; this
+    is the degraded path. On a frozen *windowed* Windows build the user sees
+    no console, so silently opening a browser tab looked identical to "the
+    app didn't launch". Three things happen here:
+      1. The reason is mirrored to the on-disk log (windowed stdout is dead).
+      2. The browser is opened.
+      3. On Windows ONLY, a native MessageBox tells the user where the UI
+         went, so the launch never *looks* like a no-op. The message box is
+         best-effort (guarded by try/except) and is skipped on macOS, whose
+         path is deliberately left unchanged.
+
+    Linux never reaches any of that: the guard below is the single choke point
+    keeping every caller — present and future — out of the fallback there.
+    """
+    if sys.platform == "linux":
+        _linux_gui_fatal(reason)  # never returns
+    print(f"({reason} — opening in browser)")
+    log = _log()
+    if log is not None:
+        log.error("native window unavailable (%s); opened browser at %s", reason, URL)
+    _open_url(URL)
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                f"Domestique's built-in window could not start "
+                f"({reason}).\n\nIt has opened in your default web browser "
+                f"at {URL} instead.",
+                "Domestique",
+                0x40,  # MB_ICONINFORMATION
+            )
+        except Exception:
+            pass
+    run_with_tray()
+
+
+def main():
+    # v2.2.x: clear the Mark-of-the-Web from bundled pythonnet assemblies BEFORE
+    # anything loads the CLR, so the native window starts first-try on a fresh
+    # download (root cause of the "Failed to resolve Loader.Initialize" dialog).
+    _win_strip_motw()
+
+    # Single-instance guard: if another instance is already serving on our
+    # port, activate its native window instead of opening a browser tab.
+    # Opening Chrome/Safari defeats the whole point of the pywebview app.
+    if is_already_running():
+        if _activate_existing_window():
+            print(f"Domestique already running — activated existing window.")
+            return
+        # Last resort: if we can't find the window (user killed the pywebview
+        # process but something else is holding the port), open the browser so
+        # the user can at least reach the UI.
+        print(f"Domestique already running → {URL}")
+        # Linux: the native window IS the product. A browser tab here is
+        # the exact degradation this release forbids, and it is the
+        # DEFAULT path when a user double-clicks the AppImage twice.
+        # Focusing the existing window is out of scope, so do nothing
+        # rather than something wrong. macOS/Windows keep the tab.
+        if not sys.platform.startswith("linux"):
+            _open_url(URL)
+        return
+
+    print(f"Starting Domestique on {URL}...")
+
+    # Handle signals
+    # CON5: ask uvicorn for a graceful shutdown (which drains in-flight
+    # requests and runs the FastAPI lifespan teardown) instead of
+    # sys.exit() killing the process immediately. Fall back to the old
+    # behaviour if uvicorn hasn't been started yet (race on fast SIGINT).
+    def signal_handler(sig, frame):
+        print("\nShutting down...")
+        _shutdown_event.set()
+        # FIX26 (§7): release OS sleep/screensaver inhibit on exit so the
+        # caffeinate / systemd-inhibit child doesn't outlive us.
+        try:
+            import sleep_inhibit
+            sleep_inhibit.disable()
+        except Exception:
+            pass
+        if _uvicorn_server is not None:
+            _uvicorn_server.should_exit = True
+            return
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    if sys.platform != "win32":
+        signal.signal(signal.SIGTERM, signal_handler)
+
+    # Bail out NOW if even the resolved port is held. The fallback list has
+    # already been walked at import; this only fires when all of it is taken.
+    _ensure_port_free_or_die()
+
+    # Start server in background thread
+    start_server()
+
+    # Wait for server to respond, then open window
+    server_up = wait_for_server()
+    if server_up:
+        # Only now is the port known-good. Remembering it here (rather than at
+        # resolve time) means a port that looked free but failed to serve is
+        # never written back as the preferred one.
+        _remember_port(PORT)
+        print(f"Server ready → {URL}")
+    else:
+        log = _log()
+        if _server_error is not None:
+            msg = (
+                f"Error: uvicorn thread crashed: "
+                f"{type(_server_error).__name__}: {_server_error}"
+            )
+            print(msg)
+            print("See ~/.domestique/logs/ for full traceback.")
+            # v2.0.2 WIN-START-FIX: mirror to disk for windowed builds.
+            if log is not None:
+                log.error(msg)
+            # v2.0.2 WIN-START-FIX: also dump the FULL captured traceback so
+            # the cause is in the log file (and CI stdout), not just the type.
+            if _server_traceback:
+                print(_server_traceback)
+                if log is not None:
+                    log.error("uvicorn thread traceback:\n%s", _server_traceback)
+            sys.exit(1)
+        print("Warning: Server may not have started (timeout).")
+        if log is not None:
+            log.warning("Server may not have started (timeout after wait_for_server).")
+
+    # v2.0.2 WIN-CI-SMOKE: headless server-only mode. A CI runner has no
+    # display, so opening the pywebview window or the tray would block on a
+    # GUI loop forever. Keep-alive instead so the smoke-test can poll
+    # /api/version, then kill the process.
+    #
+    # v2.0.2 WIN-START-FIX: this mode must FAIL FAST + LOUD, never block
+    # silently. The build is console=False, so a hung EXE looks identical to
+    # a crashed one ("connection actively refused" for the full poll window).
+    # BEFORE blocking we verify the server actually bound; if it did not
+    # (wait_for_server() returned False / _server_error set), we write the
+    # full traceback to the log AND print it, then sys.exit(1) so the EXE
+    # exits non-zero with the cause instead of hanging. The whole path is
+    # wrapped so ANY exception here is logged (full traceback) + printed +
+    # exits 1. Non-server-only behavior below is untouched.
+    if _is_server_only():
+        log = _log()
+        try:
+            if not server_up:
+                msg = (
+                    "FATAL: server-only mode — server never came up "
+                    f"(wait_for_server timed out / failed to bind {URL})."
+                )
+                print(msg)
+                if log is not None:
+                    log.error(msg)
+                if _server_error is not None:
+                    err = (
+                        f"uvicorn thread crashed: "
+                        f"{type(_server_error).__name__}: {_server_error}"
+                    )
+                    print(err)
+                    if log is not None:
+                        log.error(err)
+                if _server_traceback:
+                    print(_server_traceback)
+                    if log is not None:
+                        log.error("uvicorn thread traceback:\n%s", _server_traceback)
+                sys.exit(1)
+
+            print(f"server-only mode — serving on http://127.0.0.1:{PORT}")
+            if log is not None:
+                log.info("server-only mode — serving on http://127.0.0.1:%s", PORT)
+            # Server confirmed up. Block until the process is killed (CI stops
+            # it after the poll). _shutdown_event is also flipped by the SIGINT
+            # handler, so Ctrl+C / SIGTERM still exits cleanly without a window.
+            _shutdown_event.wait()
+            return
+        except SystemExit:
+            # sys.exit(1) above is intentional — let it propagate.
+            raise
+        except Exception as e:
+            # Any unexpected failure in the server-only path must surface
+            # with a full traceback (windowed stdout is dead) and exit 1,
+            # never leave the EXE hanging.
+            import traceback
+            tb = traceback.format_exc()
+            print(f"FATAL: server-only mode crashed: {type(e).__name__}: {e}")
+            print(tb)
+            if log is not None:
+                log.error("server-only mode crashed:\n%s", tb)
+            sys.exit(1)
+
+    # Try native window (pywebview), fall back to browser + tray.
+    def _start_native_window():
+        import webview, importlib
+        # v2.0.2 WIN-START-FIX: proactively import the platform backend BEFORE
+        # webview.start(). On Windows the EdgeChromium/WinForms backend bootstraps
+        # the .NET CLR via pythonnet; importing it here turns a backend problem
+        # into a catchable error instead of a silent process death. macOS uses the
+        # Cocoa backend (no CLR), so its path is unchanged.
+        if sys.platform == "win32":
+            importlib.import_module("webview.platforms.edgechromium")
+        # LINUX-QT: deliberately NO equivalent pre-import of the Qt backend here.
+        # webview/platforms/qt.py freezes its persistent-storage path from
+        # _state['storage_path'] at MODULE IMPORT time, and start() only populates
+        # that state further down — so importing it early would silently discard
+        # the storage_path below and scatter localStorage into ~/.pywebview.
+        # _linux_gui_fatal() digs out the real backend error instead.
+        # pywebview requires the main thread — skip pystray (tray not needed when
+        # the app has its own window; closing the window exits the app).
+        # LINUX-UI-SCALE: the AppImage's AppRun sets QT_SCALE_FACTOR (see
+        # build_linux.sh) because Qt 6 hands X11 sessions a flat 96 dpi, so the
+        # UI was drawn at 1 CSS px per physical pixel — the "font too small"
+        # report — while macOS and Windows both scale it. Qt multiplies WINDOW
+        # geometry by that same factor, which would open this window at
+        # 1750x1125 and hang it off the bottom of a 1080p screen, so divide it
+        # back out: same window in physical pixels, contents 25% larger.
+        # min_size is deliberately NOT divided — below ~840 CSS px the tab strip
+        # clips, so 1000x600 is a real layout floor and the same one macOS and
+        # Windows enforce.
+        _scale = 1.0
+        if sys.platform == "linux":
+            try:
+                _scale = max(1.0, float(os.environ.get("QT_SCALE_FACTOR", "1")))
+            except ValueError:
+                _scale = 1.0  # a junk value is Qt's to complain about, not ours
+        webview.create_window(
+            "Domestique", URL,
+            width=round(1400 / _scale), height=round(900 / _scale),
+            min_size=(1000, 600),
+            x=100, y=50,  # position near top-left, not bottom
+            js_api=JsApi(),  # WKWebView ignores <a download>; JS calls
+                             # window.pywebview.api.save_zwo/save_fit instead.
+        )
+        # v3.5.3 — pywebview defaults to private_mode=True; on macOS the
+        # cocoa backend implements that by WIPING the default
+        # WKWebsiteDataStore at every window creation, so ALL localStorage
+        # (theme choice, volume-unit toggle, FF date range, DFA throttle
+        # stamps) died between launches — the app always reopened in dark
+        # mode. private_mode=False keeps the persistent store, unwiped.
+        # storage_path pins the Windows WebView2 profile inside the
+        # Domestique data dir (ignored by the cocoa backend).
+        # LINUX-QT (§1): pin the backend instead of letting guilib pick. Its
+        # Linux default tries GTK/WebKitGTK first, which we deliberately do not
+        # bundle; leaving the choice to import-failure ordering would mean a dev
+        # box with PyGObject installed runs a backend no user ever gets.
+        # gui=None is pywebview's own default, so macOS/Windows are unchanged.
+        from user_home import domestique_home as _dh
+        webview.start(  # blocks until the window closes
+            gui="qt" if sys.platform == "linux" else None,
+            private_mode=False,
+            storage_path=str(_dh() / "webview"),
+        )
+
+    # v2.2.x WIN-CLR-COLDSTART: on a COLD first Windows launch the pythonnet CLR
+    # can fail to resolve ("Failed to resolve Python.Runtime.Loader.Initialize
+    # from …Python.Runtime.dll") and then self-heal on the next attempt — which
+    # surfaced the alarming "built-in window could not start" dialog + a browser
+    # fallback even though the app works fine on relaunch. Retry the init a few
+    # times with a short backoff BEFORE falling back, so the transient cold-start
+    # no longer shows the dialog. macOS does a single attempt (no CLR).
+    import time as _time
+    _native_attempts = 3 if sys.platform == "win32" else 1
+    for _attempt in range(_native_attempts):
+        try:
+            _start_native_window()
+            print("Window closed — shutting down.")
+            _shutdown_event.set()
+            # FIX26 (§7): release OS sleep inhibit on normal window-close exit.
+            try:
+                import sleep_inhibit
+                sleep_inhibit.disable()
+            except Exception:
+                pass
+            # WIN-RELAUNCH-FIX (v2.1.0): hard-exit on Windows so the lingering CLR
+            # backend + bound :8080 can't block the next launch. No-op on macOS.
+            _win_hard_exit()
+            break
+        except ImportError:
+            _fallback_to_browser("pywebview/backend not available")
+            break
+        except Exception as e:
+            # Retry the Windows CLR cold-start (it self-heals); only fall back to
+            # the browser (with the dialog) once the retries are exhausted.
+            _transient = (sys.platform == "win32"
+                          and "Python.Runtime" in str(e)
+                          and _attempt < _native_attempts - 1)
+            if _transient:
+                print(f"native window CLR cold-start failed "
+                      f"(attempt {_attempt + 1}/{_native_attempts}), retrying: {e}")
+                try:
+                    import webview
+                    webview.windows.clear()  # drop any half-registered window
+                except Exception:
+                    pass
+                _time.sleep(1.0 + _attempt)  # short backoff (1s, 2s) — keep worst-case delay low
+                continue
+            _fallback_to_browser(f"pywebview failed: {e}")
+            break
+
+
+if __name__ == "__main__":
+    main()

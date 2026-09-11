@@ -20,8 +20,8 @@
 #     shasum -a 256 /tmp/D.dmg
 #     # Update version + sha256 below, then commit + push to the tap repo.
 cask "domestique" do
-  version "3.5.2"
-  sha256 "22546cfeb39f6d7e890673f3abdedb797d05d5b3e30a5188e7692182d42298cb"
+  version "3.11.6"
+  sha256 "f0b580a1d025d60782bd8027fe81807f885c9f472196ffa93c283975db69221c"
 
   url "https://github.com/platypus45/domestique/releases/download/v#{version}/Domestique-v#{version}.dmg"
   name "Domestique"
@@ -33,7 +33,9 @@ cask "domestique" do
     strategy :github_latest
   end
 
-  depends_on macos: ">= :big_sur"
+  # Homebrew 6 deprecated the string-comparison form; a bare symbol already
+  # means "this version or newer", which is what ">= :big_sur" meant.
+  depends_on macos: :big_sur
 
   app "Domestique.app"
 

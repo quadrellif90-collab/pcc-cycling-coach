@@ -36,7 +36,7 @@ import app as app_module  # noqa: E402
 
 client = TestClient(app_module.app)
 
-DASHBOARD = ROOT / "templates" / "dashboard.html"
+DASHBOARD = ROOT / "src" / "templates" / "dashboard.html"
 
 
 def _get(**params):
@@ -164,7 +164,7 @@ def test_ronnestad_superset_of_tagged_files():
     _r, rows = _get(search="ronnestad", limit=6000)
     assert rows, "ronnestad search must not be empty"
     got = _files(rows)
-    cache = ROOT / "workouts" / ".content_classification.json"
+    cache = ROOT / "src" / "workouts" / ".content_classification.json"
     if cache.exists():
         cls = json.loads(cache.read_text()).get("classifications", {})
         tagged = {fn for fn, e in cls.items() if "is_ronnestad" in (e.get("tags") or [])}
@@ -225,7 +225,7 @@ def test_relevance_exact_name_query_ranks_first():
     """Querying a row's exact Name with sort=relevance puts that Name first."""
     _r, probe = _get(search="3x16", limit=50)
     assert probe
-    target = next((w for w in probe if w["File"] == "threshold_3x16min_118min.zwo"),
+    target = next((w for w in probe if w["File"] == "threshold_2x16min-10min_98pct_118min.zwo"),
                   probe[0])
     _r, ranked = _get(search=target["Name"], sort="relevance", limit=6000)
     assert ranked

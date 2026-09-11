@@ -22,20 +22,20 @@ import pytest
 import training_planner as tp
 
 _FILES = [
-    "ftp_test_coggan_20min.zwo", "ftp_test_coggan_20min_v2.zwo",
-    "ftp_test_ramp_10w_step.zwo", "neuromuscular_12s24s_6x_120min.zwo",
-    "neuromuscular_15s0s_7x_60min.zwo", "neuromuscular_15s300s_6x_74min.zwo",
-    "over_under_12x3min_51min_renamed_v46_1.zwo",
-    "over_under_12x3min_51min_renamed_v46_3.zwo",
-    "over_under_3x15s_32min.zwo", "over_under_3x15s_40min.zwo",
-    "over_under_steady_57min_v2.zwo", "recovery_spin_60min_v12.zwo",
-    "sprints_5x2min_53min.zwo", "sprints_6x15s_58min.zwo",
-    "threshold_mixed_58min.zwo",
+    "ftp_test_coggan_3x1min-1min_95pct_59min.zwo", "ftp_test_coggan_3x1min-1min_95pct_59min_v2.zwo",
+    "ftp_test_ramp_10w_step_ladder20_152pct_52min.zwo", "neuromuscular_2x3x12s-24s_145pct_120min.zwo",
+    "neuromuscular_7x15s_140pct_62min.zwo", "neuromuscular_3x12min_100pct_77min.zwo",
+    "over_under_12x3min_95pct_56min_v6.zwo",
+    "over_under_12x3min_95pct_56min_v8.zwo",
+    "over_under_3x15s_140pct_34min.zwo", "over_under_3x15s_140pct_42min.zwo",
+    "over_under_3x4min_90pct_57min.zwo", "recovery_3x295s_90pct_60min.zwo",
+    "sprints_5x2min-1min_105pct_59min.zwo", "sprints_7x15s_140pct_60min.zwo",
+    "threshold_ladder5_145pct_63min.zwo",
 ]
 
 
 def test_loader_rebuild_of_flagged_rows_matches_facts(tmp_path):
-    facts_path = Path("workouts/.workout_facts.json")
+    facts_path = Path("src/workouts/.workout_facts.json")
     if not facts_path.exists():
         pytest.skip("facts cache absent")
     facts = json.loads(facts_path.read_text())["facts"]
@@ -44,8 +44,8 @@ def test_loader_rebuild_of_flagged_rows_matches_facts(tmp_path):
     # parses them fresh (count mismatch → full parse path) without touching
     # the real committed index (repo rule: never rebuild it wholesale).
     for f in _FILES:
-        shutil.copy2(f"workouts/{f}", tmp_path / f)
-    shutil.copy2("workouts/.content_classification.json",
+        shutil.copy2(f"src/workouts/{f}", tmp_path / f)
+    shutil.copy2("src/workouts/.content_classification.json",
                  tmp_path / ".content_classification.json")
 
     orig = tp.WORKOUT_DIR

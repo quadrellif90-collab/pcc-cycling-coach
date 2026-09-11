@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<workout_file>
+    <author>Domestique Library</author>
+    <name>Neuromuscular 4x10s (69min)</name>
+    <description>Intervals: 2 x (10s @ 200% / 95s @ 50%) | Cooldown: 5min from 60% to 45% FTP</description>
+    <sportType>bike</sportType>
+    <workout>
+        <Warmup Duration="600" PowerLow="0.5" PowerHigh="0.75" /><IntervalsT Repeat="2" OnDuration="10" OffDuration="95" OnPower="2.0" OffPower="0.5" pace="0" />
+        <Ramp Duration="180" PowerLow="0.6" PowerHigh="0.75" pace="0" />
+        <SteadyState Duration="120" Power="0.5" pace="0" />
+        <Ramp Duration="300" PowerLow="0.9" PowerHigh="1.04" pace="0" />
+        <SteadyState Duration="180" Power="0.5" pace="0" />
+        <SteadyState Duration="120" Power="1.5" pace="0" />
+        <SteadyState Duration="350" Power="0.5" pace="0" />
+        <SteadyState Duration="120" Power="1.44" pace="0" />
+        <SteadyState Duration="350" Power="0.5" pace="0" />
+        <SteadyState Duration="120" Power="1.32" pace="0" />
+        <SteadyState Duration="180" Power="0.5" pace="0" />
+        <SteadyState Duration="120" Power="1.26" pace="0" />
+        <SteadyState Duration="180" Power="0.5" pace="0" />
+        <SteadyState Duration="120" Power="1.2" pace="0" />
+        <SteadyState Duration="300" Power="0.5" pace="0" />
+        <Ramp Duration="300" PowerLow="0.94" PowerHigh="0.88" pace="0" />
+        <Cooldown Duration="300" PowerLow="0.60" PowerHigh="0.45" pace="0" />
+    </workout>
+</workout_file>

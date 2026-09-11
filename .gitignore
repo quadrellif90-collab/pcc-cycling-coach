@@ -62,7 +62,7 @@ IP_*.md
 
 # OAuth client secret — NEVER commit (public repo)
 .oauth.env
-.venv-build/
+.venv-build
 .python-build/
 
 # Scrape tooling + artifacts — kept locally, not distributed (provenance is the
@@ -70,3 +70,8 @@ IP_*.md
 scripts/scrape_*.py
 workouts/.scrape_progress.json
 workouts/.ftp_tests_manifest.json
+build_premove/
+dist_premove/
+dist_postmove/
+build_postmove/
+plans/
